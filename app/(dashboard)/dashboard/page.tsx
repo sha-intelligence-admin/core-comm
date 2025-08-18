@@ -22,9 +22,9 @@ export default function DashboardPage() {
       {/* Activity Feed */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Card className="rounded-2xl">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
+          <Card className="rounded-2xl hover:shadow-lg transition-all duration-300 hover:border-brand/50 group">
+            <CardHeader className="group-hover:bg-brand/5 transition-colors duration-300 rounded-t-2xl">
+              <CardTitle className="group-hover:text-brand transition-colors duration-200">Recent Activity</CardTitle>
               <CardDescription>Real-time feed of customer support interactions</CardDescription>
             </CardHeader>
             <CardContent>
@@ -34,50 +34,54 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-6">
-          <Card className="rounded-2xl">
-            <CardHeader>
-              <CardTitle>Quick Stats</CardTitle>
+          <Card className="rounded-2xl hover:shadow-lg transition-all duration-300 hover:border-brand/50 hover:scale-105 group cursor-pointer">
+            <CardHeader className="group-hover:bg-brand/5 transition-colors duration-300 rounded-t-2xl">
+              <CardTitle className="group-hover:text-brand transition-colors duration-200">Quick Stats</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm text-muted-foreground">Active Calls</span>
-                <span className="font-semibold text-primary">12</span>
+                <span className="font-semibold text-primary group-hover:text-brand transition-colors duration-200">
+                  12
+                </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm text-muted-foreground">Queue Length</span>
-                <span className="font-semibold">3</span>
+                <span className="font-semibold group-hover:text-brand transition-colors duration-200">3</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm text-muted-foreground">Avg Wait Time</span>
-                <span className="font-semibold">1m 23s</span>
+                <span className="font-semibold group-hover:text-brand transition-colors duration-200">1m 23s</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm text-muted-foreground">Success Rate</span>
-                <span className="font-semibold text-green-600">94.2%</span>
+                <span className="font-semibold text-green-600 group-hover:text-green-700 transition-colors duration-200">
+                  94.2%
+                </span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
-            <CardHeader>
-              <CardTitle>System Status</CardTitle>
+          <Card className="rounded-2xl hover:shadow-lg transition-all duration-300 hover:border-brand/50 hover:scale-105 group cursor-pointer">
+            <CardHeader className="group-hover:bg-brand/5 transition-colors duration-300 rounded-t-2xl">
+              <CardTitle className="group-hover:text-brand transition-colors duration-200">System Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm">Voice AI</span>
-                <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                <div className="h-2 w-2 rounded-full bg-green-500 group-hover:scale-125 transition-transform duration-200"></div>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm">MCP Servers</span>
-                <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                <div className="h-2 w-2 rounded-full bg-green-500 group-hover:scale-125 transition-transform duration-200"></div>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm">Database</span>
-                <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                <div className="h-2 w-2 rounded-full bg-green-500 group-hover:scale-125 transition-transform duration-200"></div>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm">Analytics</span>
-                <div className="h-2 w-2 rounded-full bg-yellow-500"></div>
+                <div className="h-2 w-2 rounded-full bg-yellow-500 group-hover:scale-125 transition-transform duration-200"></div>
               </div>
             </CardContent>
           </Card>

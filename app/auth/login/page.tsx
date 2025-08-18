@@ -80,7 +80,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="flex justify-center">
-            <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-brand text-white">
               <HeadphonesIcon className="size-6" />
             </div>
           </div>
@@ -88,9 +88,9 @@ export default function LoginPage() {
           <p className="text-muted-foreground">Sign in to your AI customer support platform</p>
         </div>
 
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
+        <Card className="rounded-2xl border-brand/20">
+          <CardHeader className="bg-gradient-to-r from-brand/5 to-transparent rounded-t-2xl">
+            <CardTitle className="text-brand">Sign In</CardTitle>
             <CardDescription>Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -102,7 +102,9 @@ export default function LoginPage() {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-brand/80 font-medium">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -111,11 +113,14 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
+                  className="border-brand/20 focus:border-brand focus:ring-brand/20"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-brand/80 font-medium">
+                  Password
+                </Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -125,6 +130,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
+                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
                   />
                   <Button
                     type="button"
@@ -139,7 +145,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full bg-brand hover:bg-brand/90" disabled={loading}>
                 {loading && <LoadingSpinner className="mr-2" size="sm" />}
                 Sign In
               </Button>
@@ -158,7 +164,7 @@ export default function LoginPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full bg-transparent"
+              className="w-full border-brand/30 hover:bg-brand/10 hover:text-brand bg-transparent"
               onClick={handleGoogleLogin}
               disabled={loading}
             >
@@ -186,7 +192,7 @@ export default function LoginPage() {
 
             <div className="text-center text-sm">
               <span className="text-muted-foreground">Don't have an account? </span>
-              <Link href="/auth/signup" className="text-primary hover:underline">
+              <Link href="/auth/signup" className="text-brand hover:underline">
                 Sign up
               </Link>
             </div>

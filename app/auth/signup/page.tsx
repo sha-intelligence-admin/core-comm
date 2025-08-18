@@ -78,7 +78,7 @@ export default function SignUpPage() {
 
       if (data.user) {
         setSuccess(true)
-        // If email confirmation is disabled, redirect to onboarding
+        // If email confirmation is disabled or user is immediately confirmed, redirect to onboarding
         if (data.session) {
           setTimeout(() => {
             router.push("/onboarding")
@@ -94,8 +94,11 @@ export default function SignUpPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md rounded-2xl">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+        <Card className="w-full max-w-md rounded-2xl border-brand/20">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
               <div className="flex justify-center">
@@ -104,15 +107,23 @@ export default function SignUpPage() {
                 </div>
               </div>
               <div>
-                <h2 className="text-2xl font-bold">Account Created!</h2>
+                <h2 className="text-2xl font-bold text-brand">Account Created!</h2>
                 <p className="text-muted-foreground mt-2">
-                  Welcome to CoreComm! Please check your email to verify your account, then you can start setting up
-                  your AI customer support platform.
+                  Welcome to CoreComm! Let's set up your AI customer support platform.
                 </p>
               </div>
-              <Button onClick={() => router.push("/auth/login")} className="w-full">
-                Continue to Login
-              </Button>
+              <div className="space-y-2">
+                <Button onClick={() => router.push("/onboarding")} className="w-full bg-brand hover:bg-brand/90">
+                  Start Setup Process
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/dashboard")}
+                  className="w-full border-brand/30 hover:bg-brand/10 hover:text-brand"
+                >
+                  Skip Setup (Go to Dashboard)
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -128,17 +139,17 @@ export default function SignUpPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="flex justify-center">
-            <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-brand text-white">
               <HeadphonesIcon className="size-6" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold">Join CoreComm</h1>
+          <h1 className="text-2xl font-bold text-brand">Join CoreComm</h1>
           <p className="text-muted-foreground">Create your account to get started</p>
         </div>
 
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle>Create Account</CardTitle>
+        <Card className="rounded-2xl border-brand/20">
+          <CardHeader className="bg-gradient-to-r from-brand/5 to-transparent rounded-t-2xl">
+            <CardTitle className="text-brand">Create Account</CardTitle>
             <CardDescription>Enter your information to create your CoreComm account</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -151,7 +162,9 @@ export default function SignUpPage() {
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName" className="text-brand/80 font-medium">
+                    Full Name
+                  </Label>
                   <Input
                     id="fullName"
                     name="fullName"
@@ -160,10 +173,13 @@ export default function SignUpPage() {
                     onChange={handleInputChange}
                     required
                     disabled={loading}
+                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="companyName">Company</Label>
+                  <Label htmlFor="companyName" className="text-brand/80 font-medium">
+                    Company
+                  </Label>
                   <Input
                     id="companyName"
                     name="companyName"
@@ -171,12 +187,15 @@ export default function SignUpPage() {
                     value={formData.companyName}
                     onChange={handleInputChange}
                     disabled={loading}
+                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-brand/80 font-medium">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   name="email"
@@ -186,11 +205,14 @@ export default function SignUpPage() {
                   onChange={handleInputChange}
                   required
                   disabled={loading}
+                  className="border-brand/20 focus:border-brand focus:ring-brand/20"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-brand/80 font-medium">
+                  Password
+                </Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -201,6 +223,7 @@ export default function SignUpPage() {
                     onChange={handleInputChange}
                     required
                     disabled={loading}
+                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
                   />
                   <Button
                     type="button"
@@ -216,7 +239,9 @@ export default function SignUpPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-brand/80 font-medium">
+                  Confirm Password
+                </Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
@@ -227,6 +252,7 @@ export default function SignUpPage() {
                     onChange={handleInputChange}
                     required
                     disabled={loading}
+                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
                   />
                   <Button
                     type="button"
@@ -241,7 +267,7 @@ export default function SignUpPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full bg-brand hover:bg-brand/90" disabled={loading}>
                 {loading && <LoadingSpinner className="mr-2" size="sm" />}
                 Create Account
               </Button>
@@ -249,7 +275,7 @@ export default function SignUpPage() {
 
             <div className="text-center text-sm">
               <span className="text-muted-foreground">Already have an account? </span>
-              <Link href="/auth/login" className="text-primary hover:underline">
+              <Link href="/auth/login" className="text-brand hover:underline">
                 Sign in
               </Link>
             </div>

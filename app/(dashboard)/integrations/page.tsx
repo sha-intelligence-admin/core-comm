@@ -37,13 +37,13 @@ const mockIntegrations = [
 export default function IntegrationsPage() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-gradient-to-r from-brand/10 to-transparent p-6 rounded-2xl border border-brand/20">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-brand">Integrations</h1>
           <p className="text-muted-foreground">Manage your MCP servers and external integrations</p>
         </div>
         <AddIntegrationModal>
-          <Button className="rounded-xl">
+          <Button className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl">
             <Plus className="mr-2 h-4 w-4" />
             Add Integration
           </Button>
@@ -56,33 +56,47 @@ export default function IntegrationsPage() {
         ))}
       </div>
 
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle>Integration Health</CardTitle>
+      <Card className="rounded-2xl border-brand/20 hover:shadow-xl hover:border-brand/40 transition-all duration-300 group">
+        <CardHeader className="bg-gradient-to-r from-brand/5 to-transparent group-hover:from-brand/10 transition-all duration-300 rounded-t-2xl">
+          <CardTitle className="text-brand group-hover:text-brand/80 transition-colors duration-200">
+            Integration Health
+          </CardTitle>
           <CardDescription>Monitor the status and performance of your integrations</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-xl">
+            <div className="flex items-center justify-between p-4 border border-brand/20 rounded-xl hover:border-brand/40 hover:bg-brand/5 hover:shadow-md transition-all duration-300 group">
               <div className="flex items-center space-x-3">
-                <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                <span className="font-medium">Knowledge Base API</span>
+                <div className="h-3 w-3 rounded-full bg-green-500 group-hover:scale-125 group-hover:shadow-lg transition-all duration-200"></div>
+                <span className="font-medium group-hover:text-brand transition-colors duration-200">
+                  Knowledge Base API
+                </span>
               </div>
-              <div className="text-sm text-muted-foreground">Response time: 120ms</div>
+              <div className="text-sm text-muted-foreground group-hover:text-brand/70 transition-colors duration-200">
+                Response time: 120ms
+              </div>
             </div>
-            <div className="flex items-center justify-between p-4 border rounded-xl">
+            <div className="flex items-center justify-between p-4 border border-brand/20 rounded-xl hover:border-brand/40 hover:bg-brand/5 hover:shadow-md transition-all duration-300 group">
               <div className="flex items-center space-x-3">
-                <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                <span className="font-medium">CRM Integration</span>
+                <div className="h-3 w-3 rounded-full bg-green-500 group-hover:scale-125 group-hover:shadow-lg transition-all duration-200"></div>
+                <span className="font-medium group-hover:text-brand transition-colors duration-200">
+                  CRM Integration
+                </span>
               </div>
-              <div className="text-sm text-muted-foreground">Response time: 85ms</div>
+              <div className="text-sm text-muted-foreground group-hover:text-brand/70 transition-colors duration-200">
+                Response time: 85ms
+              </div>
             </div>
-            <div className="flex items-center justify-between p-4 border rounded-xl">
+            <div className="flex items-center justify-between p-4 border border-red-200 rounded-xl hover:border-red-400 hover:bg-red-50 hover:shadow-md transition-all duration-300 group">
               <div className="flex items-center space-x-3">
-                <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                <span className="font-medium">Slack Notifications</span>
+                <div className="h-3 w-3 rounded-full bg-red-500 group-hover:scale-125 group-hover:shadow-lg transition-all duration-200"></div>
+                <span className="font-medium group-hover:text-red-600 transition-colors duration-200">
+                  Slack Notifications
+                </span>
               </div>
-              <div className="text-sm text-muted-foreground">Connection failed</div>
+              <div className="text-sm text-muted-foreground group-hover:text-red-500 transition-colors duration-200">
+                Connection failed
+              </div>
             </div>
           </div>
         </CardContent>

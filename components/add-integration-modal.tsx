@@ -58,7 +58,7 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-2xl">
+      <DialogContent className="sm:max-w-[425px] rounded-2xl backdrop-blur-md bg-background/95 border border-brand/20 shadow-2xl">
         <DialogHeader>
           <DialogTitle>Add New Integration</DialogTitle>
           <DialogDescription>Connect a new MCP server or external service to your CoreComm platform.</DialogDescription>

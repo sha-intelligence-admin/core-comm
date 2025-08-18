@@ -57,7 +57,7 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] rounded-2xl">
+      <DialogContent className="max-w-4xl max-h-[80vh] rounded-2xl backdrop-blur-md bg-background/95 border border-brand/20 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Call Transcript - {call.callerName}</span>

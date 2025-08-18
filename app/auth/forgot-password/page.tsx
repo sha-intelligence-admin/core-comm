@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="flex justify-center">
-            <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-brand text-white">
               <HeadphonesIcon className="size-6" />
             </div>
           </div>

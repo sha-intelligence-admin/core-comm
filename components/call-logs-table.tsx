@@ -61,13 +61,13 @@ const callLogs = [
 const getStatusColor = (status: string) => {
   switch (status) {
     case "resolved":
-      return "bg-green-100 text-green-800"
+      return "bg-green-100 text-green-800 hover:bg-green-200"
     case "pending":
-      return "bg-yellow-100 text-yellow-800"
+      return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
     case "escalated":
-      return "bg-red-100 text-red-800"
+      return "bg-red-100 text-red-800 hover:bg-red-200"
     default:
-      return "bg-gray-100 text-gray-800"
+      return "bg-gray-100 text-gray-800 hover:bg-gray-200"
   }
 }
 
@@ -76,10 +76,10 @@ export function CallLogsTable() {
 
   return (
     <>
-      <div className="rounded-xl border">
+      <div className="rounded-xl border overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="hover:bg-brand/5 transition-colors duration-200">
               <TableHead>Caller</TableHead>
               <TableHead>Phone Number</TableHead>
               <TableHead>Date</TableHead>
@@ -90,23 +90,46 @@ export function CallLogsTable() {
           </TableHeader>
           <TableBody>
             {callLogs.map((call) => (
-              <TableRow key={call.id}>
-                <TableCell className="font-medium">{call.callerName}</TableCell>
-                <TableCell>{call.callerNumber}</TableCell>
-                <TableCell>{formatDistanceToNow(call.date, { addSuffix: true })}</TableCell>
-                <TableCell>{call.duration}</TableCell>
+              <TableRow
+                key={call.id}
+                className="hover:bg-brand/5 transition-all duration-300 hover:shadow-sm cursor-pointer group"
+              >
+                <TableCell className="font-medium group-hover:text-brand transition-colors duration-200">
+                  {call.callerName}
+                </TableCell>
+                <TableCell className="group-hover:text-foreground transition-colors duration-200">
+                  {call.callerNumber}
+                </TableCell>
+                <TableCell className="group-hover:text-foreground transition-colors duration-200">
+                  {formatDistanceToNow(call.date, { addSuffix: true })}
+                </TableCell>
+                <TableCell className="group-hover:text-foreground transition-colors duration-200">
+                  {call.duration}
+                </TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className={getStatusColor(call.status)}>
+                  <Badge
+                    variant="secondary"
+                    className={`${getStatusColor(call.status)} transition-all duration-200 group-hover:scale-105`}
+                  >
                     {call.status}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => setSelectedCall(call)} className="rounded-lg">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedCall(call)}
+                      className="rounded-lg hover:bg-brand hover:text-white hover:border-brand transition-all duration-200 hover:scale-105"
+                    >
                       <Eye className="h-4 w-4 mr-1" />
                       View
                     </Button>
-                    <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg bg-transparent hover:bg-brand hover:text-white hover:border-brand transition-all duration-200 hover:scale-105"
+                    >
                       <Download className="h-4 w-4 mr-1" />
                       Export
                     </Button>
