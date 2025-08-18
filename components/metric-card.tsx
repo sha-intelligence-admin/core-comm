@@ -1,17 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { LucideIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface MetricCardProps {
   title: string
   value: string
   change: string
+  trend: "up" | "down"
   icon: LucideIcon
-  description: string
 }
 
-export function MetricCard({ title, value, change, icon: Icon, description }: MetricCardProps) {
-  const isPositive = change.startsWith("+")
-
+export function MetricCard({ title, value, change, trend, icon: Icon }: MetricCardProps) {
   return (
     <Card className="rounded-2xl">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -20,8 +19,7 @@ export function MetricCard({ title, value, change, icon: Icon, description }: Me
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{description}</p>
-        <div className={`text-xs mt-1 ${isPositive ? "text-green-600" : "text-red-600"}`}>{change} from last month</div>
+        <p className={cn("text-xs", trend === "up" ? "text-green-600" : "text-red-600")}>{change} from last month</p>
       </CardContent>
     </Card>
   )

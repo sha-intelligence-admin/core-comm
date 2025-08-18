@@ -1,8 +1,4 @@
-"use client"
-
-import { useState } from "react"
 import { CallLogsTable } from "@/components/call-logs-table"
-import { CallTranscriptModal } from "@/components/call-transcript-modal"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -10,52 +6,54 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, Download } from "lucide-react"
 
 export default function CallLogsPage() {
-  const [selectedCall, setSelectedCall] = useState<any>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Call Logs</h2>
-        <p className="text-muted-foreground">View and manage all customer support calls</p>
+        <h1 className="text-3xl font-bold tracking-tight">Call Logs</h1>
+        <p className="text-muted-foreground">View and analyze all customer support interactions</p>
       </div>
 
       <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle>Search & Filter</CardTitle>
-          <CardDescription>Find specific calls using filters and search</CardDescription>
+          <CardDescription>Find specific calls or filter by criteria</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by caller name or number..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Search by caller name, number, or transcript..." className="pl-10 rounded-xl" />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="escalated">Escalated</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" className="gap-2 bg-transparent">
-              <Filter className="h-4 w-4" />
-              More Filters
-            </Button>
-            <Button variant="outline" className="gap-2 bg-transparent">
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
+            <div className="flex gap-2">
+              <Select>
+                <SelectTrigger className="w-[180px] rounded-xl">
+                  <SelectValue placeholder="Resolution Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="escalated">Escalated</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select>
+                <SelectTrigger className="w-[140px] rounded-xl">
+                  <SelectValue placeholder="Date Range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="week">This Week</SelectItem>
+                  <SelectItem value="month">This Month</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon" className="rounded-xl bg-transparent">
+                <Filter className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-xl bg-transparent">
+                <Download className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -63,18 +61,12 @@ export default function CallLogsPage() {
       <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle>Call History</CardTitle>
-          <CardDescription>Complete log of all customer support interactions</CardDescription>
+          <CardDescription>Complete log of all customer interactions</CardDescription>
         </CardHeader>
         <CardContent>
-          <CallLogsTable searchQuery={searchQuery} statusFilter={statusFilter} onViewTranscript={setSelectedCall} />
+          <CallLogsTable />
         </CardContent>
       </Card>
-
-      <CallTranscriptModal
-        call={selectedCall}
-        open={!!selectedCall}
-        onOpenChange={(open) => !open && setSelectedCall(null)}
-      />
     </div>
   )
 }

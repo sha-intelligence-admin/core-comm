@@ -7,90 +7,100 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { LoadingSpinner } from "@/components/loading-spinner"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { LoadingSpinner } from "./loading-spinner"
 import { CheckCircle, XCircle } from "lucide-react"
 
 interface AddIntegrationModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onAdd: (integration: any) => void
+  children: React.ReactNode
 }
 
-export function AddIntegrationModal({ open, onOpenChange, onAdd }: AddIntegrationModalProps) {
+export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
+  const [open, setOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [testResult, setTestResult] = useState<"success" | "error" | null>(null)
   const [formData, setFormData] = useState({
     name: "",
+    type: "",
     endpoint: "",
     apiKey: "",
-    description: "",
   })
-  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle")
+
+  const handleTestConnection = async () => {
+    setIsLoading(true)
+    setTestResult(null)
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Simulate random success/failure
+    const success = Math.random() > 0.3
+    setTestResult(success ? "success" : "error")
+    setIsLoading(false)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (testStatus === "success") {
-      onAdd({
-        ...formData,
-        status: "connected",
-        lastSync: "Just now",
-      })
-      setFormData({ name: "", endpoint: "", apiKey: "", description: "" })
-      setTestStatus("idle")
-    }
-  }
-
-  const handleTestConnection = async () => {
-    setTestStatus("testing")
-    // Simulate API test
-    setTimeout(() => {
-      setTestStatus(Math.random() > 0.3 ? "success" : "error")
-    }, 2000)
-  }
-
-  const resetForm = () => {
-    setFormData({ name: "", endpoint: "", apiKey: "", description: "" })
-    setTestStatus("idle")
+    // Handle form submission
+    console.log("Integration data:", formData)
+    setOpen(false)
+    setFormData({ name: "", type: "", endpoint: "", apiKey: "" })
+    setTestResult(null)
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(open) => {
-        onOpenChange(open)
-        if (!open) resetForm()
-      }}
-    >
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="sm:max-w-[425px] rounded-2xl">
         <DialogHeader>
           <DialogTitle>Add New Integration</DialogTitle>
-          <DialogDescription>Connect a new MCP server to expand your AI's capabilities</DialogDescription>
+          <DialogDescription>Connect a new MCP server or external service to your CoreComm platform.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Integration Name</Label>
             <Input
               id="name"
-              placeholder="e.g., Customer Database"
+              placeholder="Knowledge Base API"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="rounded-xl"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="type">Integration Type</Label>
+            <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Select integration type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="knowledge-base">Knowledge Base</SelectItem>
+                <SelectItem value="crm">CRM System</SelectItem>
+                <SelectItem value="database">Database</SelectItem>
+                <SelectItem value="api">REST API</SelectItem>
+                <SelectItem value="webhook">Webhook</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="endpoint">Endpoint URL</Label>
             <Input
               id="endpoint"
-              placeholder="https://api.example.com/mcp"
+              type="url"
+              placeholder="https://api.example.com/v1"
               value={formData.endpoint}
               onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
+              className="rounded-xl"
               required
             />
           </div>
@@ -100,21 +110,11 @@ export function AddIntegrationModal({ open, onOpenChange, onAdd }: AddIntegratio
             <Input
               id="apiKey"
               type="password"
-              placeholder="Enter your API key"
+              placeholder="sk-..."
               value={formData.apiKey}
               onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+              className="rounded-xl"
               required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (Optional)</Label>
-            <Textarea
-              id="description"
-              placeholder="Brief description of what this integration provides"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
             />
           </div>
 
@@ -123,27 +123,42 @@ export function AddIntegrationModal({ open, onOpenChange, onAdd }: AddIntegratio
               type="button"
               variant="outline"
               onClick={handleTestConnection}
-              disabled={!formData.endpoint || !formData.apiKey || testStatus === "testing"}
-              className="gap-2 bg-transparent"
+              disabled={isLoading || !formData.endpoint || !formData.apiKey}
+              className="rounded-xl flex-1 bg-transparent"
             >
-              {testStatus === "testing" && <LoadingSpinner />}
-              {testStatus === "success" && <CheckCircle className="h-4 w-4 text-green-600" />}
-              {testStatus === "error" && <XCircle className="h-4 w-4 text-red-600" />}
-              Test Connection
+              {isLoading ? (
+                <>
+                  <LoadingSpinner className="mr-2 h-4 w-4" />
+                  Testing...
+                </>
+              ) : (
+                "Test Connection"
+              )}
             </Button>
 
-            {testStatus === "success" && <span className="text-sm text-green-600">Connection successful!</span>}
-            {testStatus === "error" && <span className="text-sm text-red-600">Connection failed</span>}
+            {testResult && (
+              <div className="flex items-center">
+                {testResult === "success" ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-red-600" />
+                )}
+              </div>
+            )}
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          {testResult === "error" && (
+            <p className="text-sm text-red-600">Connection failed. Please check your endpoint URL and API key.</p>
+          )}
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={testStatus !== "success"}>
+            <Button type="submit" disabled={testResult !== "success"} className="rounded-xl">
               Add Integration
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
