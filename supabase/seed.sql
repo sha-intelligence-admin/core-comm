@@ -1,5 +1,3 @@
--- Seed data for development
--- Note: Run this after creating your initial user through Supabase Auth
 
 -- Insert sample calls (replace the user_id with actual user IDs from your auth.users table)
 INSERT INTO public.calls (caller_number, recipient_number, duration, transcript, resolution_status, call_type, summary, sentiment, priority) VALUES
@@ -16,8 +14,3 @@ INSERT INTO public.integrations (name, type, endpoint_url, status, description, 
   ('Help Desk Integration', 'helpdesk', 'https://api.helpdesk.com/tickets', 'pending', 'Create tickets for escalated calls', '{"api_token": "****", "queue_id": "support"}'),
   ('Analytics MCP Server', 'mcp', 'mcp://analytics-server:8080', 'inactive', 'Analytics and reporting MCP server', '{"server_name": "analytics", "capabilities": ["data_analysis", "reporting"]}'),
   ('Email Notifications', 'webhook', 'https://api.email-service.com/send', 'error', 'Send email notifications for important calls', '{"from": "support@company.com", "template_id": "call_notification"}');
-
--- Note: To properly link data to users, you'll need to:
--- 1. Create users through Supabase Auth (signup/login)
--- 2. Update the user_id fields in calls and integrations tables with actual user IDs
--- 3. Or modify this seed script to use actual user IDs from your auth.users table
