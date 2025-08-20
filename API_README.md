@@ -1,6 +1,5 @@
 # CoreComm Backend API
-
-A Next.js-based backend API for the CoreComm platform with Supabase integration.
+Backend API for the CoreComm platform with Supabase integration.
 
 ## Setup Instructions
 
