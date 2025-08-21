@@ -45,10 +45,20 @@ export default function SignUpPage() {
       setError("Passwords do not match")
       return false
     }
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters long")
+    
+    // Use Zod schema for validation
+    const result = SignupSchema.safeParse({
+      email: formData.email,
+      full_name: formData.fullName,
+      phone: formData.phone,
+      password: formData.password,
+    })
+    
+    if (!result.success) {
+      setError(result.error.issues[0]?.message || "Invalid input")
       return false
     }
+    
     return true
   }
 

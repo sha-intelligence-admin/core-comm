@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { setSecurityHeaders } from "@/lib/security-headers"
 
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -8,9 +9,8 @@ export async function updateSession(request: NextRequest) {
   // If Supabase is not configured, allow access to all routes
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn("Supabase environment variables not configured. Authentication is disabled.")
-    return NextResponse.next({
-      request,
-    })
+    const response = NextResponse.next({ request })
+    return setSecurityHeaders(response)
   }
 
   let supabaseResponse = NextResponse.next({
@@ -40,16 +40,39 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/onboarding") &&
-    request.nextUrl.pathname !== "/"
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    '/',
+    '/auth/login',
+    '/auth/signup', 
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/callback',
+    '/auth/auth-code-error',
+    '/setup',
+    '/api/health'
+  ]
+  
+  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname) || 
+                       request.nextUrl.pathname.startsWith('/_next') ||
+                       request.nextUrl.pathname.startsWith('/favicon')
+
+  // Redirect unauthenticated users from protected routes
+  if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
-    return NextResponse.redirect(url)
+    url.searchParams.set('redirectTo', request.nextUrl.pathname)
+    const redirectResponse = NextResponse.redirect(url)
+    return setSecurityHeaders(redirectResponse)
+  }
+
+  // Redirect authenticated users away from auth pages
+  if (user && request.nextUrl.pathname.startsWith('/auth/') && 
+      request.nextUrl.pathname !== '/auth/callback') {
+    const url = request.nextUrl.clone()
+    url.pathname = "/dashboard"
+    const redirectResponse = NextResponse.redirect(url)
+    return setSecurityHeaders(redirectResponse)
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
@@ -60,5 +83,5 @@ export async function updateSession(request: NextRequest) {
   //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
   // 3. Change the myNewResponse object here instead of the supabaseResponse object
 
-  return supabaseResponse
+  return setSecurityHeaders(supabaseResponse)
 }

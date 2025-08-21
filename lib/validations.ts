@@ -27,12 +27,24 @@ export const CreateCompanySchema = z.object({
 export const UpdateCompanySchema = CreateCompanySchema.partial();
 
 /**
- * Zod schema for creating a new user profile record.
- * This is meant for a new user signing up, after the auth.users
- * record has been created. It requires the 'id' from auth.users
- * and the 'company_id' for linking.
+ * Zod schema for signup form validation.
+ * This validates the signup form data before creating the auth user.
  */
 export const SignupSchema = z.object({
+  email: z.string().email('Invalid email address.'),
+  full_name: z.string().min(1, 'Full name is required.').max(100, 'Name too long'),
+  phone: z.string().regex(/^\+?[\d\s\-\(\)]{10,}$/, 'Invalid phone number format').optional().or(z.literal('')),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 
+           'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+});
+
+/**
+ * Zod schema for creating a new user profile record.
+ * This is meant for a new user profile after auth.users creation.
+ */
+export const CreateUserProfileSchema = z.object({
   email: z.string().email('Invalid email address.'),
   full_name: z.string().min(1, 'Full name is required.'),
   phone: z.string().optional(),
@@ -51,3 +63,60 @@ export const UpdateUserSchema = z.object({
   role: z.enum(['admin', 'user']).optional(),
   is_active: z.boolean().optional(),
 });
+
+// Call validation schemas
+export const CreateCallSchema = z.object({
+  caller_number: z.string().min(1, 'Caller number is required'),
+  recipient_number: z.string().optional(),
+  duration: z.number().int().min(0, 'Duration must be a positive integer'),
+  transcript: z.string().optional(),
+  resolution_status: z.enum(['pending', 'resolved', 'escalated', 'failed']).default('pending'),
+  call_type: z.enum(['inbound', 'outbound']).default('inbound'),
+  summary: z.string().optional(),
+  sentiment: z.enum(['positive', 'neutral', 'negative']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
+  user_id: z.string().uuid().optional(),
+});
+
+export const UpdateCallSchema = CreateCallSchema.partial();
+
+// Integration validation schemas
+export const CreateIntegrationSchema = z.object({
+  name: z.string().min(1, 'Integration name is required'),
+  type: z.enum(['mcp', 'webhook', 'api', 'crm', 'helpdesk']),
+  endpoint_url: z.string().url('Must be a valid URL'),
+  status: z.enum(['active', 'inactive', 'error', 'pending']).default('pending'),
+  config: z.record(z.string(), z.any()).default({}),
+  description: z.string().optional(),
+  user_id: z.string().uuid().optional(),
+});
+
+export const UpdateIntegrationSchema = CreateIntegrationSchema.partial();
+
+// Query parameter schemas
+export const PaginationSchema = z.object({
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(10),
+});
+
+export const CallsQuerySchema = PaginationSchema.extend({
+  resolution_status: z.enum(['pending', 'resolved', 'escalated', 'failed']).optional(),
+  call_type: z.enum(['inbound', 'outbound']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  search: z.string().optional(),
+});
+
+export const IntegrationsQuerySchema = PaginationSchema.extend({
+  type: z.enum(['mcp', 'webhook', 'api', 'crm', 'helpdesk']).optional(),
+  status: z.enum(['active', 'inactive', 'error', 'pending']).optional(),
+  search: z.string().optional(),
+});
+
+// Type exports
+export type CreateCallInput = z.infer<typeof CreateCallSchema>;
+export type UpdateCallInput = z.infer<typeof UpdateCallSchema>;
+export type CreateIntegrationInput = z.infer<typeof CreateIntegrationSchema>;
+export type UpdateIntegrationInput = z.infer<typeof UpdateIntegrationSchema>;
+export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
+export type CallsQueryInput = z.infer<typeof CallsQuerySchema>;
+export type IntegrationsQueryInput = z.infer<typeof IntegrationsQuerySchema>;

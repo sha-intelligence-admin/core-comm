@@ -1,34 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-// You would import the function you created
 import { createServerSupabase } from '@/lib/supabase/superbaseClient';
+import { CreateUserProfileSchema } from '@/lib/validations';
+import { authRateLimit } from '@/lib/rate-limit';
+import { createErrorResponse, ValidationError, RateLimitError, createSuccessResponse } from '@/lib/error-handling';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, email, fullName, phone } = await req.json();
-
-    if (!userId || !email || !fullName || !phone) {
-      return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
+    // Apply rate limiting
+    const rateLimitResult = await authRateLimit(req);
+    if (!rateLimitResult.success) {
+      throw new RateLimitError();
     }
 
-    // 🚀 Get a fresh client instance by calling the function
+    // Validate request body
+    const body = await req.json();
+    
+    if (!body.userId) {
+      throw new ValidationError('User ID is required');
+    }
+    
+    const validatedProfile = CreateUserProfileSchema.parse({
+      email: body.email,
+      full_name: body.fullName,
+      phone: body.phone || null
+    });
+
+    // Sanitize inputs
+    const sanitizedData = {
+      id: body.userId,
+      email: validatedProfile.email.toLowerCase().trim(),
+      full_name: validatedProfile.full_name.trim(),
+      phone: validatedProfile.phone?.trim() || null
+    };
+
     const supabaseServer = createServerSupabase();
 
     const { data: userData, error: userError } = await supabaseServer
       .from('users')
-      .insert([{ id: userId, full_name: fullName, phone: phone, email: email }])
+      .insert([sanitizedData])
       .select()
       .single();
 
     if (userError) {
-      console.error("Error inserting into custom users table:", userError);
-      return NextResponse.json({ error: userError.message }, { status: 500 });
+      console.error("Error inserting user profile:", userError);
+      
+      // Don't expose database errors to client
+      if (userError.code === '23505') { // Unique constraint violation
+        return createErrorResponse(new ValidationError('User profile already exists'));
+      }
+      
+      throw new Error('Failed to create user profile');
     }
 
-    return NextResponse.json(
-      { message: 'User profile saved successfully', user: userData },
-      { status: 201 }
+    return createSuccessResponse(
+      { user: userData },
+      'User profile created successfully'
     );
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    
+  } catch (error) {
+    return createErrorResponse(error, 'Failed to create user profile');
   }
 }
