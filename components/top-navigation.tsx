@@ -1,3 +1,5 @@
+"use client"
+
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -14,9 +16,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ThemeToggle } from "./theme-toggle"
 import { LogoutButton } from "./auth-actions"
-import { Search, Bell, User, Settings } from "lucide-react"
+import { Search, Bell, User, Settings, Loader2 } from "lucide-react"
+import { useUserProfile } from "@/hooks/use-user-profile"
 
 export function TopNavigation() {
+  const { profile, loading, getInitials } = useUserProfile()
+
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b border-brand/20 px-4 bg-gradient-to-r from-brand/5 to-transparent">
       <SidebarTrigger className="-ml-1 hover:bg-brand/10 hover:text-brand transition-all duration-200 hover:scale-110" />
@@ -61,8 +66,10 @@ export function TopNavigation() {
               className="relative h-8 w-8 rounded-full hover:ring-2 hover:ring-brand/30 transition-all duration-200 hover:scale-110"
             >
               <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder-40x40.png" alt="User" />
-                <AvatarFallback className="bg-brand/10 text-brand">JD</AvatarFallback>
+                <AvatarImage src={profile?.avatar_url || "/placeholder-40x40.png"} alt="User" />
+                <AvatarFallback className="bg-brand/10 text-brand">
+                  {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : getInitials()}
+                </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
