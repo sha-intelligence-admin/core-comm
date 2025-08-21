@@ -1,3 +1,5 @@
+"use client"
+
 import {
   Sidebar,
   SidebarContent,
@@ -10,11 +12,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Phone, Settings, Plug, User } from "lucide-react"
+import { LayoutDashboard, Phone, Settings, Plug, User, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { LogoutButton } from "./auth-actions"
+import { useUserProfile } from "@/hooks/use-user-profile"
 
 const menuItems = [
   {
@@ -40,6 +43,8 @@ const menuItems = [
 ]
 
 export function AppSidebar() {
+  const { profile, loading, getInitials, getDisplayName } = useUserProfile()
+
   return (
     <Sidebar className="border-r border-brand/20">
       <SidebarHeader className="p-4 hover:bg-brand/5 transition-colors duration-300 group">
@@ -81,15 +86,17 @@ export function AppSidebar() {
           <DropdownMenuTrigger asChild>
             <div className="flex items-center space-x-2 cursor-pointer hover:bg-brand/10 hover:border hover:border-brand/30 rounded-lg p-2 transition-all duration-300 hover:shadow-md group">
               <Avatar className="h-8 w-8 group-hover:scale-110 group-hover:ring-2 group-hover:ring-brand/30 transition-all duration-300">
-                <AvatarImage src="/placeholder-40x40.png" />
+                <AvatarImage src={profile?.avatar_url || "/placeholder-40x40.png"} />
                 <AvatarFallback className="group-hover:bg-brand/20 group-hover:text-brand transition-colors duration-200">
-                  JD
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : getInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 text-left">
-                <p className="text-sm font-medium group-hover:text-brand transition-colors duration-200">John Doe</p>
+                <p className="text-sm font-medium group-hover:text-brand transition-colors duration-200">
+                  {loading ? "Loading..." : getDisplayName()}
+                </p>
                 <p className="text-xs text-muted-foreground group-hover:text-brand/70 transition-colors duration-200">
-                  john@company.com
+                  {loading ? "" : (profile?.email || "No email")}
                 </p>
               </div>
             </div>

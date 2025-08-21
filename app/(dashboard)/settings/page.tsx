@@ -1,3 +1,5 @@
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,14 +9,83 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import { useUserProfile } from "@/hooks/use-user-profile"
+import { useState, useEffect } from "react"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CheckCircle, Upload } from "lucide-react"
 
 export default function SettingsPage() {
+  const { profile, loading, getInitials, updateProfile } = useUserProfile()
+  const [formData, setFormData] = useState({
+    full_name: "",
+    phone: "",
+    avatar_url: ""
+  })
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+
+  // Initialize form data when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || "",
+        phone: profile.phone || "",
+        avatar_url: profile.avatar_url || ""
+      })
+    }
+  }, [profile])
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleProfileUpdate = async () => {
+    setIsUpdating(true)
+    setUpdateMessage(null)
+
+    try {
+      const result = await updateProfile(formData)
+      
+      if (result?.error) {
+        setUpdateMessage({ type: 'error', message: result.error })
+      } else {
+        setUpdateMessage({ type: 'success', message: 'Profile updated successfully!' })
+        setTimeout(() => setUpdateMessage(null), 3000)
+      }
+    } catch (error) {
+      setUpdateMessage({ type: 'error', message: 'Failed to update profile' })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-brand/10 to-transparent p-6 rounded-2xl border border-brand/20">
         <h1 className="text-3xl font-bold tracking-tight text-brand">Settings</h1>
         <p className="text-muted-foreground">Manage your account and application preferences</p>
       </div>
+
+      {updateMessage && (
+        <Alert className={updateMessage.type === 'success' ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription className={updateMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}>
+            {updateMessage.message}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4 rounded-2xl bg-brand/5 border border-brand/20">
@@ -55,14 +126,17 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-20 w-20 hover:scale-110 hover:ring-4 hover:ring-brand/30 transition-all duration-300">
-                  <AvatarImage src="/placeholder-40x40.png" />
-                  <AvatarFallback className="bg-brand/10 text-brand text-xl">JD</AvatarFallback>
+                  <AvatarImage src={profile?.avatar_url || "/placeholder-40x40.png"} />
+                  <AvatarFallback className="bg-brand/10 text-brand text-xl">
+                    {getInitials()}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
                   <Button
                     variant="outline"
                     className="rounded-xl bg-brand/5 border-brand/30 hover:bg-brand hover:text-white hover:scale-105 transition-all duration-200"
                   >
+                    <Upload className="h-4 w-4 mr-2" />
                     Change Avatar
                   </Button>
                   <p className="text-sm text-muted-foreground mt-2">JPG, GIF or PNG. 1MB max.</p>
@@ -71,54 +145,67 @@ export default function SettingsPage() {
 
               <Separator className="bg-brand/20" />
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-brand/80 font-medium">
-                    First Name
+                  <Label htmlFor="full_name" className="text-brand/80 font-medium">
+                    Full Name
                   </Label>
                   <Input
-                    id="firstName"
-                    defaultValue="John"
+                    id="full_name"
+                    value={formData.full_name}
+                    onChange={(e) => handleInputChange('full_name', e.target.value)}
                     className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20 hover:border-brand/40 transition-all duration-200"
+                    placeholder="Enter your full name"
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-brand/80 font-medium">
-                    Last Name
+                  <Label htmlFor="email" className="text-brand/80 font-medium">
+                    Email
                   </Label>
                   <Input
-                    id="lastName"
-                    defaultValue="Doe"
+                    id="email"
+                    type="email"
+                    value={profile?.email || ""}
+                    disabled
+                    className="rounded-xl border-brand/20 bg-muted text-muted-foreground"
+                  />
+                  <p className="text-sm text-muted-foreground">Email cannot be changed here. Contact support if needed.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-brand/80 font-medium">
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
                     className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20 hover:border-brand/40 transition-all duration-200"
+                    placeholder="Enter your phone number"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="role" className="text-brand/80 font-medium">
+                    Role
+                  </Label>
+                  <Input
+                    id="role"
+                    value={profile?.role || "user"}
+                    disabled
+                    className="rounded-xl border-brand/20 bg-muted text-muted-foreground capitalize"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-brand/80 font-medium">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  defaultValue="john@company.com"
-                  className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20 hover:border-brand/40 transition-all duration-200"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="company" className="text-brand/80 font-medium">
-                  Company
-                </Label>
-                <Input
-                  id="company"
-                  defaultValue="Acme Corp"
-                  className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20 hover:border-brand/40 transition-all duration-200"
-                />
-              </div>
-
-              <Button className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl">
-                Save Changes
+              <Button 
+                onClick={handleProfileUpdate}
+                disabled={isUpdating}
+                className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                {isUpdating && <LoadingSpinner className="mr-2" size="sm" />}
+                {isUpdating ? 'Saving...' : 'Save Changes'}
               </Button>
             </CardContent>
           </Card>
