@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { HeadphonesIcon, Eye, EyeOff, CheckCircle } from "lucide-react"
+import { SignupSchema } from "@/lib/validations"
+import axios from "axios";
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -20,8 +22,9 @@ export default function SignUpPage() {
     password: "",
     confirmPassword: "",
     fullName: "",
-    companyName: "",
+    phone: "",
   })
+
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -60,32 +63,49 @@ export default function SignUpPage() {
     }
 
     try {
+      const validated = SignupSchema.parse({
+        full_name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // 🔑 Step 1: Use Supabase's auth.signUp() for authentication only.
+      // We are no longer passing profile data here.
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullName,
-            company_name: formData.companyName,
-          },
-        },
-      })
+      });
 
       if (error) {
         setError(error.message)
+        setLoading(false) // Set loading to false on error
         return
       }
 
+      console.log("Supabase sign up data:", data.user)
+
       if (data.user) {
-        setSuccess(true)
-        // If email confirmation is disabled or user is immediately confirmed, redirect to onboarding
+        // ✅ Step 2: After successful Supabase signup,
+        // call your API to save the profile info.
+        // We pass the user's unique ID to link the tables.
+        await axios.post("/api/auth/signup", {
+          userId: data.user.id,
+          fullName: formData.fullName,
+          phone: formData.phone,
+          email: formData.email,
+        });
+
+        setSuccess(true);
+
         if (data.session) {
           setTimeout(() => {
-            router.push("/onboarding")
-          }, 2000)
+            router.push("/onboarding");
+          }, 2000);
         }
       }
+
     } catch (err) {
+      console.error(err);
       setError("An unexpected error occurred")
     } finally {
       setLoading(false)
@@ -114,15 +134,18 @@ export default function SignUpPage() {
               </div>
               <div className="space-y-2">
                 <Button onClick={() => router.push("/onboarding")} className="w-full bg-brand hover:bg-brand/90">
-                  Start Setup Process
+                  Setup Company
                 </Button>
-                <Button
+                <Button variant="outline" onClick={() => router.push("/join")} className="w-full border-brand/30 hover:bg-brand/10 hover:text-brand">
+                  Join Company
+                </Button>
+                {/* <Button
                   variant="outline"
                   onClick={() => router.push("/dashboard")}
                   className="w-full border-brand/30 hover:bg-brand/10 hover:text-brand"
                 >
                   Skip Setup (Go to Dashboard)
-                </Button>
+                </Button> */}
               </div>
             </div>
           </CardContent>
@@ -154,42 +177,42 @@ export default function SignUpPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
-              <Alert variant="destructive">
+              <Alert className="border-red-500 bg-red-300 text-red-700">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
             <form onSubmit={handleSignUp} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-brand/80 font-medium">
-                    Full Name
-                  </Label>
-                  <Input
-                    id="fullName"
-                    name="fullName"
-                    placeholder="John Doe"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    required
-                    disabled={loading}
-                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyName" className="text-brand/80 font-medium">
-                    Company
-                  </Label>
-                  <Input
-                    id="companyName"
-                    name="companyName"
-                    placeholder="Acme Inc"
-                    value={formData.companyName}
-                    onChange={handleInputChange}
-                    disabled={loading}
-                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
-                  />
-                </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fullName" className="text-brand/80 font-medium">
+                  Full Name
+                </Label>
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  placeholder="John Doe"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  required
+                  disabled={loading}
+                  className="border-brand/20 focus:border-brand focus:ring-brand/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone``" className="text-brand/80 font-medium">
+                  Phone Number
+                </Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  placeholder="(123) 456-7890"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  disabled={loading}
+                  className="border-brand/20 focus:border-brand focus:ring-brand/20"
+                />
               </div>
 
               <div className="space-y-2">
@@ -208,6 +231,8 @@ export default function SignUpPage() {
                   className="border-brand/20 focus:border-brand focus:ring-brand/20"
                 />
               </div>
+
+
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-brand/80 font-medium">

@@ -10,5 +10,10 @@ export function createClient() {
     )
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,   // ensures session is saved in localStorage
+      autoRefreshToken: true, // automatically refresh JWT when expired
+    }
+  })
 }
