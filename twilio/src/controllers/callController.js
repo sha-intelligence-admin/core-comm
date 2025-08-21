@@ -13,22 +13,25 @@ export const voiceCall = async (req, res) => {
   try {
     const twiml = new twilio.twiml.VoiceResponse();
 
-    const gather = twiml.gather({
-      action: 'api/calls/user-input',
-      method: 'POST',
-      numDigits: 1,
-      timeout: 10,
+    //start stream to get real time audio
+    const start = twiml.start();
+    start.stream({
+      name: 'speech-recognition-stream',
+      url: `wss:${req.headers.host}/api/calls/media-stream`,
     });
 
-    gather.say(
+    //initial greeting
+    twiml.say(
       {
         voice: 'alice',
         language: 'en-US',
       },
-      'Hello Welcome to our demo. Press 1 for more information, or 2 to leave a message, or 3 to speak with an agent.'
+      'Hello Welcome to our demo. How can I assist you today?'
     );
 
-    twiml.say("Sorry, I didn't get that. Goodbye!");
+    twiml.pause({
+      length: 30,
+    });
 
     res.type('text/xml');
     res.send(twiml.toString());
@@ -96,4 +99,25 @@ export const handleRecording = async (req, res) => {
     console.error('Error handling recording:', error);
     res.status(500).send('Error handling recording');
   }
+};
+
+export const reEnterStream = async (req, res) => {
+    console.log('Re-entering media stream');
+    try {
+        const twiml = new twilio.twiml.VoiceResponse();
+        
+        const start = twiml.start();
+        start.stream({
+            name: 'speech-recognition-stream',
+            url: `wss://${req.headers.host}/api/calls/media-stream`,
+        });
+
+        twiml.pause({ length: 30 }); // Pause to listen for the user's next response
+
+        res.type('text/xml');
+        res.send(twiml.toString());
+    } catch (error) {
+        console.error('Error re-entering media stream:', error);
+        res.status(500).send('Error re-entering media stream');
+    }
 };
