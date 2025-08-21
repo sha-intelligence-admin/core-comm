@@ -17,21 +17,24 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     // Step 1: Company Info
+    companyName: "",
+    description: "",
     companySize: "",
     industry: "",
-    supportVolume: "",
-    currentSolution: "",
 
     // Step 2: Phone Setup
+    supportVolume: "",
+    currentSolution: "",
     phoneNumber: "",
     businessHours: "",
+    customHours: "",
     timezone: "",
 
     // Step 3: Integration Setup
-    integrationName: "",
-    mcpEndpoint: "",
-    apiKey: "",
-    knowledgeBase: "",
+    // integrationName: "",
+    // mcpEndpoint: "",
+    // apiKey: "",
+    // knowledgeBase: "",
 
     // Step 4: Goals
     primaryGoals: [] as string[],
@@ -53,14 +56,14 @@ export default function OnboardingPage() {
       description: "Set up your customer support line",
       icon: Phone,
     },
+    // {
+    //   id: 3,
+    //   title: "Knowledge Integration",
+    //   description: "Connect your knowledge sources",
+    //   icon: Server,
+    // },
     {
       id: 3,
-      title: "Knowledge Integration",
-      description: "Connect your knowledge sources",
-      icon: Server,
-    },
-    {
-      id: 4,
       title: "Goals & Preferences",
       description: "Define your success metrics",
       icon: Target,
@@ -72,7 +75,7 @@ export default function OnboardingPage() {
   }
 
   const handleNext = () => {
-    if (currentStep < 4) {
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1)
     } else {
       // Complete onboarding
@@ -80,11 +83,15 @@ export default function OnboardingPage() {
     }
   }
 
-  const handleSkip = () => {
-    router.push("/dashboard")
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    } else {
+      router.push("/dashboard")
+    }
   }
 
-  const progress = (currentStep / 4) * 100
+  const progress = (currentStep / 3) * 100
 
   const toggleGoal = (goal: string) => {
     const currentGoals = formData.primaryGoals
@@ -114,7 +121,7 @@ export default function OnboardingPage() {
 
         <div className="space-y-4">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Step {currentStep} of 4</span>
+            <span>Step {currentStep} of 3</span>
             <span>{Math.round(progress)}% complete</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -133,6 +140,51 @@ export default function OnboardingPage() {
           <CardContent className="space-y-6">
             {currentStep === 1 && (
               <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="companyName" className="text-brand/80 font-medium">
+                    Company Name
+                  </Label>
+                  <Input
+                    id="companyName"
+                    name="companyName"
+                    placeholder="Company Name"
+                    value={formData.companyName}
+                    onChange={(e) => handleInputChange("companyName", e.target.value)}
+                    required
+                    // disabled={loading}
+                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-brand/80 font-medium">
+                    Company Description
+                  </Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    placeholder="Company Description"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    required
+                    // disabled={loading}
+                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
+                  />
+                </div>
+                {/* <div className="space-y-2">
+                  <Label htmlFor="currentVolume" className="text-brand/80 font-medium">
+                    Current Support Volume
+                  </Label>
+                  <Input
+                    id="currentVolume"
+                    name="currentVolume"
+                    placeholder="Current Support Volume"
+                    value={formData.supportVolume}
+                    onChange={(e) => handleInputChange("supportVolume", e.target.value)}
+                    required
+                    // disabled={loading}
+                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
+                  />
+                </div> */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="companySize" className="text-brand/80 font-medium">
@@ -146,11 +198,10 @@ export default function OnboardingPage() {
                         <SelectValue placeholder="Select company size" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1-10">1-10 employees</SelectItem>
-                        <SelectItem value="11-50">11-50 employees</SelectItem>
-                        <SelectItem value="51-200">51-200 employees</SelectItem>
-                        <SelectItem value="201-1000">201-1000 employees</SelectItem>
-                        <SelectItem value="1000+">1000+ employees</SelectItem>
+                        <SelectItem value="1-10">Small</SelectItem>
+                        <SelectItem value="11-50">Medium</SelectItem>
+                        <SelectItem value="51-200">Large</SelectItem>
+
                       </SelectContent>
                     </Select>
                   </div>
@@ -173,6 +224,42 @@ export default function OnboardingPage() {
                     </Select>
                   </div>
                 </div>
+                {/* <div className="space-y-2">
+                  <Label htmlFor="supportVolume" className="text-brand/80 font-medium">
+                    Current Support Volume
+                  </Label>
+                  <Select
+                    value={formData.supportVolume}
+                    onValueChange={(value) => handleInputChange("supportVolume", value)}
+                  >
+                    <SelectTrigger className="rounded-xl border-brand/20 focus:border-brand">
+                      <SelectValue placeholder="How many support requests per month?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0-100">0-100 requests</SelectItem>
+                      <SelectItem value="101-500">101-500 requests</SelectItem>
+                      <SelectItem value="501-2000">501-2000 requests</SelectItem>
+                      <SelectItem value="2000+">2000+ requests</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="currentSolution" className="text-brand/80 font-medium">
+                    Current Solution
+                  </Label>
+                  <Textarea
+                    id="currentSolution"
+                    placeholder="Tell us about your current customer support setup..."
+                    value={formData.currentSolution}
+                    onChange={(e) => handleInputChange("currentSolution", e.target.value)}
+                    className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20"
+                  />
+                </div> */}
+              </div>
+            )}
+
+            {currentStep === 2 && (
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="supportVolume" className="text-brand/80 font-medium">
                     Current Support Volume
@@ -204,11 +291,6 @@ export default function OnboardingPage() {
                     className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20"
                   />
                 </div>
-              </div>
-            )}
-
-            {currentStep === 2 && (
-              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber" className="text-brand/80 font-medium">
                     Phone Number
@@ -242,6 +324,21 @@ export default function OnboardingPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* {formData.businessHours === 'custom' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="customHours" className="text-brand/80 font-medium">
+                        Specify Custom Hours
+                      </Label>
+                      <Input
+                        type="text"
+                        id="customHours"
+                        value={formData.customHours}
+                        onChange={(e) => handleInputChange("customHours", e.target.value)}
+                        placeholder="e.g., Mon-Fri, 10am-6pm"
+                        className="rounded-xl border-brand/20 focus:border-brand"
+                      />
+                    </div>
+                  )} */}
                   <div className="space-y-2">
                     <Label htmlFor="timezone" className="text-brand/80 font-medium">
                       Timezone
@@ -271,7 +368,7 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {currentStep === 3 && (
+            {/* {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="integrationName" className="text-brand/80 font-medium">
@@ -330,9 +427,9 @@ export default function OnboardingPage() {
                   Test Connection
                 </Button>
               </div>
-            )}
+            )} */}
 
-            {currentStep === 4 && (
+            {currentStep === 3 && (
               <div className="space-y-6">
                 <div className="space-y-4">
                   <Label className="text-brand/80 font-medium">Primary Goals (Select all that apply)</Label>
@@ -342,11 +439,10 @@ export default function OnboardingPage() {
                         key={goal}
                         type="button"
                         variant={formData.primaryGoals.includes(goal) ? "default" : "outline"}
-                        className={`rounded-xl text-left justify-start h-auto p-3 ${
-                          formData.primaryGoals.includes(goal)
-                            ? "bg-brand text-white"
-                            : "border-brand/30 hover:bg-brand/10 hover:text-brand bg-transparent"
-                        }`}
+                        className={`rounded-xl text-left justify-start h-auto p-3 ${formData.primaryGoals.includes(goal)
+                          ? "bg-brand text-white"
+                          : "border-brand/30 hover:bg-brand/10 hover:text-brand bg-transparent"
+                          }`}
                         onClick={() => toggleGoal(goal)}
                       >
                         {goal}
@@ -390,9 +486,15 @@ export default function OnboardingPage() {
             )}
 
             <div className="flex justify-between pt-4">
-              <Button variant="ghost" onClick={handleSkip} className="rounded-xl hover:bg-brand/10 hover:text-brand">
-                Skip Setup
-              </Button>
+              {currentStep > 1 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleBack}
+                  className="rounded-xl hover:bg-brand/10 hover:text-brand"
+                >
+                  Back
+                </Button>
+              )}
               <Button onClick={handleNext} className="rounded-xl bg-brand hover:bg-brand/90">
                 {currentStep === 4 ? "Complete Setup" : "Continue"}
               </Button>
