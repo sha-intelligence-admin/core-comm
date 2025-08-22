@@ -2,6 +2,12 @@ import { WebSocketServer } from 'ws';
 import twilio from 'twilio';
 import { LiveTranscriptionEvents, LiveTTSEvents } from '@deepgram/sdk';
 import { start } from 'repl';
+import { createClient as createClientSupabase } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase = createClientSupabase(supabaseUrl, supabaseKey);
 
 let deepgramConnection = null;
 
@@ -11,12 +17,28 @@ export const initializeWebSocket = (server, deepgram, activeCalls) => {
 
   wss.on('connection', (ws, req) => {
     if (req.url === '/api/calls/media-stream') {
-      handleMediaStream(ws, deepgram, activeCalls);
+      const params = new URLSearchParams(req.url.split('?')[1]);
+      const callerNumber = params.get('From');
+      const receivingNumber = params.get('To');
+
+      handleMediaStream(
+        ws,
+        deepgram,
+        activeCalls,
+        callerNumber,
+        receivingNumber
+      );
     }
   });
 };
 
-function handleMediaStream(ws, deepgram, activeCalls) {
+function handleMediaStream(
+  ws,
+  deepgram,
+  activeCalls,
+  callerNumber,
+  receivingNumber
+) {
   console.log('Media Stream Connected');
   let callSid = null;
   let streamSid = null; // This single handler correctly manages all incoming messages
@@ -69,7 +91,17 @@ function handleMediaStream(ws, deepgram, activeCalls) {
   ws.on('close', () => {
     console.log('WebSocket connection closed');
     if (callSid) {
-      activeCalls.delete(callSid);
+      const callSession = activeCalls.get(callSid);
+      if (callSession) {
+        // Log the conversation before deleting the session
+        logConversation(
+          callerNumber,
+          receivingNumber,
+          callSession.startTime,
+          callSession.transcripts
+        );
+        activeCalls.delete(callSid);
+      }
     }
     if (deepgramConnection) {
       deepgramConnection.finish();
@@ -175,7 +207,6 @@ function generateSimpleResponse(transcript) {
   } else if (lowerTranscript.includes('help')) {
     return 'Sure, I can help you with that. What do you need assistance with?';
   } else if (lowerTranscript.includes('about')) {
-    
     return 'Sha Intelligence builds safe, secure, and privacy-first AI systems by design to serve people, not exploit them.';
   } else if (lowerTranscript.includes('problem')) {
     return 'The problem is that most AI systems today overlook safety, privacy, and human alignment, which puts people and organizations at risk.';
@@ -274,4 +305,59 @@ function createCallSession(callSid, streamSid, ws) {
       nextStep: null,
     },
   };
+}
+
+// this function will handle logging the conversation
+// only for inbound calls
+// only caller numbers, recipient numbers, transcript, duration for now.
+// more fields can be added later (start time, Sid...)
+// for now, the function will use the recipient number to find the company
+async function logConversation(
+  callerNumber,
+  receivingNumber,
+  startTime,
+  transcripts
+) {
+  try {
+    const endTime = new Date();
+    const durationSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+
+    const fullTranscript = transcripts.map((t) => t.text).join(' ');
+
+    const { data: companyData, error: companyError } = await supabase
+      .from('company')
+      .select('id')
+      .contains('phone_numbers', [receivingNumber])
+      .limit(1);
+
+    if (companyError) {
+      console.error('Error finding company:', companyError);
+      return;
+    }
+
+    if (!companyData || companyData.length === 0) {
+      console.log(`No company found for number: ${receivingNumber}`);
+      return; // Proceed with logging the call, but company_id will be null
+    }
+
+    const companyId =
+      companyData && companyData.length > 0 ? companyData[0].id : null;
+
+    const { error } = await supabase.from('calls').insert({
+      company_id: companyId,
+      caller_number: callerNumber,
+      recipient_number: receivingNumber,
+      duration: durationSeconds,
+      transcript: fullTranscript,
+      call_type: 'in-bound',
+    });
+
+    if (error) {
+      console.error('Error logging conversation:', error);
+    } else {
+      console.log(`Conversation logged successfully.`);
+    }
+  } catch (e) {
+    console.error('Database error during logging:', e);
+  }
 }

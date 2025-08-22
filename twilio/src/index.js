@@ -1,11 +1,11 @@
 import express from 'express';
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import twilio from 'twilio';
 import { initializeWebSocket } from './websocket.js';
 import { createClient } from '@deepgram/sdk';
 import http from 'http';
 
-dotenv.config();
+// dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
@@ -27,5 +27,5 @@ server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`phone number: ${process.env.PHONE_NUMBER}`);
   console.log('speech recognition is enabled');
-  console.log("make sure to update your Twilio webhook URL");
+  console.log('make sure to update your Twilio webhook URL');
 });
