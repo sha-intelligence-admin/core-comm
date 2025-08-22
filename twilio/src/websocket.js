@@ -3,6 +3,7 @@ import twilio from 'twilio';
 import { LiveTranscriptionEvents, LiveTTSEvents } from '@deepgram/sdk';
 import { start } from 'repl';
 import { createClient as createClientSupabase } from '@supabase/supabase-js';
+import qna from './npl/nlp-kb';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -196,39 +197,27 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
 }
 
 //enhanced response generation to answer questions about sha Intelligence
-function generateSimpleResponse(transcript) {
+// now uses nlp.js nlu model. Check src/nlp/README.md for more information
+async function generateSimpleResponse(transcript) {
   console.log(`Generating simple response for transcript: ${transcript}`);
   const lowerTranscript = transcript.toLowerCase();
 
+  // First, check for simple greetings and farewells as these are common and
+  // don't require the full knowledge base lookup.
   if (lowerTranscript.includes('hello')) {
     return 'Hi there! How can I assist you today?';
   } else if (lowerTranscript.includes('bye')) {
     return 'Goodbye! Have a great day!';
   } else if (lowerTranscript.includes('help')) {
     return 'Sure, I can help you with that. What do you need assistance with?';
-  } else if (lowerTranscript.includes('about')) {
-    return 'Sha Intelligence builds safe, secure, and privacy-first AI systems by design to serve people, not exploit them.';
-  } else if (lowerTranscript.includes('problem')) {
-    return 'The problem is that most AI systems today overlook safety, privacy, and human alignment, which puts people and organizations at risk.';
-  } else if (lowerTranscript.includes('solution')) {
-    return 'The solution is to build decentralized AI systems that are safe, secure, and privacy-first. This puts people in control and aligns intelligence with human values.';
-  } else if (lowerTranscript.includes('business model')) {
-    return 'Our business model is a scalable B2B model that generates revenue through a multi-faceted approach, including a subscription-based model, enterprise licensing, and custom API deployments.';
-  } else if (
-    lowerTranscript.includes('revenue') ||
-    lowerTranscript.includes('traction')
-  ) {
-    return 'So far, we have generated over $150,000 in revenue from pilot subscriptions and API access, specifically on Core Comm.';
-  } else if (lowerTranscript.includes('market size')) {
-    return 'According to Precedence Research, the market size for AI is projected to reach $3.68 trillion by 2034.';
-  } else if (lowerTranscript.includes('team')) {
-    return "Our team includes Ibrahim BK as Founder and CEO, Ibrahim B Balogun as Head of Security, Yaqub Ja'e as Co-Founder and CTO, and Neemah Lawal as Co-Founder and COO.";
-  } else if (lowerTranscript.includes('contact')) {
-    return 'You can find more information on our website at shaintelligence.com, email us at info@shaintelligence.com, or call us at +44 7853 257472.';
-  } else if (lowerTranscript.includes('pricing')) {
-    return 'Pricing is available upon request.';
-  } else if (lowerTranscript.includes('user growth')) {
-    return 'We have a user growth rate of 45.86% and have onboarded over 100 users so far.';
+  }
+
+  const result = await qna.getBestAnswer('en', lowerTranscript);
+
+  // If a good answer is found (confidence above a certain threshold), return it.
+  if (result && result.answer && result.score > 0.7) {
+    console.log(`Knowledge Base matched with confidence: ${result.score}`);
+    return result.answer;
   }
 
   console.log(`No specific response found for transcript: ${transcript}`);
