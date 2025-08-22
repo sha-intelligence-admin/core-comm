@@ -5,17 +5,18 @@
 import { NextRequest } from 'next/server'
 import { createRateLimit } from '@/lib/rate-limit-redis'
 
-// Mock Redis
-jest.mock('redis', () => ({
-  Redis: jest.fn().mockImplementation(() => ({
+// Mock ioredis
+jest.mock('ioredis', () => {
+  return jest.fn().mockImplementation(() => ({
     ping: jest.fn().mockResolvedValue('PONG'),
     multi: jest.fn().mockReturnValue({
       incr: jest.fn().mockReturnThis(),
       expire: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([[null, 1], [null, 'OK']])
-    })
+    }),
+    disconnect: jest.fn().mockResolvedValue(undefined)
   }))
-}))
+})
 
 describe('Rate Limiting', () => {
   beforeEach(() => {

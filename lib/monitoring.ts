@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { captureError, captureMessage, addBreadcrumb } from './sentry'
 
 interface MetricData {
   name: string
@@ -65,6 +66,17 @@ class MonitoringService {
       event,
       user_id: userId || 'anonymous'
     })
+    
+    // Add breadcrumb for Sentry
+    addBreadcrumb(`Auth event: ${event}`, 'auth', event.includes('failure') ? 'warning' : 'info')
+    
+    // Alert on failed logins
+    if (event === 'login_failure') {
+      captureMessage(`Failed login attempt for user: ${userId || 'anonymous'}`, 'warning', {
+        event,
+        userId: userId || 'anonymous'
+      })
+    }
   }
 
   // Record database operations

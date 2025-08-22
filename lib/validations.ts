@@ -58,6 +58,14 @@ export const SignupSchema = z.object({
 });
 
 /**
+ * Zod schema for login form validation.
+ */
+export const LoginSchema = z.object({
+  email: z.string().email('Invalid email address.'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+/**
  * Zod schema for creating a new user profile record.
  * This is meant for a new user profile after auth.users creation.
  */

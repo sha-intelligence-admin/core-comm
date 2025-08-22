@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { captureError, captureMessage } from './sentry'
 
 export interface ApiError extends Error {
   statusCode?: number
@@ -67,16 +68,23 @@ export class DatabaseError extends Error {
 
 // Generic error responses that don't expose internal details
 export function createErrorResponse(error: unknown, fallbackMessage = 'An error occurred'): Response {
+  // Generate error ID for tracking
+  const errorId = generateErrorId()
+  
   // Log detailed error for debugging (only in development or with proper logging service)
   if (process.env.NODE_ENV === 'development') {
     console.error('API Error:', error)
   } else {
     // In production, log to your monitoring service (Sentry, etc.)
     console.error('API Error occurred:', error instanceof Error ? error.message : 'Unknown error')
+    
+    // Send to Sentry for production error tracking
+    if (error instanceof Error) {
+      captureError(error, { errorId })
+    } else {
+      captureMessage(`Unknown error type: ${typeof error}`, 'error', { errorId, error })
+    }
   }
-  
-  // Generate error ID for tracking
-  const errorId = generateErrorId()
   
   if (error instanceof AuthenticationError) {
     return NextResponse.json(

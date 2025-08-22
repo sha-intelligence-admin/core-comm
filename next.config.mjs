@@ -11,6 +11,7 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: [],
+    instrumentationHook: true,
   },
   async headers() {
     return [
