@@ -12,7 +12,7 @@ const supabase = createClientSupabase(supabaseUrl, supabaseKey);
 
 let deepgramConnection = null;
 
-// The function to be exported and called from server.js
+// The function to be exported and called from index.js
 export const initializeWebSocket = (server, deepgram, activeCalls) => {
   const wss = new WebSocketServer({ server });
 
