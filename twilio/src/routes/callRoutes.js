@@ -9,9 +9,17 @@ const router = express.Router();
 // Middleware for Twilio webhook signature verification
 const verifyTwilioSignature = (req, res, next) => {
   const signature = req.headers['x-twilio-signature'];
-  const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
-  
-  if (!signature) {
+//   const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    const url = `https://127799d3057c.ngrok-free.app${req.originalUrl}`;
+    const params = req.body;
+    logger.info("Url Used", { url });
+    logger.info("Signature from Twilio", { signature });
+
+    const isValid = TwilioService.validateWebhookSignature(signature, params, url);
+
+    logger.info("Validation result", { isValid });
+
+  if (!isValid) {
     logger.warn('Missing Twilio signature', { url });
     return res.status(400).json({ error: 'Missing signature' });
   }
