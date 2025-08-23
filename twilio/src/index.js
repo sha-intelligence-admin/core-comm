@@ -1,31 +1,55 @@
 import express from 'express';
 import 'dotenv/config';
-import twilio from 'twilio';
 import { initializeWebSocket } from './websocket.js';
 import { createClient } from '@deepgram/sdk';
 import http from 'http';
+import logger from './services/LoggingService.js';
+import { generalRateLimiter } from './middleware/rateLimiter.js';
 
-// dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
-const activeCalls = new Map(); // store active call sessions
 
+// Middleware
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(generalRateLimiter.middleware()); // Apply general rate limiting
 
 const PORT = process.env.PORT || 3000;
 
+// Routes
 import callRoutes from './routes/callRoutes.js';
+import healthRoutes from './routes/healthRoutes.js';
 
 app.use('/api/calls', callRoutes);
+app.use('/api', healthRoutes);
 
-initializeWebSocket(server, deepgram, activeCalls);
+// Initialize WebSocket (activeCalls now managed by CallSessionManager)
+initializeWebSocket(server, deepgram);
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
+});
 
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`phone number: ${process.env.TWILIO_PHONE_NUMBER}`);
-  console.log('speech recognition is enabled');
-  console.log('make sure to update your Twilio webhook URL');
+  logger.info('Server started', { 
+    port: PORT, 
+    phoneNumber: process.env.TWILIO_PHONE_NUMBER 
+  });
+  logger.info('Speech recognition enabled');
+  logger.info('Health check available at /api/health');
 });

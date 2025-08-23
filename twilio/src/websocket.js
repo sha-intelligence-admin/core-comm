@@ -1,20 +1,38 @@
 import { WebSocketServer } from 'ws';
-import twilio from 'twilio';
-import { LiveTranscriptionEvents, LiveTTSEvents } from '@deepgram/sdk';
-import { start } from 'repl';
-import { createClient as createClientSupabase } from '@supabase/supabase-js';
-import qna from './npl/nlp-kb.js';
+import { LiveTranscriptionEvents } from '@deepgram/sdk';
 import url from 'url';
+import { CONFIG } from './config/config.js';
+import TwilioService from './services/TwilioService.js';
+import DatabaseService from './services/DatabaseService.js';
+import CallSessionManager from './services/CallSessionManager.js';
+import logger from './services/LoggingService.js';
+import { validateWebhookData, sanitizeTranscript, validatePhoneNumbers } from './utils/validation.js';
+import qna from './nlp/nlp-kb.js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Validate environment variables
+function validateEnvironmentVariables() {
+  const missing = CONFIG.REQUIRED_ENV_VARS.filter(varName => !process.env[varName]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+}
 
-const supabase = createClientSupabase(supabaseUrl, supabaseKey);
+// Initialize environment validation
+try {
+  validateEnvironmentVariables();
+  logger.info('Environment validation successful');
+} catch (error) {
+  logger.error('Environment validation failed', { error: error.message });
+  process.exit(1);
+}
 
-let deepgramConnection = null;
+// Initialize services
+const twilioService = new TwilioService();
+
+// Remove global deepgramConnection - now managed per session
 
 // The function to be exported and called from index.js
-export const initializeWebSocket = (server, deepgram, activeCalls) => {
+export const initializeWebSocket = (server, deepgram) => {
   const wss = new WebSocketServer({ server });
 
   wss.on('connection', (ws, req) => {
@@ -30,7 +48,6 @@ export const initializeWebSocket = (server, deepgram, activeCalls) => {
       handleMediaStream(
         ws,
         deepgram,
-        activeCalls,
         callerNumber,
         receivingNumber
       );
@@ -41,89 +58,166 @@ export const initializeWebSocket = (server, deepgram, activeCalls) => {
 function handleMediaStream(
   ws,
   deepgram,
-  activeCalls,
   callerNumber,
   receivingNumber
 ) {
-  console.log('Media Stream Connected');
+  logger.info('Media Stream Connected', { callerNumber, receivingNumber });
   let callSid = null;
-  let streamSid = null; // This single handler correctly manages all incoming messages
+  let streamSid = null;
+  let callSession = null;
+
+  // Set WebSocket timeout
+  const wsTimeout = setTimeout(() => {
+    console.warn(`WebSocket timeout for call ${callSid}, closing connection`);
+    ws.terminate();
+  }, CONFIG.WEBSOCKET_TIMEOUT);
 
   ws.on('message', async (message) => {
     try {
+      // Reset timeout on activity
+      clearTimeout(wsTimeout);
       const data = JSON.parse(message);
+
+      // Validate incoming webhook data
+      validateWebhookData(data);
 
       switch (data.event) {
         case 'connected':
-          console.log('Stream Connected');
+          logger.info('Stream Connected');
           break;
         case 'start':
-          callSid = data.start.callSid; // Corrected to match Twilio payload
-          streamSid = data.start.streamSid; // Corrected to match Twilio payload
+          callSid = data.start.callSid;
+          streamSid = data.start.streamSid;
+          
+          // Validate phone numbers
+          validatePhoneNumbers(callerNumber, receivingNumber);
 
-          console.log(`Stream Started: ${streamSid} for call: ${callSid}`); // Store call session
+          logger.logCallEvent('started', callSid, { streamSid, callerNumber, receivingNumber });
 
-          const newSession = createCallSession(callSid, streamSid, ws);
-          activeCalls.set(callSid, newSession);
+          callSession = CallSessionManager.createCallSession(
+            callSid, 
+            streamSid, 
+            ws, 
+            callerNumber, 
+            receivingNumber
+          );
 
-          deepgramConnection = await startTranscription(
+          const deepgramConnection = await startTranscription(
             callSid,
             ws,
-            deepgram,
-            activeCalls
+            deepgram
           );
+          
+          CallSessionManager.setDeepgramConnection(callSid, deepgramConnection);
           break;
         case 'media': // Send audio to Deepgram
-          if (deepgramConnection && deepgramConnection.getReadyState() === 1) {
-            const audioBuffer = Buffer.from(data.media.payload, 'base64');
-            deepgramConnection.send(audioBuffer);
+          callSession = CallSessionManager.getCallSession(callSid);
+          if (callSession && callSession.deepgramConnection) {
+            const connection = callSession.deepgramConnection;
+            if (typeof connection.getReadyState === 'function' && 
+                connection.getReadyState() === 1) {
+              try {
+                const audioBuffer = Buffer.from(data.media.payload, 'base64');
+                connection.send(audioBuffer);
+                CallSessionManager.updateLastActivity(callSid);
+              } catch (error) {
+                logger.error('Error sending audio to Deepgram', { callSid, error: error.message });
+              }
+            }
+          } else if (callSession && !callSession.deepgramConnection) {
+            logger.warn('Deepgram connection is null, attempting to reconnect', { callSid });
+            const newConnection = await startTranscription(callSid, ws, deepgram);
+            CallSessionManager.setDeepgramConnection(callSid, newConnection);
           }
           break;
         case 'stop':
-          console.log(`Stopped media stream for Call SID: ${callSid}`);
-          if (deepgramConnection) {
-            deepgramConnection.finish();
+          logger.logCallEvent('stopped', callSid);
+          if (callSession) {
+            // Log conversation before cleanup
+            await logConversation(
+              callSession.callerNumber,
+              callSession.receivingNumber,
+              callSession.startTime,
+              callSession.transcripts
+            );
           }
-          activeCalls.delete(callSid);
+          CallSessionManager.removeCallSession(callSid, 'completed');
           break;
         default:
           break;
       }
     } catch (error) {
-      console.error('Error handling media stream:', error);
+      logger.logError(error, { callSid, event: 'message_handling' });
     }
   });
 
-  ws.on('close', () => {
-    console.log('WebSocket connection closed');
+  ws.on('close', async () => {
+    logger.info('WebSocket connection closed', { callSid });
+    clearTimeout(wsTimeout);
+    
     if (callSid) {
-      const callSession = activeCalls.get(callSid);
+      callSession = CallSessionManager.getCallSession(callSid);
       if (callSession) {
-        // Log the conversation before deleting the session
-        // logConversation(
-        //   callerNumber,
-        //   receivingNumber,
-        //   callSession.startTime,
-        //   callSession.transcripts
-        // );
-        activeCalls.delete(callSid);
+        // Log the conversation before cleanup
+        await logConversation(
+          callSession.callerNumber,
+          callSession.receivingNumber,
+          callSession.startTime,
+          callSession.transcripts
+        );
+        CallSessionManager.removeCallSession(callSid, 'disconnected');
       }
     }
-    if (deepgramConnection) {
-      deepgramConnection.finish();
+  });
+
+  ws.on('error', (error) => {
+    logger.logError(error, { callSid, event: 'websocket_error' });
+    if (callSid) {
+      CallSessionManager.removeCallSession(callSid, 'failed');
     }
   });
 }
 
-async function startTranscription(callSid, ws, deepgram, activeCalls) {
+async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
   try {
     deepgramConnection = deepgram.listen.live({
-      model: 'nova-2',
-      language: 'en-US',
+      model: CONFIG.DEEPGRAM_MODEL,
+      language: CONFIG.DEEPGRAM_LANGUAGE,
       smart_format: true,
-      endpointing: 300,
+      endpointing: CONFIG.DEEPGRAM_ENDPOINTING,
       punctuate: true,
       interim_results: true,
+    });
+
+    // Set up connection timeout
+    const connectionTimeout = setTimeout(() => {
+      if (deepgramConnection && deepgramConnection.getReadyState() !== 1) {
+        console.warn('Deepgram connection timeout, retrying...');
+        deepgramConnection.finish();
+        retryDeepgramConnection(callSid, ws, deepgram, activeCalls, retryCount + 1);
+      }
+    }, CONFIG.DEEPGRAM_CONNECTION_TIMEOUT);
+
+    // Connection events handler
+    deepgramConnection.on(LiveTranscriptionEvents.Open, () => {
+      console.log('Deepgram Connected');
+      clearTimeout(connectionTimeout);
+    });
+
+    deepgramConnection.on(LiveTranscriptionEvents.Close, () => {
+      console.log('Deepgram Disconnected');
+      clearTimeout(connectionTimeout);
+    });
+
+    deepgramConnection.on(LiveTranscriptionEvents.Error, (error) => {
+      console.error('Deepgram Error:', error);
+      clearTimeout(connectionTimeout);
+      retryDeepgramConnection(callSid, ws, deepgram, activeCalls, retryCount + 1);
+    });
+
+    deepgramConnection.on(LiveTranscriptionEvents.Timeout, () => {
+      console.warn('Deepgram Timeout');
+      retryDeepgramConnection(callSid, ws, deepgram, activeCalls, retryCount + 1);
     });
 
     //handle transcription result
@@ -131,61 +225,61 @@ async function startTranscription(callSid, ws, deepgram, activeCalls) {
       const transcript = data.channel.alternatives[0];
 
       if (transcript && transcript.transcript.trim()) {
-        console.log('Caller Said:', transcript.transcript);
-        console.log(
-          'Confidentiality Level:',
-          (transcript.confidence * 100).toFixed(1),
-          '%'
-        );
+        const sanitizedText = sanitizeTranscript(transcript.transcript);
+        
+        logger.logTranscript(callSid, sanitizedText, transcript.confidence);
 
         //store transcript
-        const callSession = activeCalls.get(callSid);
-        if (callSession) {
-          callSession.transcripts.push({
-            text: transcript.transcript,
-            confidence: transcript.confidence,
-            time: new Date(),
-          });
-        }
+        CallSessionManager.addTranscript(callSid, {
+          text: sanitizedText,
+          confidence: transcript.confidence
+        });
 
         //process speech and respond
         handleCustomerSpeech(
           callSid,
-          transcript.transcript,
+          sanitizedText,
           transcript.confidence
         );
-
-        //connection events handler
-        // deepgramConnection.on(LiveTranscriptionEvents.Open, () => {
-        //   console.log('Deepgram Connected');
-        // });
-
-        // deepgramConnection.on(LiveTranscriptionEvents.Close, () => {
-        //   console.log('Deepgram Disconnected');
-        // });
-
-        // deepgramConnection.on(LiveTranscriptionEvents.Error, (error) => {
-        //   console.error('Deepgram Error:', error);
-        // });
-
-        // deepgramConnection.on(LiveTranscriptionEvents.Timeout, () => {
-        //   console.warn('Deepgram Timeout');
-        // });
       }
     });
+
+    return deepgramConnection;
   } catch (error) {
-    console.error('Error starting Deepgram connection:', error);
+    logger.logError(error, { callSid, event: 'deepgram_connection_error' });
+    return retryDeepgramConnection(callSid, ws, deepgram, retryCount + 1);
   }
 }
 
-async function handleCustomerSpeech(callSid, transcript, confidence) {
-  console.log(`Handling customer speech for Call SID: ${callSid}`);
-  console.log(`Transcript: ${transcript}`);
-  console.log(`Confidence: ${confidence}`);
+async function retryDeepgramConnection(callSid, ws, deepgram, retryCount) {
+  if (retryCount >= CONFIG.MAX_DEEPGRAM_RETRIES) {
+    logger.error('Max Deepgram retry attempts exceeded', { 
+      callSid, 
+      maxRetries: CONFIG.MAX_DEEPGRAM_RETRIES 
+    });
+    return null;
+  }
 
-  const callSession = activeCalls.get(callSid);
+  logger.info('Retrying Deepgram connection', { 
+    callSid, 
+    attempt: retryCount + 1, 
+    maxRetries: CONFIG.MAX_DEEPGRAM_RETRIES 
+  });
+  
+  return new Promise((resolve) => {
+    setTimeout(async () => {
+      const connection = await startTranscription(callSid, ws, deepgram, retryCount);
+      resolve(connection);
+    }, CONFIG.RETRY_DELAY * retryCount);
+  });
+}
+
+async function handleCustomerSpeech(callSid, transcript, confidence) {
+  logger.debug('Processing customer speech', { callSid, confidence });
+
+  const callSession = CallSessionManager.getCallSession(callSid);
   if (!callSession) {
-    console.log(`No active call session found for Call SID: ${callSid}`);
+    logger.warn('No active call session found', { callSid });
     return;
   }
 
@@ -193,18 +287,18 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
   let response = generateSimpleResponse(transcript.toLowerCase());
 
   // if confidence is low enough, ask for clarification
-  if (confidence < 0.7) {
+  if (confidence < CONFIG.CONFIDENCE_THRESHOLD) {
     response = "I'm sorry, I didn't quite catch that. Could you please repeat?";
   }
 
   // Send the response back to the client
-  await speakToCustomer(callSid, response);
+  await twilioService.speakToCustomer(callSid, response);
 }
 
 //enhanced response generation to answer questions about sha Intelligence
 // now uses nlp.js nlu model. Check src/nlp/README.md for more information
 async function generateSimpleResponse(transcript) {
-  console.log(`Generating simple response for transcript: ${transcript}`);
+  logger.debug('Generating response for transcript', { transcript: transcript.substring(0, 50) });
   const lowerTranscript = transcript.toLowerCase();
 
   // First, check for simple greetings and farewells as these are common and
@@ -220,138 +314,35 @@ async function generateSimpleResponse(transcript) {
   const result = await qna.getBestAnswer('en', lowerTranscript);
 
   // If a good answer is found (confidence above a certain threshold), return it.
-  if (result && result.answer && result.score > 0.7) {
-    console.log(`Knowledge Base matched with confidence: ${result.score}`);
+  if (result && result.answer && result.score > CONFIG.NLP_CONFIDENCE_THRESHOLD) {
+    logger.debug('Knowledge base match found', { confidence: result.score });
     return result.answer;
   }
 
-  console.log(`No specific response found for transcript: ${transcript}`);
+  logger.debug('No specific response found for transcript');
   return "I'm not sure how to respond to that. I'm still learning.";
 }
 
-// this will not send any audio to the caller.
-// async function speakToCustomer(callSid, text) {
-//   console.log(`Speaking to customer for Call SID: ${text}`);
+// Legacy speakToCustomer function - now handled by TwilioService
+// Keeping for reference but functionality moved to services
 
-//   const callSession = activeCalls.get(callSid);
-//   if (!callSession) {
-//     console.log(`No active call session found for Call SID: ${callSid}`);
-//     return;
-//   }
+// Session creation now handled by CallSessionManager
 
-//   try {
-//     // use twilio TTS to generate audio
-//     const twilioClient = twilio(
-//       process.env.TWILIO_ACCOUNT_SID,
-//       process.env.TWILIO_AUTH_TOKEN
-//     );
+// Log conversation using DatabaseService
+async function logConversation(callerNumber, receivingNumber, startTime, transcripts) {
+  if (!callerNumber || !receivingNumber || !transcripts || transcripts.length === 0) {
+    logger.debug('Skipping conversation logging - missing required data');
+    return;
+  }
 
-//     const markEvent = {
-//       event: 'mark',
-//       streamSid: callSession.streamSid,
-//       mark: {
-//         name: 'speech_response',
-//       },
-//     };
-
-//     console.log('Response Sent');
-//   } catch (error) {
-//     console.error('Error sending response:', error);
-//   }
-// }
-
-//this function be able to handle a back-and-forth conversation.
-//After the bot speaks, Twilio will redirect the call back to your server, which will in turn start a new media stream and listen for the caller's next response.
-//This creates the illusion of a continuous, real-time conversation, even though the underlying technology involves a series of connections and disconnections.
-async function speakToCustomer(callSid, text) {
-  console.log(`Speaking to customer for Call SID: ${callSid}`);
   try {
-    const twilioClient = twilio(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
-    );
-
-    const twiml = new twilio.twiml.VoiceResponse();
-    twiml.say({ voice: 'alice' }, text);
-    // Redirect back to the entry point to restart the conversation
-    twiml.redirect('/api/calls/re-enter-stream');
-
-    await twilioClient.calls(callSid).update({
-      twiml: twiml.toString(),
-    });
-
-    console.log('TwiML response sent, call redirected to re-enter stream.');
+    await DatabaseService.logConversation(callerNumber, receivingNumber, startTime, transcripts);
+    logger.info('Conversation logged successfully', { callerNumber, receivingNumber });
   } catch (error) {
-    console.error('Error sending TwiML response:', error);
+    logger.logError(error, { 
+      event: 'conversation_logging_failed', 
+      callerNumber, 
+      receivingNumber 
+    });
   }
 }
-
-function createCallSession(callSid, streamSid, ws) {
-  return {
-    callSid,
-    streamSid,
-    ws,
-    startTime: new Date(),
-    transcripts: [],
-    context: {
-      topic: null,
-      customerInfo: null,
-      nextStep: null,
-    },
-  };
-}
-
-// this function will handle logging the conversation
-// only for inbound calls
-// only caller numbers, recipient numbers, transcript, duration for now.
-// more fields can be added later (start time, Sid...)
-// for now, the function will use the recipient number to find the company
-// async function logConversation(
-//   callerNumber,
-//   receivingNumber,
-//   startTime,
-//   transcripts
-// ) {
-//   try {
-//     const endTime = new Date();
-//     const durationSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-
-//     const fullTranscript = transcripts.map((t) => t.text).join(' ');
-
-//     const { data: companyData, error: companyError } = await supabase
-//       .from('company')
-//       .select('id')
-//       .contains('phone_numbers', [receivingNumber])
-//       .limit(1);
-
-//     if (companyError) {
-//       console.error('Error finding company:', companyError);
-//       return;
-//     }
-
-//     if (!companyData || companyData.length === 0) {
-//       console.log(`No company found for number: ${receivingNumber}`);
-//       return; // Proceed with logging the call, but company_id will be null
-//     }
-
-//     const companyId =
-//       companyData && companyData.length > 0 ? companyData[0].id : null;
-
-//     const { error } = await supabase.from('calls').insert({
-//       company_id: companyId,
-//       caller_number: callerNumber,
-//       recipient_number: receivingNumber,
-//       duration: durationSeconds,
-//       transcript: fullTranscript,
-//       call_type: 'in-bound',
-//     });
-
-//     if (error) {
-//       console.error('Error logging conversation:', error);
-//     } else {
-//       console.log(`Conversation logged successfully.`);
-//     }
-//   } catch (e) {
-//     console.error('Database error during logging:', e);
-//   }
-// }
