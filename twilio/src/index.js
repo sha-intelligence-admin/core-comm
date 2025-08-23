@@ -25,7 +25,7 @@ initializeWebSocket(server, deepgram, activeCalls);
 
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log(`phone number: ${process.env.PHONE_NUMBER}`);
+  console.log(`phone number: ${process.env.TWILIO_PHONE_NUMBER}`);
   console.log('speech recognition is enabled');
   console.log('make sure to update your Twilio webhook URL');
 });

@@ -3,7 +3,8 @@ import twilio from 'twilio';
 import { LiveTranscriptionEvents, LiveTTSEvents } from '@deepgram/sdk';
 import { start } from 'repl';
 import { createClient as createClientSupabase } from '@supabase/supabase-js';
-import qna from './npl/nlp-kb';
+import qna from './npl/nlp-kb.js';
+import url from 'url';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,9 +19,13 @@ export const initializeWebSocket = (server, deepgram, activeCalls) => {
 
   wss.on('connection', (ws, req) => {
     if (req.url === '/api/calls/media-stream') {
-      const params = new URLSearchParams(req.url.split('?')[1]);
-      const callerNumber = params.get('From');
-      const receivingNumber = params.get('To');
+      //   const params = new URLSearchParams(req.url.split('?')[1]);
+      //   const callerNumber = params.get('From');
+      //   const receivingNumber = params.get('To');
+
+      const parsedUrl = url.parse(req.url, true);
+      const callerNumber = parsedUrl.query.From;
+      const receivingNumber = parsedUrl.query.To;
 
       handleMediaStream(
         ws,
@@ -95,12 +100,12 @@ function handleMediaStream(
       const callSession = activeCalls.get(callSid);
       if (callSession) {
         // Log the conversation before deleting the session
-        logConversation(
-          callerNumber,
-          receivingNumber,
-          callSession.startTime,
-          callSession.transcripts
-        );
+        // logConversation(
+        //   callerNumber,
+        //   receivingNumber,
+        //   callSession.startTime,
+        //   callSession.transcripts
+        // );
         activeCalls.delete(callSid);
       }
     }
@@ -110,7 +115,7 @@ function handleMediaStream(
   });
 }
 
-async function startTranscription(callSid, ws) {
+async function startTranscription(callSid, ws, deepgram, activeCalls) {
   try {
     deepgramConnection = deepgram.listen.live({
       model: 'nova-2',
@@ -151,21 +156,21 @@ async function startTranscription(callSid, ws) {
         );
 
         //connection events handler
-        deepgramConnection.on(LiveTranscriptionEvents.Open, () => {
-          console.log('Deepgram Connected');
-        });
+        // deepgramConnection.on(LiveTranscriptionEvents.Open, () => {
+        //   console.log('Deepgram Connected');
+        // });
 
-        deepgramConnection.on(LiveTranscriptionEvents.Close, () => {
-          console.log('Deepgram Disconnected');
-        });
+        // deepgramConnection.on(LiveTranscriptionEvents.Close, () => {
+        //   console.log('Deepgram Disconnected');
+        // });
 
-        deepgramConnection.on(LiveTranscriptionEvents.Error, (error) => {
-          console.error('Deepgram Error:', error);
-        });
+        // deepgramConnection.on(LiveTranscriptionEvents.Error, (error) => {
+        //   console.error('Deepgram Error:', error);
+        // });
 
-        deepgramConnection.on(LiveTranscriptionEvents.Timeout, () => {
-          console.warn('Deepgram Timeout');
-        });
+        // deepgramConnection.on(LiveTranscriptionEvents.Timeout, () => {
+        //   console.warn('Deepgram Timeout');
+        // });
       }
     });
   } catch (error) {
@@ -301,52 +306,52 @@ function createCallSession(callSid, streamSid, ws) {
 // only caller numbers, recipient numbers, transcript, duration for now.
 // more fields can be added later (start time, Sid...)
 // for now, the function will use the recipient number to find the company
-async function logConversation(
-  callerNumber,
-  receivingNumber,
-  startTime,
-  transcripts
-) {
-  try {
-    const endTime = new Date();
-    const durationSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+// async function logConversation(
+//   callerNumber,
+//   receivingNumber,
+//   startTime,
+//   transcripts
+// ) {
+//   try {
+//     const endTime = new Date();
+//     const durationSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
 
-    const fullTranscript = transcripts.map((t) => t.text).join(' ');
+//     const fullTranscript = transcripts.map((t) => t.text).join(' ');
 
-    const { data: companyData, error: companyError } = await supabase
-      .from('company')
-      .select('id')
-      .contains('phone_numbers', [receivingNumber])
-      .limit(1);
+//     const { data: companyData, error: companyError } = await supabase
+//       .from('company')
+//       .select('id')
+//       .contains('phone_numbers', [receivingNumber])
+//       .limit(1);
 
-    if (companyError) {
-      console.error('Error finding company:', companyError);
-      return;
-    }
+//     if (companyError) {
+//       console.error('Error finding company:', companyError);
+//       return;
+//     }
 
-    if (!companyData || companyData.length === 0) {
-      console.log(`No company found for number: ${receivingNumber}`);
-      return; // Proceed with logging the call, but company_id will be null
-    }
+//     if (!companyData || companyData.length === 0) {
+//       console.log(`No company found for number: ${receivingNumber}`);
+//       return; // Proceed with logging the call, but company_id will be null
+//     }
 
-    const companyId =
-      companyData && companyData.length > 0 ? companyData[0].id : null;
+//     const companyId =
+//       companyData && companyData.length > 0 ? companyData[0].id : null;
 
-    const { error } = await supabase.from('calls').insert({
-      company_id: companyId,
-      caller_number: callerNumber,
-      recipient_number: receivingNumber,
-      duration: durationSeconds,
-      transcript: fullTranscript,
-      call_type: 'in-bound',
-    });
+//     const { error } = await supabase.from('calls').insert({
+//       company_id: companyId,
+//       caller_number: callerNumber,
+//       recipient_number: receivingNumber,
+//       duration: durationSeconds,
+//       transcript: fullTranscript,
+//       call_type: 'in-bound',
+//     });
 
-    if (error) {
-      console.error('Error logging conversation:', error);
-    } else {
-      console.log(`Conversation logged successfully.`);
-    }
-  } catch (e) {
-    console.error('Database error during logging:', e);
-  }
-}
+//     if (error) {
+//       console.error('Error logging conversation:', error);
+//     } else {
+//       console.log(`Conversation logged successfully.`);
+//     }
+//   } catch (e) {
+//     console.error('Database error during logging:', e);
+//   }
+// }

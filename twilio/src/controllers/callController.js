@@ -13,11 +13,18 @@ export const voiceCall = async (req, res) => {
   try {
     const twiml = new twilio.twiml.VoiceResponse();
 
-    //start stream to get real time audio
+    const fromNumber = req.body.From ? req.body.From.trim() : '';
+    const toNumber = req.body.To ? req.body.To.trim() : '';
+    const websocketUrl = `wss://${req.headers.host}/api/calls/media-stream?From=${encodeURIComponent(fromNumber)}&To=${encodeURIComponent(toNumber)}`;
+    console.log('WebSocket URL:', websocketUrl);
+    console.log('From (clean):', fromNumber);
+    console.log('To (clean):', toNumber);
+    
+    // Start stream to get real time audio
     const start = twiml.start();
     start.stream({
       name: 'speech-recognition-stream',
-      url: `wss:${req.headers.host}/api/calls/media-stream`,
+      url: websocketUrl, // Fixed URL with parameters
     });
 
     //initial greeting
@@ -26,17 +33,23 @@ export const voiceCall = async (req, res) => {
         voice: 'alice',
         language: 'en-US',
       },
-      'Hello Welcome to our demo. How can I assist you today?'
+      'Hello, Welcome to our demo. How can I assist you today?'
     );
 
     twiml.pause({
-      length: 30,
+      length: 10,
     });
 
+    const twimlString = twiml.toString();
+    console.log('Generated TwiML:', twimlString);
+    
+    // Send response
     res.type('text/xml');
-    res.send(twiml.toString());
+    res.send(twimlString);
   } catch (error) {
     console.error('Error handling voice call:', error);
+    const fallbackTwiml = new twilio.twiml.VoiceResponse();
+    fallbackTwiml.say('Sorry, there was an error. Please try again later.');
     res.status(500).send('Error handling voice call');
   }
 };
@@ -59,7 +72,7 @@ export const UserInput = async (req, res) => {
       case '2':
         twiml.say('You Pressed 2. Please leave your message after the beep.');
         twiml.record({
-          action: 'api/calls/handle-recording',
+          action: '/api/calls/handle-recording',
           method: 'POST',
           maxLength: 30,
           playBeep: true,
