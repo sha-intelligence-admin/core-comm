@@ -16,23 +16,241 @@ import OpenAIService from './services/OpenAIService.js';
 import ElevenLabsService from './services/ElevenLabsService.js';
 
 // Call ending detection patterns
-const CALL_END_PATTERNS = [
-  // Direct goodbye phrases
-  /\b(goodbye|bye|see you|farewell|talk to you later|ttyl)\b/i,
-  /\b(good bye|bye bye|see ya|catch you later)\b/i,
+const COMPREHENSIVE_CALL_END_PATTERNS = [
+  // ==========================================
+  // DIRECT GOODBYE PHRASES
+  // ==========================================
+  
+  // Basic goodbyes
+  /\b(goodbye|bye|see you|farewell|talk to you later|ttyl|cya|see ya)\b/i,
+  /\b(good bye|bye bye|bye now|goodbye now|see you later|talk soon)\b/i,
+  /\b(catch you later|until next time|take it easy|peace out)\b/i,
+  
+  // Formal endings
+  /\b(good day|good evening|good afternoon|good morning)\b.*\b(sir|ma'am|have a|wish you)\b/i,
+  /\b(thank you and goodbye|thanks and bye|appreciate it, bye)\b/i,
 
-  // End call requests
-  /\b(end the call|hang up|disconnect|finish the call)\b/i,
-  /\b(that's all|i'm done|we're done|nothing else)\b/i,
-  /\b(end this|stop the call|terminate)\b/i,
+  // ==========================================
+  // COMPLETION & SATISFACTION SIGNALS
+  // ==========================================
+  
+  // Task completion
+  /\b(that's all|that's everything|that's it|i'm done|we're done|i'm finished)\b/i,
+  /\b(nothing else|no more questions|that covers it|that's sufficient)\b/i,
+  /\b(that answers everything|that's what i needed|perfect, thanks)\b/i,
+  /\b(that helps|that works|that's helpful|exactly what i needed)\b/i,
+  
+  // Information satisfaction
+  /\b(got it|understood|that makes sense|that clarifies it)\b.*\b(thanks|thank you|bye|goodbye)\b/i,
+  /\b(perfect|great|excellent|wonderful)\b.*\b(that's all|thanks|thank you)\b/i,
+  /\b(appreciate it|thanks so much|thank you very much)\b.*\b(that's|done|all)\b/i,
 
-  // Thank you + ending context
-  /\b(thank you.*bye|thanks.*goodbye|appreciate it.*done)\b/i,
-  /\b(thank you.*that's all|thanks.*nothing else)\b/i,
+  // ==========================================
+  // EXPLICIT END REQUESTS
+  // ==========================================
+  
+  // Direct call ending
+  /\b(end the call|hang up|disconnect|finish the call|terminate|end this)\b/i,
+  /\b(stop the call|close the call|wrap up|finish up|let's end)\b/i,
+  /\b(i need to go|i have to go|gotta go|must go|time to go)\b/i,
+  /\b(let me let you go|don't want to keep you|won't keep you)\b/i,
+  
+  // Urgency/time constraints
+  /\b(running out of time|in a hurry|need to run|got to run)\b/i,
+  /\b(someone's calling|another call|meeting starting|appointment)\b/i,
+  /\b(my phone is dying|battery low|losing signal)\b/i,
 
-  // Have a good day variations
-  /\b(have a good day|have a nice day|good day|nice day)\b/i,
-  /\b(have a great day|wonderful day|lovely day)\b/i,
+  // ==========================================
+  // POLITENESS PATTERNS
+  // ==========================================
+  
+  // Well wishes
+  /\b(have a good day|have a nice day|have a great day|have a wonderful day)\b/i,
+  /\b(have a blessed day|have a fantastic day|have an amazing day)\b/i,
+  /\b(enjoy your day|hope you have a good|wish you well|take care)\b/i,
+  /\b(stay safe|be well|all the best|best wishes|good luck)\b/i,
+  
+  // Professional closings
+  /\b(thank you for your time|appreciate your help|thanks for the information)\b/i,
+  /\b(have a productive day|enjoy the rest of your|talk to you soon)\b/i,
+  
+  // Weekend/time-specific
+  /\b(have a great weekend|enjoy your weekend|have a good evening)\b/i,
+  /\b(see you monday|talk next week|catch up later|speak soon)\b/i,
+
+  // ==========================================
+  // GRATITUDE + ENDING COMBINATIONS
+  // ==========================================
+  
+  // Thank you variations with endings
+  /\b(thank you.*bye|thanks.*goodbye|thank you.*see you|thanks.*take care)\b/i,
+  /\b(appreciate it.*done|grateful.*that's all|thanks.*nothing else)\b/i,
+  /\b(thank you so much.*bye|thanks a lot.*goodbye|really appreciate.*done)\b/i,
+  /\b(thanks for everything|thank you for all|appreciate all your help)\b/i,
+  
+  // Acknowledgment + ending
+  /\b(sounds good.*bye|looks good.*thanks|works for me.*take care)\b/i,
+  /\b(that's perfect.*goodbye|exactly.*thank you|brilliant.*bye)\b/i,
+
+  // ==========================================
+  // CONTEXT-SPECIFIC ENDINGS
+  // ==========================================
+  
+  // Business/professional
+  /\b(we'll be in touch|i'll follow up|talk to you soon|speak with you later)\b/i,
+  /\b(i'll call back|call you back|get back to you|touch base later)\b/i,
+  /\b(that concludes|meeting adjourned|session complete|call complete)\b/i,
+  
+  // Personal/informal
+  /\b(alright then|okay then|well then|right then)\b.*\b(bye|take care|see you)\b/i,
+  /\b(cool.*thanks|awesome.*bye|nice.*take care|sweet.*goodbye)\b/i,
+  /\b(later|laters|peace|cheers|adios|au revoir)\b[\s]*$|^[\s]*\b(later|laters|peace|cheers)\b/i,
+
+  // ==========================================
+  // TRANSITIONAL ENDINGS
+  // ==========================================
+  
+  // Shifting to other activities
+  /\b(back to work|get back to|return to|continue with|resume)\b.*\b(bye|thanks|take care)\b/i,
+  /\b(let you go|let me go|should probably go|better get going)\b/i,
+  /\b(other things to do|busy day|lots to do|need to focus)\b/i,
+  
+  // Social obligations
+  /\b(family dinner|picking up kids|meeting friends|date night)\b/i,
+  /\b(doctor appointment|dentist|meeting|conference)\b.*\b(got to go|need to leave)\b/i,
+
+  // ==========================================
+  // SUBTLE/IMPLICIT ENDINGS
+  // ==========================================
+  
+  // Confirmation + closure
+  /\b(okay|ok|alright|right)\b.*\b(thank you|thanks|bye|take care|goodbye)\b/i,
+  /\b(got it|understood|makes sense|clear)\b.*\b(appreciate it|thank you|thanks)\b/i,
+  
+  // Problem resolved
+  /\b(that solves it|problem solved|issue resolved|question answered)\b/i,
+  /\b(that's the answer|that's what i wanted|that's helpful)\b.*\b(thank you|thanks)\b/i,
+  
+  // No further needs
+  /\b(that's all i need|no other questions|nothing more|that covers it)\b/i,
+  /\b(no further assistance|that's sufficient|that'll do|that works)\b/i,
+
+  // ==========================================
+  // EMERGENCY/URGENT ENDINGS
+  // ==========================================
+  
+  // Immediate departures
+  /\b(sorry.*have to go|apologize.*must leave|excuse me.*urgent)\b/i,
+  /\b(emergency|urgent matter|something came up|crisis)\b/i,
+  /\b(door bell|doorbell|someone at the door|delivery)\b/i,
+  /\b(baby crying|child needs|kid calling|fire alarm)\b/i,
+
+  // ==========================================
+  // CULTURAL/REGIONAL VARIATIONS
+  // ==========================================
+  
+  // International goodbyes
+  /\b(cheerio|ta ta|toodles|so long|until we meet again)\b/i,
+  /\b(god bless|bless you|blessed be|may peace|inshallah)\b/i,
+  /\b(namaste|shalom|salaam|aloha|sayonara)\b/i,
+  
+  // Regional expressions
+  /\b(y'all take care|you too|same to you|likewise|ditto)\b/i,
+  /\b(keep in touch|stay in touch|don't be a stranger|holler at me)\b/i,
+
+  // ==========================================
+  // PHONE-SPECIFIC ENDINGS
+  // ==========================================
+  
+  // Technical issues
+  /\b(losing you|breaking up|bad connection|can't hear|cutting out)\b/i,
+  /\b(dropped call|call back|try again|reconnect)\b/i,
+  /\b(low battery|phone dying|about to die|losing charge)\b/i,
+  
+  // Call mechanics
+  /\b(hang up now|ending the call|terminating|disconnecting)\b/i,
+  /\b(press end|hit end|click end|touch end)\b/i,
+
+  // ==========================================
+  // RESPONSE TO SYSTEM PROMPTS
+  // ==========================================
+  
+  // When asked if they need anything else
+  /^(no|nope|no thanks|no thank you|that's it|nothing)$/i,
+  /\b(no.*that's all|no.*i'm good|no.*we're done|no.*thank you)\b/i,
+  /\b(nothing else|no more|all set|i'm set|we're set)\b/i,
+  
+  // Satisfaction confirmation
+  /\b(yes.*that's all|yeah.*done|yep.*finished|sure.*complete)\b/i,
+  /\b(definitely.*done|absolutely.*finished|certainly.*complete)\b/i,
+
+  // ==========================================
+  // EMOTIONAL ENDINGS
+  // ==========================================
+  
+  // Gratitude-heavy endings
+  /\b(so grateful|really appreciate|can't thank you enough|means a lot)\b/i,
+  /\b(you've been great|wonderful service|excellent help|amazing support)\b/i,
+  /\b(made my day|really helped|saved me|lifesaver)\b.*\b(bye|thank you|take care)\b/i,
+  
+  // Positive closure
+  /\b(feeling better|much clearer|confidence boost|peace of mind)\b.*\b(thank you|thanks)\b/i,
+  /\b(satisfied|content|happy|pleased)\b.*\b(that's all|goodbye|bye)\b/i,
+
+  // ==========================================
+  // SEASONAL/TIME-BASED
+  // ==========================================
+  
+  // Holiday greetings as endings
+  /\b(merry christmas|happy holidays|happy new year|happy birthday)\b/i,
+  /\b(happy thanksgiving|enjoy the holidays|season's greetings)\b/i,
+  /\b(have a good vacation|enjoy your trip|safe travels)\b/i,
+  
+  // Weather-related
+  /\b(stay warm|keep cool|drive safe|be careful out there)\b/i,
+  /\b(enjoy the sunshine|stay dry|bundle up|dress warm)\b/i,
+
+  // ==========================================
+  // ABBREVIATED/TEXT-SPEAK ENDINGS
+  // ==========================================
+  
+  // Modern abbreviations
+  /\b(thx|ty|tyvm|cu|l8r|g2g|gtg|brb)\b/i,
+  /\b(omg.*bye|lol.*thanks|haha.*take care|rofl.*goodbye)\b/i,
+  /\b(k.*bye|ok.*thanks|np.*take care|yw.*goodbye)\b/i,
+
+  // ==========================================
+  // CONVERSATION FLOW ENDERS
+  // ==========================================
+  
+  // Summary statements
+  /\b(to summarize|in summary|so basically|bottom line)\b.*\b(that's it|done|finished)\b/i,
+  /\b(long story short|end of story|case closed|final answer)\b/i,
+  
+  // Closure confirmation
+  /\b(does that help|hope that helps|that should do it|think we're done)\b/i,
+  /\b(any questions|anything else|all clear|make sense)\b.*\b(no|that's all|we're good)\b/i,
+
+  // ==========================================
+  // REPEATED CONFIRMATION PATTERNS
+  // ==========================================
+  
+  // Double confirmation (often indicates readiness to end)
+  /\b(yes yes|yeah yeah|ok ok|right right|good good)\b.*\b(thank you|thanks|bye)\b/i,
+  /\b(sure sure|fine fine|great great|perfect perfect)\b/i,
+  
+  // Emphatic agreement
+  /\b(absolutely|definitely|certainly|of course)\b.*\b(that's all|thank you|goodbye)\b/i,
+  /\b(for sure|no doubt|without question|exactly right)\b.*\b(thanks|bye|take care)\b/i,
+];
+
+// Additional function to detect soft ending indicators
+const SOFT_ENDING_INDICATORS = [
+  // These patterns suggest the conversation might be winding down
+  // but aren't definitive endings by themselves
+  /\b(anyway|well|so|alright|okay then)\b/i,
+  /\b(i guess|i suppose|i think|probably)\b.*\b(that's it|all|done)\b/i,
+  /\b(unless|except|other than that|apart from that)\b.*\b(nothing|no|all)\b/i,
 ];
 
 // Validate environment variables
@@ -57,42 +275,52 @@ try {
 }
 
 // Helper function to detect call ending intent
+function hasCompoundEndingPattern(text) {
+  const lowerText = text.toLowerCase().trim();
+  
+  // Check for soft indicator + confirmation pattern
+  const hasSoftIndicator = SOFT_ENDING_INDICATORS.some(pattern => pattern.test(lowerText));
+  const hasConfirmation = /\b(thanks|thank you|bye|goodbye|done|finished|complete)\b/i.test(lowerText);
+  
+  return hasSoftIndicator && hasConfirmation;
+}
+
+// Main detection function
 function detectCallEndingIntent(transcript) {
   if (!transcript || typeof transcript !== 'string') return false;
-
+  
   const cleanText = transcript.toLowerCase().trim();
-
-  // Check direct patterns
-  const hasEndingPattern = CALL_END_PATTERNS.some((pattern) =>
+  
+  // Check primary ending patterns
+  const hasEndingPattern = COMPREHENSIVE_CALL_END_PATTERNS.some(pattern => 
     pattern.test(cleanText)
   );
-
+  
   if (hasEndingPattern) {
-    logger.info('Call ending pattern detected', { transcript: cleanText });
+    console.log('Call ending pattern detected:', { transcript: cleanText });
     return true;
   }
-
-  // Check for contextual endings (shorter phrases that might indicate ending)
+  
+  // Check for compound patterns
+  if (hasCompoundEndingPattern(cleanText)) {
+    console.log('Compound ending pattern detected:', { transcript: cleanText });
+    return true;
+  }
+  
+  // Check for very short conclusive phrases
   if (cleanText.length <= 15) {
     const shortEndingPhrases = [
-      'bye',
-      'goodbye',
-      'thanks',
-      'thank you',
-      'done',
-      'finish',
-      'end',
-      'stop',
-      "that's it",
-      'ok bye',
-      'okay bye',
+      'bye', 'goodbye', 'thanks', 'thank you', 'done', 'finish', 'end',
+      'stop', "that's it", 'ok bye', 'okay bye', 'alright bye', 'cool thanks',
+      'perfect thanks', 'great bye', 'awesome thanks', 'nice bye',
+      'later', 'peace', 'cheers', 'cya', 'ttyl', 'g2g', 'gtg'
     ];
-
-    return shortEndingPhrases.some(
-      (phrase) => cleanText === phrase || cleanText.includes(phrase)
+    
+    return shortEndingPhrases.some(phrase => 
+      cleanText === phrase || cleanText.includes(phrase)
     );
   }
-
+  
   return false;
 }
 

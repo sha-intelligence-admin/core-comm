@@ -1,5 +1,6 @@
 import twilio from 'twilio';
 import { CONFIG } from '../config/config.js';
+import CallSessionManager from './services/CallSessionManager.js';
 
 class TwilioService {
   constructor() {
@@ -172,8 +173,6 @@ class TwilioService {
         const audioDuration = this.estimateAudioDuration(goodbyeMessage);
         setTimeout(() => {
           // Clean up the session after audio completes
-          const CallSessionManager =
-            require('../services/CallSessionManager.js').default;
           CallSessionManager.removeCallSession(callSid, 'completed-goodbye');
         }, audioDuration + 2000);
       } else {
