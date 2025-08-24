@@ -1,9 +1,9 @@
-import { ElevenLabs } from '@elevenlabs/elevenlabs-js';
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import logger from './LoggingService.js';
 
 class ElevenLabsService {
   constructor() {
-    this.client = new ElevenLabs({
+    this.client = new ElevenLabsClient({
       apiKey: process.env.ELEVENLABS_API_KEY,
     });
 

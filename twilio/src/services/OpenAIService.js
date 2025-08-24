@@ -37,7 +37,7 @@ Guidelines:
       ];
 
       const response = await this.client.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini', // gpt-4 no longer available in the open ai api
         messages: messages,
         max_tokens: 150,
         temperature: 0.7,
@@ -50,6 +50,15 @@ Guidelines:
       if (!assistantResponse) {
         throw new Error('No response generated from OpenAI');
       }
+
+      // Log the AI conversation
+      logger.info('AI Conversation', {
+        userInput: userInput,
+        aiResponse: assistantResponse,
+        tokensUsed: response.usage?.total_tokens || 0,
+        inputLength: userInput.length,
+        responseLength: assistantResponse.length
+      });
 
       logger.info('OpenAI response generated', {
         inputLength: userInput.length,
@@ -84,7 +93,7 @@ Guidelines:
       ];
 
       const stream = await this.client.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',  // gpt-4 no longer available in the open ai api
         messages: messages,
         max_tokens: 150,
         temperature: 0.7,
@@ -102,6 +111,14 @@ Guidelines:
           }
         }
       }
+
+      // Log the streaming conversation
+      logger.info('AI Streaming Conversation', {
+        userInput: userInput,
+        aiResponse: fullResponse,
+        inputLength: userInput.length,
+        responseLength: fullResponse.length
+      });
 
       logger.info('OpenAI streaming response completed', {
         inputLength: userInput.length,
