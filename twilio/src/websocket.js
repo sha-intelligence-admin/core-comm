@@ -472,7 +472,7 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
     });
 
     let connectionReady = false;
-    const STARTUP_DELAY = 1000; // Reduced from 3000ms to 1000ms
+    const STARTUP_DELAY = 200; // Reduced from 1000ms to 200ms for faster response
 
     return new Promise((resolve, reject) => {
       // Use config timeout value
@@ -497,7 +497,7 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
             callSession.startupComplete = true;
             logger.info('Transcription startup complete', { callSid });
           }
-        }, STARTUP_DELAY); // Now 1000ms instead of 3000ms
+        }, STARTUP_DELAY); // Now 200ms for faster agent response
 
         resolve(deepgramConnection);
       });
@@ -620,11 +620,12 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
     if (!transcript || transcript.trim().length < 3) return;
 
     const now = Date.now();
-    if (
-      callSession.lastResponseTime &&
-      now - callSession.lastResponseTime < 500
-    )
-      return;
+    // Remove throttling delay - allow immediate responses
+    // if (
+    //   callSession.lastResponseTime &&
+    //   now - callSession.lastResponseTime < 500
+    // )
+    //   return;
 
     callSession.lastResponseTime = now;
 
@@ -675,7 +676,7 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
             error: error.message,
           });
         }
-      }, 4000); // Wait 4 seconds for goodbye message to complete
+      }, 2000); // Reduced from 4000ms to 2000ms for faster call completion
 
       return; // Don't process as regular conversation
     }

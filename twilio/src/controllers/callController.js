@@ -127,7 +127,8 @@ export const voiceCall = async (req, res) => {
       }, randomGreeting);
     }
 
-    twiml.pause({ length: 3600 });
+    // Minimal pause instead of 3600 seconds
+    twiml.pause({ length: 1 });
 
     const twimlString = twiml.toString();
     console.log('Generated TwiML:', twimlString);

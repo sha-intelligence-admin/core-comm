@@ -6,16 +6,16 @@ export const CONFIG = {
   // Deepgram configuration - optimized for speed
   DEEPGRAM_MODEL: 'nova-2',
   DEEPGRAM_LANGUAGE: 'en-US',
-  DEEPGRAM_ENDPOINTING: 300, // Reduced from 1000ms to 300ms for faster response
-  DEEPGRAM_CONNECTION_TIMEOUT: 8000, // Reduced from 10s to 8s
+  DEEPGRAM_ENDPOINTING: 200, // Reduced from 300ms to 200ms for even faster response
+  DEEPGRAM_CONNECTION_TIMEOUT: 6000, // Reduced from 8000ms to 6000ms
   
-  // Timeout settings (in milliseconds)
-  WEBSOCKET_TIMEOUT: 30000, // 30 seconds
-  DEEPGRAM_RETRY_TIMEOUT: 3000, // Reduced from 5s to 3s
+  // Timeout settings (in milliseconds) - all reduced for speed
+  WEBSOCKET_TIMEOUT: 20000, // Reduced from 30000ms
+  DEEPGRAM_RETRY_TIMEOUT: 2000, // Reduced from 3000ms to 2000ms
   
-  // Retry configuration
-  MAX_DEEPGRAM_RETRIES: 2, // Reduced from 3 to 2 for faster failover
-  RETRY_DELAY: 500, // Reduced from 1000ms to 500ms
+  // Retry configuration - faster failover
+  MAX_DEEPGRAM_RETRIES: 1, // Reduced from 2 to 1 for faster failover
+  RETRY_DELAY: 300, // Reduced from 500ms to 300ms
   
   // Call session cleanup
   CALL_SESSION_CLEANUP_INTERVAL: 60000, // 1 minute
