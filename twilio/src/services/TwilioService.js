@@ -1,6 +1,6 @@
 import twilio from 'twilio';
 import { CONFIG } from '../config/config.js';
-import CallSessionManager from './services/CallSessionManager.js';
+import CallSessionManager from '../services/CallSessionManager.js';
 
 class TwilioService {
   constructor() {
