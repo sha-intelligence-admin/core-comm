@@ -63,7 +63,9 @@ class CallSessionManager {
       existingSession.isTranscriptionReady = false;
       existingSession.startupComplete = false;
       existingSession.isReadyForEvents = false;
-      // Keep existing conversationHistory - don't reset it 
+      existingSession.isEnding = false; // Reset ending flag for new connection
+      existingSession.endingInitiatedAt = null;
+      // Keep existing conversationHistory - don't reset it
 
       return existingSession;
     }
@@ -89,6 +91,8 @@ class CallSessionManager {
       lastResponseTime: null,
       lastTranscriptTime: null,
       speechBuffer: [],
+      isEnding: false, // NEW: Flag to indicate call is ending
+      endingInitiatedAt: null,
     };
 
     this.activeCalls.set(callSid, newSession);

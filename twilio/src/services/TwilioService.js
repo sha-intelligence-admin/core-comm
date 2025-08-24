@@ -29,7 +29,6 @@ class TwilioService {
       text
     );
 
-
     return twiml.toString();
   }
 
@@ -53,25 +52,25 @@ class TwilioService {
   }
 
   async updateCall(callSid, twimlResponse) {
-  try {
-    const twimlString = twimlResponse.toString();
-    console.log(`Sending TwiML to Twilio for call SID ${callSid}:`);
-    console.log(twimlString); // Log the TwiML string here
+    try {
+      const twimlString = twimlResponse.toString();
+      console.log(`Sending TwiML to Twilio for call SID ${callSid}:`);
+      console.log(twimlString); // Log the TwiML string here
 
-    await this.client.calls(callSid).update({
-      twiml: twimlString,
-    });
-    return true;
-  } catch (error) {
-    console.error('Error updating call:', error);
-    throw error;
+      await this.client.calls(callSid).update({
+        twiml: twimlString,
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating call:', error);
+      throw error;
+    }
   }
-}
 
   async speakToCustomer(callSid, text, audioBuffer = null) {
     try {
       let twiml;
-      
+
       if (audioBuffer) {
         // Use custom audio from ElevenLabs
         // Note: This would require hosting the audio file temporarily
@@ -83,7 +82,7 @@ class TwilioService {
         // Use Twilio's built-in TTS
         twiml = `<Response><Say voice="alice">${text}</Say><Pause length="3600"/></Response>`;
       }
-      
+
       await this.client.calls(callSid).update({ twiml });
       console.log('TTS sent successfully - stream continues');
       return true;
@@ -102,13 +101,97 @@ class TwilioService {
   async playAudioToCustomer(callSid, audioUrl) {
     try {
       const twiml = `<Response><Play>${audioUrl}</Play><Pause length="3600"/></Response>`;
-      
+
       await this.client.calls(callSid).update({ twiml });
       console.log('Audio playback sent successfully - stream continues');
       return true;
     } catch (error) {
       console.error('Error playing audio:', error);
       throw error;
+    }
+  }
+
+  async hangupCall(callSid) {
+    try {
+      console.log(`Attempting to hang up call: ${callSid}`);
+
+      // Update the call with hangup TwiML
+      const hangupTwiml = '<Response><Hangup/></Response>';
+
+      await this.client.calls(callSid).update({
+        twiml: hangupTwiml,
+      });
+
+      console.log(`Call ${callSid} hung up successfully`);
+      return true;
+    } catch (error) {
+      console.error('Error hanging up call:', error);
+
+      // Alternative method: Update call status to completed
+      try {
+        console.log(`Trying alternative method to end call ${callSid}`);
+        await this.client.calls(callSid).update({
+          status: 'completed',
+        });
+        console.log(`Call ${callSid} marked as completed`);
+        return true;
+      } catch (altError) {
+        console.error('Alternative hangup method also failed:', altError);
+        throw error;
+      }
+    }
+  }
+
+  async speakAndHangup(callSid, goodbyeMessage) {
+    try {
+      console.log(`Speaking goodbye and hanging up call: ${callSid}`);
+
+      // Create TwiML that speaks the message and then hangs up
+      const twiml = `<Response>
+      <Say voice="alice">${goodbyeMessage}</Say>
+      <Hangup/>
+    </Response>`;
+
+      await this.client.calls(callSid).update({ twiml });
+      console.log(`Goodbye message sent and call ${callSid} will be hung up`);
+      return true;
+    } catch (error) {
+      console.error('Error in speakAndHangup:', error);
+
+      // Fallback: Just hang up without message
+      try {
+        await this.hangupCall(callSid);
+        return true;
+      } catch (hangupError) {
+        throw error;
+      }
+    }
+  }
+
+  async getCallDetails(callSid) {
+    try {
+      const call = await this.client.calls(callSid).fetch();
+      return {
+        status: call.status,
+        duration: call.duration,
+        startTime: call.startTime,
+        endTime: call.endTime,
+        from: call.from,
+        to: call.to,
+      };
+    } catch (error) {
+      console.error('Error fetching call details:', error);
+      throw error;
+    }
+  }
+
+  async isCallActive(callSid) {
+    try {
+      const call = await this.client.calls(callSid).fetch();
+      return ['ringing', 'in-progress', 'queued'].includes(call.status);
+    } catch (error) {
+      console.error('Error checking call status:', error);
+      return false;
     }
   }
 }
