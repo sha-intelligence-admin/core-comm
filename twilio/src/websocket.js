@@ -509,7 +509,7 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
     const now = Date.now();
     if (
       callSession.lastResponseTime &&
-      now - callSession.lastResponseTime < 2000 // Reduced from 3000ms to 2000ms
+      now - callSession.lastResponseTime < 500 // Reduced from 2000ms to 500ms
     )
       return;
 
