@@ -648,17 +648,17 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
       });
 
       // Send goodbye message
-      await speakToCustomerEnhanced(callSid, goodbyeResponse);
+      await twilioService.speakAndHangup(callSid, goodbyeResponse);
 
       // Mark session for ending and schedule hangup
       callSession.isEnding = true;
       callSession.endingInitiatedAt = now;
 
       // Give time for goodbye message to play, then hang up
-      setTimeout(async () => {
-        try {
-          await twilioService.hangupCall(callSid);
-          logger.info('Call ended gracefully', { callSid });
+    //   setTimeout(async () => {
+    //     try {
+    //       await twilioService.hangupCall(callSid);
+    //       logger.info('Call ended gracefully', { callSid });
 
           // Log the conversation before cleanup
           if (callSession) {
@@ -676,7 +676,7 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
             error: error.message,
           });
         }
-      }, 2000); // Reduced from 4000ms to 2000ms for faster call completion
+      }, 4000); // Wait 4 seconds for goodbye message to complete
 
       return; // Don't process as regular conversation
     }
