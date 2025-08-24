@@ -639,7 +639,7 @@ async function speakToCustomerEnhanced(callSid, text) {
       // Create a dynamic audio URL for this specific text
       // We'll pass the text as a base64-encoded query parameter
       const encodedText = Buffer.from(text).toString('base64');
-      const audioUrl = `${process.env.NGROK_URL || 'localhost:3001'}/api/audio/dynamic?text=${encodedText}`;
+      const audioUrl = `https://${process.env.NGROK_URL || 'localhost:3001'}/api/audio/dynamic?text=${encodedText}`;
       
       logger.info('Playing ElevenLabs audio from dynamic endpoint', {
         callSid,
