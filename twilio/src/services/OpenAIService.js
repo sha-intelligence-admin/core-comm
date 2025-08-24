@@ -43,7 +43,7 @@ Guidelines:
       const response = await this.client.chat.completions.create({
         model: 'gpt-4o-mini', // gpt-4 no longer available in the open ai api
         messages: messages,
-        max_tokens: 250,
+        max_tokens: 100,
         temperature: 0.7,
         presence_penalty: 0.1,
         frequency_penalty: 0.1,

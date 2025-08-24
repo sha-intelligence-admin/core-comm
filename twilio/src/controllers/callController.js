@@ -68,14 +68,13 @@ export const generateDynamicAudio = async (req, res) => {
     
     const result = await elevenLabsService.generateSpeech(text);
     
-    if (result.success) {
-      // Set proper headers for audio
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Length', result.audioBuffer.length);
-      res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
-      
-      // Send the audio buffer
-      res.send(result.audioBuffer);
+    if (result.success && Buffer.isBuffer(result.audioBuffer) && result.audioBuffer.length > 0) {
+      res.writeHead(200, {
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': result.audioBuffer.length,
+        'Cache-Control': 'public, max-age=300'
+      });
+      res.end(result.audioBuffer);
     } else {
       console.error('ElevenLabs generation failed:', result.error);
       res.status(500).json({ error: 'Failed to generate audio', details: result.error });

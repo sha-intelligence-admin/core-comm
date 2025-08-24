@@ -30,7 +30,7 @@ class TwilioService {
     );
 
     // Keep call alive with long pause
-    twiml.pause({ length: 3600 });
+    // twiml.pause({ length: 3600 });
 
     return twiml.toString();
   }

@@ -9,7 +9,7 @@ const router = express.Router();
 // Middleware for Twilio webhook signature verification
 const verifyTwilioSignature = (req, res, next) => {
   const signature = req.headers['x-twilio-signature'];
-  const url = `https://${process.env.NGROK_URL}${req.originalUrl}`;
+  const url = `${process.env.NGROK_URL}${req.originalUrl}`;
 
   logger.info("Url Used", { url });
   logger.info("Signature from Twilio", { signature });
