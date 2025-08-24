@@ -8,8 +8,9 @@ class ElevenLabsService {
     });
 
     // Default voice settings - you can customize these
-    this.defaultVoiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam voice (professional male)
+    this.defaultVoiceId = '21m00Tcm4TlvDq8ikWAM';
     // Alternative voices:
+    // 'pNInz6obpgDQGcFmaJgB' - Adam (professional male)
     // 'EXAVITQu4vr4xnSDxMaL' - Bella (professional female)
     // 'VR6AewLTigWG4xSOukaG' - Arnold (older male)
     // 'MF3mGyEYCl7XYWbV9V6O' - Elli (young female)
@@ -24,7 +25,7 @@ class ElevenLabsService {
 
   async generateSpeech(text, voiceId = null, options = {}) {
     try {
-      const selectedVoiceId = voiceId || this.defaultVoiceId;
+      const selectedVoiceId = this.defaultVoiceId;
       const voiceSettings = { ...this.voiceSettings, ...options.voice_settings };
 
       logger.info('Generating speech with ElevenLabs', {
@@ -71,12 +72,12 @@ class ElevenLabsService {
       logger.error('Error generating speech with ElevenLabs', {
         error: error.message,
         textPreview: text.substring(0, 50),
-        voiceId: voiceId || this.defaultVoiceId
+        voiceId: this.defaultVoiceId
       });
 
       return {
         audioBuffer: null,
-        voiceId: voiceId || this.defaultVoiceId,
+        voiceId: this.defaultVoiceId,
         success: false,
         error: error.message
       };
@@ -85,7 +86,7 @@ class ElevenLabsService {
 
   async generateStreamingSpeech(text, voiceId = null, onChunk = null, options = {}) {
     try {
-      const selectedVoiceId = voiceId || this.defaultVoiceId;
+      const selectedVoiceId = this.defaultVoiceId;
       const voiceSettings = { ...this.voiceSettings, ...options.voice_settings };
 
       logger.info('Generating streaming speech with ElevenLabs', {
@@ -130,12 +131,12 @@ class ElevenLabsService {
       logger.error('Error generating streaming speech with ElevenLabs', {
         error: error.message,
         textPreview: text.substring(0, 50),
-        voiceId: voiceId || this.defaultVoiceId
+        voiceId: this.defaultVoiceId
       });
 
       return {
         audioBuffer: null,
-        voiceId: voiceId || this.defaultVoiceId,
+        voiceId: this.defaultVoiceId,
         success: false,
         error: error.message
       };
