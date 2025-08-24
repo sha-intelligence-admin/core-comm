@@ -45,14 +45,14 @@ Custom TCP  TCP         3000         0.0.0.0/0 (for testing)
 
 ```bash
 # Replace with your key and instance details
-ssh -i your-key.pem ubuntu@your-ec2-public-ip
+ssh -i corecomm-key.pem ubuntu@34.220.242.121
 ```
 
 ## Step 3: Run the Automated Deployment
 
 ```bash
 # Download and run the deployment script
-curl -O https://raw.githubusercontent.com/sha-intelligence-admin/core-comm/main/twilio/deploy-aws.sh
+curl -O https://raw.githubusercontent.com/sha-intelligence-admin/core-comm/main/deployment/deploy-aws.sh
 chmod +x deploy-aws.sh
 ./deploy-aws.sh
 ```

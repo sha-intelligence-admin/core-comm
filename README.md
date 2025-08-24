@@ -107,3 +107,34 @@ MCP servers return structured responses for CoreComm to present to the caller.
 - Reduced wait times and call queue lengths.
 - Actionable, integrated support instead of just answering FAQs.
 - Seamless escalation to human agents for complex cases.
+
+---
+
+## 🚀 Quick Deployment
+
+### For Production Deployment
+See the comprehensive deployment guides in the [`/deployment`](./deployment/) directory.
+
+#### AWS EC2 Quick Start
+```bash
+wget https://raw.githubusercontent.com/sha-intelligence-admin/core-comm/main/deployment/deploy-aws.sh
+chmod +x deploy-aws.sh
+./deploy-aws.sh
+```
+
+#### Local/Manual Deployment
+```bash
+# If you already have the repository
+cd core-comm/deployment
+chmod +x deploy-no-git.sh
+./deploy-no-git.sh
+```
+
+### Prerequisites
+- Ubuntu 20.04+ with 7GB+ RAM (AWS t3.large recommended)
+- API Keys: Twilio, OpenAI (GPT-4), ElevenLabs, Deepgram, Supabase
+- Domain name for webhooks
+
+📖 **Full Documentation**: [`deployment/README.md`](./deployment/README.md)
+
+---

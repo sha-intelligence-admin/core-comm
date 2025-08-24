@@ -1,7 +1,33 @@
 #!/bin/bash
 set -e
 
-echo "🤖 Starting AWS EC2 Advanced RAG System Deployment..."
+echo "🤖 Starting Local Advanced RAG System Deployment..."
+echo "   (Skip Git Clone - Use Existing Repository)"
+echo ""
+
+# Check if we're in the deployment directory and navigate appropriately
+if [ -f "docker-compose.prod.yml" ] && [ -d "../twilio" ]; then
+    echo "✅ Running from deployment directory, navigating to twilio..."
+    cd ../twilio
+elif [ -f "../twilio/package.json" ] && [ -f "../twilio/docker-compose.prod.yml" ]; then
+    echo "✅ Found twilio directory, navigating..."
+    cd ../twilio
+elif [ -f "package.json" ] && [ -f "docker-compose.prod.yml" ]; then
+    echo "✅ Already in twilio directory"
+else
+    echo "❌ Cannot find twilio directory with required files"
+    echo "   Expected files: package.json, docker-compose.prod.yml"
+    echo "   Current directory: $(pwd)"
+    echo ""
+    echo "💡 To fix this:"
+    echo "   1. Download: wget https://github.com/sha-intelligence-admin/core-comm/archive/refs/heads/main.zip"
+    echo "   2. Extract: unzip main.zip && mv core-comm-main core-comm"
+    echo "   3. Navigate: cd core-comm/deployment"
+    echo "   4. Run this script again"
+    exit 1
+fi
+
+echo "✅ Running from correct directory: $(pwd)"
 
 # System requirements check
 echo "🔍 Checking system requirements for RAG system..."
@@ -19,14 +45,15 @@ sudo apt update && sudo apt upgrade -y
 
 # Install Docker with enhanced configuration
 echo "📦 Installing Docker..."
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-
-# Configure Docker for AI workloads
-echo "⚙️ Configuring Docker for AI workloads..."
-sudo mkdir -p /etc/docker
-cat << 'EOF' | sudo tee /etc/docker/daemon.json
+if ! command -v docker &> /dev/null; then
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    sudo usermod -aG docker $USER
+    
+    # Configure Docker for AI workloads
+    echo "⚙️ Configuring Docker for AI workloads..."
+    sudo mkdir -p /etc/docker
+    cat << 'EOF' | sudo tee /etc/docker/daemon.json
 {
   "log-driver": "json-file",
   "log-opts": {
@@ -36,13 +63,22 @@ cat << 'EOF' | sudo tee /etc/docker/daemon.json
   "storage-driver": "overlay2"
 }
 EOF
-
-sudo systemctl restart docker
+    sudo systemctl restart docker
+    
+    echo "⚠️  Docker installed. You may need to log out and back in for group permissions."
+    echo "   Or run: newgrp docker"
+else
+    echo "✅ Docker already installed"
+fi
 
 # Install Docker Compose
 echo "📦 Installing Docker Compose..."
-sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+if ! command -v docker-compose &> /dev/null; then
+    sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+else
+    echo "✅ Docker Compose already installed"
+fi
 
 # Install additional tools for RAG system
 echo "📦 Installing system dependencies for RAG system..."
@@ -50,42 +86,73 @@ sudo apt install -y git curl nginx certbot python3-certbot-nginx htop iotop unzi
 
 # Install Node.js (for backup local testing if needed)
 echo "📦 Installing Node.js..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Clone your repository
-echo "📂 Cloning repository..."
-if [ ! -d "core-comm" ]; then
-    git clone https://github.com/sha-intelligence-admin/core-comm.git
+if ! command -v node &> /dev/null; then
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+else
+    echo "✅ Node.js already installed: $(node --version)"
 fi
-
-cd core-comm/twilio
 
 # Setup environment files
 echo "⚙️ Setting up environment variables for RAG system..."
 if [ ! -f ".env.production" ]; then
+    # Try different template files in order of preference
     if [ -f ".env.production.example" ]; then
         cp .env.production.example .env.production
-        echo "📋 Environment template created: .env.production"
-        echo "❗ REQUIRED: Fill in your API keys in .env.production:"
-        echo "   - TWILIO_ACCOUNT_SID & TWILIO_AUTH_TOKEN"
-        echo "   - OPENAI_API_KEY (GPT-4 access required)"
-        echo "   - ELEVENLABS_API_KEY"
-        echo "   - DEEPGRAM_API_KEY"
-        echo "   - SUPABASE credentials"
-        echo "   - PUBLIC_DOMAIN"
-        echo ""
-        echo "🔗 API Key Setup Help:"
-        echo "   OpenAI: https://platform.openai.com/api-keys"
-        echo "   ElevenLabs: https://elevenlabs.io/speech-synthesis"
-        echo "   Deepgram: https://console.deepgram.com/"
-        echo ""
-        echo "⏸️  Pausing deployment. After filling .env.production, re-run this script."
-        exit 1
+        echo "📋 Environment template created from .env.production.example"
+    elif [ -f ".env.template" ]; then
+        cp .env.template .env.production
+        echo "📋 Environment template created from .env.template"
+    elif [ -f ".env.example" ]; then
+        cp .env.example .env.production
+        echo "📋 Environment template created from .env.example"
     else
-        echo "❌ .env.production.example not found. Please create environment file manually."
-        exit 1
+        echo "📋 Creating basic .env.production template..."
+        cat << 'ENV_TEMPLATE' > .env.production
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
+
+# ElevenLabs Configuration
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+
+# Deepgram Configuration
+DEEPGRAM_API_KEY=your_deepgram_api_key
+
+# Supabase Configuration
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Domain Configuration
+PUBLIC_DOMAIN=your_domain.com
+
+# Application Configuration
+NODE_ENV=production
+PORT=3000
+ENV_TEMPLATE
+        echo "📋 Basic environment template created"
     fi
+    
+    echo "❗ REQUIRED: Fill in your API keys in .env.production:"
+    echo "   - TWILIO_ACCOUNT_SID & TWILIO_AUTH_TOKEN"
+    echo "   - OPENAI_API_KEY (GPT-4 access required)"
+    echo "   - ELEVENLABS_API_KEY"
+    echo "   - DEEPGRAM_API_KEY"
+    echo "   - SUPABASE credentials"
+    echo "   - PUBLIC_DOMAIN"
+    echo ""
+    echo "🔗 API Key Setup Help:"
+    echo "   OpenAI: https://platform.openai.com/api-keys"
+    echo "   ElevenLabs: https://elevenlabs.io/speech-synthesis"
+    echo "   Deepgram: https://console.deepgram.com/"
+    echo ""
+    echo "⏸️  Pausing deployment. After filling .env.production, re-run this script."
+    exit 1
 fi
 
 # Validate critical environment variables
@@ -134,6 +201,12 @@ free -h | grep "Mem:" | awk '{print "🧠 Memory: " $7 " available"}'
 # Build and start the RAG application
 echo "🏗️ Building and starting Advanced RAG application..."
 echo "   This may take 5-10 minutes due to AI service dependencies..."
+
+# Check if docker group is accessible
+if ! docker ps >/dev/null 2>&1; then
+    echo "⚠️  Docker permission issue. Running with newgrp docker..."
+    exec newgrp docker "$0" "$@"
+fi
 
 docker-compose -f docker-compose.prod.yml up -d --build
 
