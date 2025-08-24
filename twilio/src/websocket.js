@@ -343,34 +343,30 @@ function handleMediaStream(
 // All other functions remain the same...
 async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
   try {
-    // FIXED: Simplified Deepgram configuration
+    // FIXED: Use CONFIG values for optimized performance
     let deepgramConnection = deepgram.listen.live({
-      model: 'nova-2', // Use explicit model name
-      language: 'en-US', // Use explicit language
+      model: CONFIG.DEEPGRAM_MODEL,
+      language: CONFIG.DEEPGRAM_LANGUAGE,
       punctuate: true,
       smart_format: true,
       interim_results: false,
       encoding: 'mulaw',
       sample_rate: 8000,
-      endpointing: 300, // REDUCED: Use default endpointing
-      // REMOVED: These might cause connection issues
-      // vad_events: true,
-      // utterance_end_ms: 2000,
-      // no_delay: false
+      endpointing: CONFIG.DEEPGRAM_ENDPOINTING, // Now 300ms for faster response
     });
 
     let connectionReady = false;
-    const STARTUP_DELAY = 3000;
+    const STARTUP_DELAY = 1000; // Reduced from 3000ms to 1000ms
 
     return new Promise((resolve, reject) => {
-      // Longer timeout for connection
+      // Use config timeout value
       const connectionTimeout = setTimeout(() => {
         if (!connectionReady) {
           logger.error('Deepgram connection timeout', { callSid, retryCount });
           deepgramConnection.finish();
           reject(new Error('Deepgram connection timeout'));
         }
-      }, 15000); // Increased to 15 seconds
+      }, CONFIG.DEEPGRAM_CONNECTION_TIMEOUT); // Now 8000ms
 
       deepgramConnection.on(LiveTranscriptionEvents.Open, () => {
         logger.info('Deepgram Connected', { callSid });
@@ -385,7 +381,7 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
             callSession.startupComplete = true;
             logger.info('Transcription startup complete', { callSid });
           }
-        }, STARTUP_DELAY);
+        }, STARTUP_DELAY); // Now 1000ms instead of 3000ms
 
         resolve(deepgramConnection);
       });
@@ -461,14 +457,14 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
       retryCount,
     });
 
-    if (retryCount < 2) {
-      // Reduced retry attempts
+    if (retryCount < CONFIG.MAX_DEEPGRAM_RETRIES) {
+      // Use CONFIG retry attempts (now 2 instead of hardcoded 2)
       logger.info('Retrying Deepgram connection', {
         callSid,
         retryCount: retryCount + 1,
       });
       await new Promise((resolve) =>
-        setTimeout(resolve, 2000 * (retryCount + 1))
+        setTimeout(resolve, CONFIG.RETRY_DELAY * (retryCount + 1)) // Use CONFIG.RETRY_DELAY (500ms)
       );
       return startTranscription(callSid, ws, deepgram, retryCount + 1);
     }
@@ -509,7 +505,7 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
     const now = Date.now();
     if (
       callSession.lastResponseTime &&
-      now - callSession.lastResponseTime < 3000
+      now - callSession.lastResponseTime < 2000 // Reduced from 3000ms to 2000ms
     )
       return;
 
@@ -520,7 +516,8 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
       response =
         "I'm sorry, I didn't quite catch that. Could you please repeat?";
     } else {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // REMOVED: Artificial 2-second delay for faster response
+      // await new Promise((resolve) => setTimeout(resolve, 2000));
       const currentSession = CallSessionManager.getCallSession(callSid);
       if (!currentSession) return;
       response = await generateSimpleResponse(transcript.toLowerCase());
@@ -533,11 +530,7 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
       responseLength: response.length,
       transcript,
     });
-    await twilioService.speakToCustomer(
-      callSid,
-      response,
-      callSession.streamUrl
-    );
+    await twilioService.speakToCustomer(callSid, response);
   } catch (error) {
     logger.error('Error handling customer speech', {
       callSid,

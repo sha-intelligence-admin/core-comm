@@ -29,8 +29,8 @@ class TwilioService {
       text
     );
 
-    // CRITICAL FIX: Just pause briefly, don't terminate
-    twiml.pause({ length: 1 });
+    // Keep call alive with long pause
+    twiml.pause({ length: 3600 });
 
     return twiml.toString();
   }
@@ -54,20 +54,6 @@ class TwilioService {
     return twiml;
   }
 
-  generateSayAndConnectResponse(text, streamUrl) {
-    const twiml = this.createVoiceResponse();
-    twiml.say(
-      {
-        voice: 'alice',
-        language: 'en-US',
-      },
-      text
-    );
-    // CRITICAL FIX: Add a <Connect> verb to reconnect the stream
-    twiml.connect().stream({ url: streamUrl });
-    return twiml;
-  }
-
   async updateCall(callSid, twimlResponse) {
   try {
     const twimlString = twimlResponse.toString();
@@ -84,15 +70,16 @@ class TwilioService {
   }
 }
 
-  async speakToCustomer(callSid, text, streamUrl) {
+  async speakToCustomer(callSid, text) {
     try {
-      // Use the new, correct TwiML generator
-      const twiml = this.generateSayAndConnectResponse(text, streamUrl);
-      await this.updateCall(callSid, twiml);
+      // FIXED: Use simple Say + long pause to maintain stream connection
+      const twiml = `<Response><Say voice="alice">${text}</Say><Pause length="3600"/></Response>`;
+      
+      await this.client.calls(callSid).update({ twiml });
       console.log('TTS sent successfully - stream continues');
       return true;
     } catch (error) {
-      console.error('Error sending TwiML response:', error);
+      console.error('Error sending TTS:', error);
       throw error;
     }
   }
