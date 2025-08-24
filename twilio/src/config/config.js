@@ -6,7 +6,10 @@ export const CONFIG = {
   // Deepgram configuration
   DEEPGRAM_MODEL: 'nova-2',
   DEEPGRAM_LANGUAGE: 'en-US',
-  DEEPGRAM_ENDPOINTING: 300,
+  DEEPGRAM_ENDPOINTING: 800,
+  DEEPGRAM_ENDPOINTING: 1000, // Increase to 1000ms minimum
+  CONFIDENCE_THRESHOLD: 0.6,   // Adjust based on your needs
+  DEEPGRAM_CONNECTION_TIMEOUT: 10000,
   
   // Timeout settings (in milliseconds)
   WEBSOCKET_TIMEOUT: 30000, // 30 seconds

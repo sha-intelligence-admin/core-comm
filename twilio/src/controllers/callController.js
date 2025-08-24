@@ -15,42 +15,38 @@ export const voiceCall = async (req, res) => {
 
     const fromNumber = req.body.From ? req.body.From.trim() : '';
     const toNumber = req.body.To ? req.body.To.trim() : '';
-    const websocketUrl = `wss://${req.headers.host}/api/calls/media-stream?From=${encodeURIComponent(fromNumber)}&To=${encodeURIComponent(toNumber)}`;
-    console.log('WebSocket URL:', websocketUrl);
-    console.log('From (clean):', fromNumber);
-    console.log('To (clean):', toNumber);
     
-    // Start stream to get real time audio
+    // SOLUTION: Encode parameters in the WebSocket URL path instead of query
+    const websocketUrl = `wss://${req.headers.host}/api/calls/media-stream/${encodeURIComponent(fromNumber)}/${encodeURIComponent(toNumber)}`;
+    
+    console.log('WebSocket URL:', websocketUrl);
+
+    // Start stream
     const start = twiml.start();
     start.stream({
       name: 'speech-recognition-stream',
-      url: websocketUrl, // Fixed URL with parameters
+      url: websocketUrl,
     });
 
-    //initial greeting
-    twiml.say(
-      {
-        voice: 'alice',
-        language: 'en-US',
-      },
-      'Hello, Welcome to our demo. How can I assist you today?'
-    );
+    // Initial greeting
+    twiml.say({
+      voice: 'alice',
+      language: 'en-US',
+    }, 'Hello, Welcome to our demo. How can I assist you today?');
 
-    twiml.pause({
-      length: 10,
-    });
+    twiml.pause({ length: 3600 });
 
     const twimlString = twiml.toString();
     console.log('Generated TwiML:', twimlString);
-    
-    // Send response
+
     res.type('text/xml');
     res.send(twimlString);
+    
   } catch (error) {
     console.error('Error handling voice call:', error);
     const fallbackTwiml = new twilio.twiml.VoiceResponse();
     fallbackTwiml.say('Sorry, there was an error. Please try again later.');
-    res.status(500).send('Error handling voice call');
+    res.status(500).send(fallbackTwiml.toString());
   }
 };
 
@@ -114,23 +110,23 @@ export const handleRecording = async (req, res) => {
   }
 };
 
-export const reEnterStream = async (req, res) => {
-    console.log('Re-entering media stream');
-    try {
-        const twiml = new twilio.twiml.VoiceResponse();
+// export const reEnterStream = async (req, res) => {
+//     console.log('Re-entering media stream');
+//     try {
+//         const twiml = new twilio.twiml.VoiceResponse();
         
-        const start = twiml.start();
-        start.stream({
-            name: 'speech-recognition-stream',
-            url: `wss://${req.headers.host}/api/calls/media-stream`,
-        });
+//         const start = twiml.start();
+//         start.stream({
+//             name: 'speech-recognition-stream',
+//             url: `wss://${req.headers.host}/api/calls/media-stream`,
+//         });
 
-        twiml.pause({ length: 30 }); // Pause to listen for the user's next response
+//         twiml.pause({ length: 30 }); // Pause to listen for the user's next response
 
-        res.type('text/xml');
-        res.send(twiml.toString());
-    } catch (error) {
-        console.error('Error re-entering media stream:', error);
-        res.status(500).send('Error re-entering media stream');
-    }
-};
+//         res.type('text/xml');
+//         res.send(twiml.toString());
+//     } catch (error) {
+//         console.error('Error re-entering media stream:', error);
+//         res.status(500).send('Error re-entering media stream');
+//     }
+// };

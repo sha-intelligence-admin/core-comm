@@ -1,3 +1,4 @@
+// index.js - Clean version without Express-WS
 import express from 'express';
 import 'dotenv/config';
 import { initializeWebSocket } from './websocket.js';
@@ -14,7 +15,7 @@ const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 // Middleware
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(generalRateLimiter.middleware()); // Apply general rate limiting
+app.use(generalRateLimiter.middleware());
 
 const PORT = process.env.PORT || 3000;
 
@@ -25,7 +26,7 @@ import healthRoutes from './routes/healthRoutes.js';
 app.use('/api/calls', callRoutes);
 app.use('/api', healthRoutes);
 
-// Initialize WebSocket (activeCalls now managed by CallSessionManager)
+// Initialize native WebSocket server
 initializeWebSocket(server, deepgram);
 
 // Graceful shutdown handling

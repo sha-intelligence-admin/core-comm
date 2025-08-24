@@ -18,13 +18,28 @@ class TwilioService {
     return new twilio.twiml.VoiceResponse();
   }
 
-  generateSayResponse(text, voice = CONFIG.TWILIO_VOICE) {
-    const twiml = this.createVoiceResponse();
-    twiml.say({ voice }, text);
-    return twiml;
+  generateSayResponse(text) {
+    const twiml = new twilio.twiml.VoiceResponse();
+
+    twiml.say(
+      {
+        voice: 'alice',
+        language: 'en-US',
+      },
+      text
+    );
+
+    // CRITICAL FIX: Just pause briefly, don't terminate
+    twiml.pause({ length: 1 });
+
+    return twiml.toString();
   }
 
-  generateSayAndRedirectResponse(text, redirectUrl, voice = CONFIG.TWILIO_VOICE) {
+  generateSayAndRedirectResponse(
+    text,
+    redirectUrl,
+    voice = CONFIG.TWILIO_VOICE
+  ) {
     const twiml = this.createVoiceResponse();
     twiml.say({ voice }, text);
     twiml.redirect(redirectUrl);
@@ -34,15 +49,33 @@ class TwilioService {
   generateStreamResponse(streamUrl) {
     const twiml = this.createVoiceResponse();
     twiml.start().stream({
-      url: streamUrl
+      url: streamUrl,
     });
+    return twiml;
+  }
+
+  generateSayAndConnectResponse(text, streamUrl) {
+    const twiml = this.createVoiceResponse();
+    twiml.say(
+      {
+        voice: 'alice',
+        language: 'en-US',
+      },
+      text
+    );
+    // CRITICAL FIX: Add a <Connect> verb to reconnect the stream
+    twiml.connect().stream({ url: streamUrl });
     return twiml;
   }
 
   async updateCall(callSid, twimlResponse) {
     try {
+      const twimlString = twimlResponse.toString();
+      console.log(`Sending TwiML to Twilio for call SID ${callSid}:`);
+      console.log(twimlString); // Log the TwiML string here
+
       await this.client.calls(callSid).update({
-        twiml: twimlResponse.toString(),
+        twiml: twimlString,
       });
       return true;
     } catch (error) {
@@ -51,14 +84,17 @@ class TwilioService {
     }
   }
 
-  async speakToCustomer(callSid, text, redirectUrl = '/api/calls/re-enter-stream') {
+  async speakToCustomer(callSid, text) {
     try {
-      const twiml = this.generateSayAndRedirectResponse(text, redirectUrl);
-      await this.updateCall(callSid, twiml);
-      console.log('TwiML response sent, call redirected to re-enter stream.');
+      // Use Twilio REST API to speak without interrupting the stream
+      await this.client.calls(callSid).update({
+        twiml: `<Response><Say voice="alice">${text}</Say><Pause length="1"/></Response>`,
+      });
+
+      console.log('TTS sent successfully - stream continues');
       return true;
     } catch (error) {
-      console.error('Error sending TwiML response:', error);
+      console.error('Error sending TTS:', error);
       throw error;
     }
   }
