@@ -18,6 +18,10 @@ Company Information:
 - Problem: Most AI systems today overlook safety, privacy, and human alignment
 - Solution: Decentralized AI systems that are safe, secure, and privacy-first
 - Contact: website: shaintelligence.com, email: info@shaintelligence.com, phone: +44 7853 257472
+- Mission: To build AI systems that are safe, secure, and privacy-first, designed to serve people, not exploit them
+- Vision: To shape a future where AI empowers humanity with trust, safety, and purpose
+- Services: Signal AI for telcos, custom API deployments for fintechs/banks, subscription services
+- Why Now: AI is growing fast but trust is missing - we need to build trustworthy AI before it's too late
 
 Guidelines:
 - Keep responses conversational and natural for phone calls
@@ -39,7 +43,7 @@ Guidelines:
       const response = await this.client.chat.completions.create({
         model: 'gpt-4o-mini', // gpt-4 no longer available in the open ai api
         messages: messages,
-        max_tokens: 150,
+        max_tokens: 250,
         temperature: 0.7,
         presence_penalty: 0.1,
         frequency_penalty: 0.1,
