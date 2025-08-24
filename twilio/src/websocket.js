@@ -11,7 +11,9 @@ import {
   validateWebhookData,
   validatePhoneNumbers,
 } from './utils/validation.js';
-import qna from './nlp/nlp-kb.js';
+import qna from './nlp/secure-kb.js';
+import OpenAIService from './services/OpenAIService.js';
+import ElevenLabsService from './services/ElevenLabsService.js';
 
 // Validate environment variables
 function validateEnvironmentVariables() {
@@ -36,6 +38,8 @@ try {
 
 // Initialize services
 const twilioService = new TwilioService();
+const openaiService = new OpenAIService();
+const elevenLabsService = new ElevenLabsService();
 const activeConnections = new Set();
 
 // WebSocketServer with path-based parameter handling
@@ -520,7 +524,7 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
       // await new Promise((resolve) => setTimeout(resolve, 2000));
       const currentSession = CallSessionManager.getCallSession(callSid);
       if (!currentSession) return;
-      response = await generateSimpleResponse(transcript.toLowerCase());
+      response = await generateAdvancedResponse(transcript.toLowerCase(), callSid);
     }
 
     if (!response) return;
@@ -530,7 +534,7 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
       responseLength: response.length,
       transcript,
     });
-    await twilioService.speakToCustomer(callSid, response);
+    await speakToCustomerEnhanced(callSid, response);
   } catch (error) {
     logger.error('Error handling customer speech', {
       callSid,
@@ -560,23 +564,122 @@ function sanitizeTranscript(text) {
     .substring(0, 500);
 }
 
-async function generateSimpleResponse(transcript) {
-  const lowerTranscript = transcript.toLowerCase();
+async function generateAdvancedResponse(transcript, callSid) {
+  try {
+    const callSession = CallSessionManager.getCallSession(callSid);
+    const conversationHistory = callSession?.conversationHistory || [];
+    
+    // First try the legacy knowledge base for quick responses
+    const lowerTranscript = transcript.toLowerCase();
+    const legacyResult = await qna.getBestAnswer('en', lowerTranscript);
+    
+    // If legacy KB has high confidence, use it (faster response)
+    if (legacyResult?.answer && legacyResult.score > CONFIG.NLP_CONFIDENCE_THRESHOLD) {
+      logger.info('Using legacy KB response', { 
+        callSid, 
+        score: legacyResult.score,
+        transcript: transcript.substring(0, 50)
+      });
+      return legacyResult.answer;
+    }
 
-  if (lowerTranscript.includes('hello')) {
-    return 'Hi there! How can I assist you today?';
-  } else if (lowerTranscript.includes('bye')) {
-    return 'Goodbye! Have a great day!';
-  } else if (lowerTranscript.includes('help')) {
-    return 'Sure, I can help you with that. What do you need assistance with?';
+    // Otherwise, use OpenAI for more intelligent responses
+    logger.info('Using OpenAI for response generation', { 
+      callSid,
+      transcript: transcript.substring(0, 50),
+      historyLength: conversationHistory.length
+    });
+
+    const openaiResult = await openaiService.generateResponse(transcript, conversationHistory);
+    
+    // Update conversation history
+    if (callSession) {
+      callSession.conversationHistory = callSession.conversationHistory || [];
+      callSession.conversationHistory.push(
+        { role: 'user', content: transcript },
+        { role: 'assistant', content: openaiResult.response }
+      );
+      
+      // Keep only last 10 exchanges (20 messages) for performance
+      if (callSession.conversationHistory.length > 20) {
+        callSession.conversationHistory = callSession.conversationHistory.slice(-20);
+      }
+    }
+
+    return openaiResult.response;
+
+  } catch (error) {
+    logger.error('Error in advanced response generation', {
+      callSid,
+      error: error.message,
+      transcript: transcript.substring(0, 50)
+    });
+    
+    // Fallback to simple responses
+    const fallbackResponses = [
+      'I apologize, I\'m having trouble processing that right now. Could you please rephrase your question?',
+      'I\'m experiencing some technical difficulties. Please try asking your question differently.',
+      'Let me help you with that. You can reach us directly at info@shaintelligence.com for immediate assistance.'
+    ];
+    
+    return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
   }
+}
 
-  const result = await qna.getBestAnswer('en', lowerTranscript);
-  if (result?.answer && result.score > CONFIG.NLP_CONFIDENCE_THRESHOLD) {
-    return result.answer;
+async function speakToCustomerEnhanced(callSid, text) {
+  try {
+    // For now, we'll use Twilio's TTS as ElevenLabs integration
+    // requires hosting audio files or streaming setup
+    // This is where you would implement ElevenLabs audio hosting
+    
+    const useElevenLabs = process.env.USE_ELEVENLABS_TTS === 'true';
+    
+    if (useElevenLabs) {
+      logger.info('Attempting ElevenLabs TTS', { 
+        callSid, 
+        textLength: text.length 
+      });
+      
+      // Generate speech with ElevenLabs
+      const optimizedText = elevenLabsService.optimizeTextForTTS(text);
+      const speechResult = await elevenLabsService.generateSpeech(optimizedText);
+      
+      if (speechResult.success && speechResult.audioBuffer) {
+        // In a production setup, you would:
+        // 1. Upload the audio buffer to a hosting service (S3, etc.)
+        // 2. Get a public URL
+        // 3. Use twilioService.playAudioToCustomer(callSid, audioUrl)
+        
+        logger.info('ElevenLabs speech generated successfully', {
+          callSid,
+          audioSize: speechResult.audioBuffer.length
+        });
+        
+        // For now, fall back to Twilio TTS with a note
+        console.log('ElevenLabs audio generated but no hosting configured, using Twilio fallback');
+        await twilioService.speakToCustomer(callSid, text);
+      } else {
+        logger.warn('ElevenLabs TTS failed, falling back to Twilio', {
+          callSid,
+          error: speechResult.error
+        });
+        await twilioService.speakToCustomer(callSid, text);
+      }
+    } else {
+      // Use standard Twilio TTS
+      await twilioService.speakToCustomer(callSid, text);
+    }
+    
+  } catch (error) {
+    logger.error('Error in enhanced TTS', {
+      callSid,
+      error: error.message,
+      textPreview: text.substring(0, 50)
+    });
+    
+    // Final fallback to Twilio TTS
+    await twilioService.speakToCustomer(callSid, text);
   }
-
-  return "I'm not sure how to respond to that. I'm still learning.";
 }
 
 // async function logConversation(callerNumber, receivingNumber, startTime, transcripts) {

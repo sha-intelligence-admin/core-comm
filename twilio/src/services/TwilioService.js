@@ -70,16 +70,47 @@ class TwilioService {
   }
 }
 
-  async speakToCustomer(callSid, text) {
+  async speakToCustomer(callSid, text, audioBuffer = null) {
     try {
-      // FIXED: Use simple Say + long pause to maintain stream connection
-      const twiml = `<Response><Say voice="alice">${text}</Say><Pause length="3600"/></Response>`;
+      let twiml;
+      
+      if (audioBuffer) {
+        // Use custom audio from ElevenLabs
+        // Note: This would require hosting the audio file temporarily
+        // For now, falling back to Twilio's TTS but this is where you'd
+        // implement the audio hosting logic
+        console.log('Custom audio buffer provided, but using fallback TTS');
+        twiml = `<Response><Say voice="alice">${text}</Say><Pause length="3600"/></Response>`;
+      } else {
+        // Use Twilio's built-in TTS
+        twiml = `<Response><Say voice="alice">${text}</Say><Pause length="3600"/></Response>`;
+      }
       
       await this.client.calls(callSid).update({ twiml });
       console.log('TTS sent successfully - stream continues');
       return true;
     } catch (error) {
       console.error('Error sending TTS:', error);
+      throw error;
+    }
+  }
+
+  generatePlayResponse(audioUrl) {
+    const twiml = this.createVoiceResponse();
+    twiml.play(audioUrl);
+    twiml.pause({ length: 3600 }); // Keep call alive
+    return twiml;
+  }
+
+  async playAudioToCustomer(callSid, audioUrl) {
+    try {
+      const twiml = `<Response><Play>${audioUrl}</Play><Pause length="3600"/></Response>`;
+      
+      await this.client.calls(callSid).update({ twiml });
+      console.log('Audio playback sent successfully - stream continues');
+      return true;
+    } catch (error) {
+      console.error('Error playing audio:', error);
       throw error;
     }
   }

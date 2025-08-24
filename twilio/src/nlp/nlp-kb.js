@@ -75,7 +75,7 @@ manager.addAnswer('en', 'company.about', 'Sha Intelligence builds safe, secure, 
 await manager.train();
 manager.save();
 
-// Create a wrapper to match your existing API
+// Create a wrapper to match existing API
 const qna = {
   async getBestAnswer(language, question) {
     try {

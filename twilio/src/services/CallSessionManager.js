@@ -62,7 +62,8 @@ class CallSessionManager {
       existingSession.deepgramConnection = null; // Prepare for the new connection
       existingSession.isTranscriptionReady = false;
       existingSession.startupComplete = false;
-      existingSession.isReadyForEvents = false; 
+      existingSession.isReadyForEvents = false;
+      // Keep existing conversationHistory - don't reset it 
 
       return existingSession;
     }
@@ -78,6 +79,7 @@ class CallSessionManager {
       streamUrl,
       startTime: new Date(),
       transcripts: [],
+      conversationHistory: [], // NEW: For OpenAI conversation tracking
       deepgramConnection: null,
       lastActivity: new Date(),
       isTranscriptionReady: false,
