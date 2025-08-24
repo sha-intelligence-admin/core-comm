@@ -33,9 +33,8 @@ class ElevenLabsService {
         textPreview: text.substring(0, 50)
       });
 
-      // Generate speech using the correct API
-      const audioResponse = await this.client.generate({
-        voice: selectedVoiceId,
+      // Use the correct API method for v2.12.0
+      const audioResponse = await this.client.textToSpeech.convert(selectedVoiceId, {
         text: text,
         voice_settings: voiceSettings,
         model_id: options.model_id || 'eleven_monolingual_v1',
@@ -94,14 +93,12 @@ class ElevenLabsService {
         voiceId: selectedVoiceId
       });
 
-      // Generate streaming speech
-      const audioStream = await this.client.generate({
-        voice: selectedVoiceId,
+      // Use the correct streaming API method for v2.12.0
+      const audioStream = await this.client.textToSpeech.stream(selectedVoiceId, {
         text: text,
         voice_settings: voiceSettings,
         model_id: options.model_id || 'eleven_monolingual_v1',
-        output_format: 'mp3_22050_32',
-        stream: true
+        output_format: 'mp3_22050_32'
       });
 
       const chunks = [];
@@ -150,10 +147,10 @@ class ElevenLabsService {
       const voices = await this.client.voices.getAll();
       
       logger.info('Retrieved available voices', {
-        voiceCount: voices?.length || 0
+        voiceCount: voices?.voices?.length || 0
       });
 
-      return voices || [];
+      return voices?.voices || [];
     } catch (error) {
       logger.error('Error retrieving voices', {
         error: error.message

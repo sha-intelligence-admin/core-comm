@@ -1,9 +1,38 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import twilio from 'twilio';
+import ElevenLabsService from '../services/ElevenLabsService.js';
 
 dotenv.config();
 
+const elevenLabsService = new ElevenLabsService();
+
+// Add this endpoint to serve dynamic ElevenLabs audio
+export const generateGreetingAudio = async (req, res) => {
+  try {
+    const greetingText = "Hello, Welcome to our demo. How can I assist you today?";
+    
+    const result = await elevenLabsService.generateSpeech(greetingText);
+    
+    if (result.success) {
+      // Set proper headers for audio
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', result.audioBuffer.length);
+      res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+      
+      // Send the audio buffer
+      res.send(result.audioBuffer);
+    } else {
+      // Fallback to Twilio TTS
+      res.status(500).json({ error: 'Failed to generate audio' });
+    }
+  } catch (error) {
+    console.error('Error generating greeting audio:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Updated voice call handler
 export const voiceCall = async (req, res) => {
   console.log('Incoming Call');
   console.log('from:', req.body.From);
@@ -16,7 +45,6 @@ export const voiceCall = async (req, res) => {
     const fromNumber = req.body.From ? req.body.From.trim() : '';
     const toNumber = req.body.To ? req.body.To.trim() : '';
     
-    // SOLUTION: Encode parameters in the WebSocket URL path instead of query
     const websocketUrl = `wss://${req.headers.host}/api/calls/media-stream/${encodeURIComponent(fromNumber)}/${encodeURIComponent(toNumber)}`;
     
     console.log('WebSocket URL:', websocketUrl);
@@ -28,11 +56,18 @@ export const voiceCall = async (req, res) => {
       url: websocketUrl,
     });
 
-    // Initial greeting
-    twiml.say({
-      voice: 'alice',
-      language: 'en-US',
-    }, 'Hello, Welcome to our demo. How can I assist you today?');
+    // Try ElevenLabs first, with Twilio fallback
+    try {
+      const greetingAudioUrl = `https://${req.headers.host}/api/audio/greeting`;
+      twiml.play(greetingAudioUrl);
+    } catch (audioError) {
+      // Fallback to Twilio TTS
+      console.warn('ElevenLabs audio failed, using Twilio TTS fallback');
+      twiml.say({
+        voice: 'alice',
+        language: 'en-US',
+      }, 'Hello, Welcome to our demo. How can I assist you today?');
+    }
 
     twiml.pause({ length: 3600 });
 
