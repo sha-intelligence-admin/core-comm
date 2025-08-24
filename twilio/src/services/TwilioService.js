@@ -144,28 +144,61 @@ class TwilioService {
 
   async speakAndHangup(callSid, goodbyeMessage) {
     try {
-      console.log(`Speaking goodbye and hanging up call: ${callSid}`);
+      console.log(
+        `Speaking goodbye with ElevenLabs and hanging up call: ${callSid}`
+      );
 
-      // Create TwiML that speaks the message and then hangs up
-      const twiml = `<Response>
-      <Say voice="alice">${goodbyeMessage}</Say>
-      <Hangup/>
-    </Response>`;
+      const useElevenLabs = process.env.USE_ELEVENLABS_TTS === 'true';
 
-      await this.client.calls(callSid).update({ twiml });
-      console.log(`Goodbye message sent and call ${callSid} will be hung up`);
+      if (useElevenLabs) {
+        const encodedText = Buffer.from(goodbyeMessage).toString('base64');
+        const audioUrl = `${
+          process.env.NGROK_URL || 'localhost:3001'
+        }/api/audio/dynamic?text=${encodedText}`;
+
+        // Use Play with hangup - let TwiML handle the sequencing
+        const twiml = `<Response>
+        <Play>${audioUrl}</Play>
+        <Pause length="1"/>
+        <Hangup/>
+      </Response>`;
+
+        await this.client.calls(callSid).update({ twiml });
+        console.log(
+          `ElevenLabs goodbye audio sent and call ${callSid} will be hung up`
+        );
+
+        // Schedule cleanup after estimated audio duration
+        const audioDuration = this.estimateAudioDuration(goodbyeMessage);
+        setTimeout(() => {
+          // Clean up the session after audio completes
+          const CallSessionManager =
+            require('../services/CallSessionManager.js').default;
+          CallSessionManager.removeCallSession(callSid, 'completed-goodbye');
+        }, audioDuration + 2000);
+      } else {
+        // Fallback to Twilio TTS
+        const twiml = `<Response>
+        <Say voice="alice">${goodbyeMessage}</Say>
+        <Pause length="2"/>
+        <Hangup/>
+      </Response>`;
+
+        await this.client.calls(callSid).update({ twiml });
+      }
+
       return true;
     } catch (error) {
       console.error('Error in speakAndHangup:', error);
-
-      // Fallback: Just hang up without message
-      try {
-        await this.hangupCall(callSid);
-        return true;
-      } catch (hangupError) {
-        throw error;
-      }
+      throw error;
     }
+  }
+
+  // Add this helper method to TwilioService
+  estimateAudioDuration(text) {
+    const wordCount = text.split(/\s+/).length;
+    const baseDuration = (wordCount / 2.5) * 1000; // ~2.5 words per second for ElevenLabs
+    return Math.max(2000, baseDuration); // Minimum 2 seconds
   }
 
   async getCallDetails(callSid) {

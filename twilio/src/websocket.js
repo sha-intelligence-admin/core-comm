@@ -647,35 +647,35 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
       });
 
       // Send goodbye message
-      await speakToCustomerEnhanced(callSid, goodbyeResponse);
+      await twilioService.speakAndHangup(callSid, goodbyeResponse);
 
       // Mark session for ending and schedule hangup
       callSession.isEnding = true;
       callSession.endingInitiatedAt = now;
 
       // Give time for goodbye message to play, then hang up
-      setTimeout(async () => {
-        try {
-          await twilioService.hangupCall(callSid);
-          logger.info('Call ended gracefully', { callSid });
+    //   setTimeout(async () => {
+    //     try {
+    //       await twilioService.hangupCall(callSid);
+    //       logger.info('Call ended gracefully', { callSid });
 
-          // Log the conversation before cleanup
-          if (callSession) {
-            await logConversation(
-              callSession.callerNumber,
-              callSession.receivingNumber,
-              callSession.startTime,
-              callSession.transcripts
-            );
-            CallSessionManager.removeCallSession(callSid, 'completed-goodbye');
-          }
-        } catch (error) {
-          logger.error('Error ending call gracefully', {
-            callSid,
-            error: error.message,
-          });
-        }
-      }, 4000); // Wait 4 seconds for goodbye message to complete
+    //       // Log the conversation before cleanup
+    //       if (callSession) {
+    //         // await logConversation(
+    //         //   callSession.callerNumber,
+    //         //   callSession.receivingNumber,
+    //         //   callSession.startTime,
+    //         //   callSession.transcripts
+    //         // );
+    //         CallSessionManager.removeCallSession(callSid, 'completed-goodbye');
+    //       }
+    //     } catch (error) {
+    //       logger.error('Error ending call gracefully', {
+    //         callSid,
+    //         error: error.message,
+    //       });
+    //     }
+    //   }, 4000); // Wait 4 seconds for goodbye message to complete
 
       return; // Don't process as regular conversation
     }
