@@ -4,10 +4,10 @@ export const CONFIG = {
   NLP_CONFIDENCE_THRESHOLD: 0.7,
   
   // Deepgram configuration - optimized for speed and natural conversation flow
-  DEEPGRAM_MODEL: 'nova-2-general', // Updated to nova-2-general for better speed/accuracy balance
+  DEEPGRAM_MODEL: 'nova-2', // Stable model for reliable performance
   DEEPGRAM_LANGUAGE: 'en-US',
-  DEEPGRAM_ENDPOINTING: 200, // Reduced to 200ms for even faster detection
-  DEEPGRAM_CONNECTION_TIMEOUT: 6000, // Further reduced to 6s for faster failover
+  DEEPGRAM_ENDPOINTING: 300, // Conservative 300ms for stability
+  DEEPGRAM_CONNECTION_TIMEOUT: 10000, // Stable 10s timeout
   
   // Enhanced Voice Activity Detection and Speech Processing
   SPEECH_PAUSE_THRESHOLD: 600, // Reduced from 800ms to 600ms for faster responses

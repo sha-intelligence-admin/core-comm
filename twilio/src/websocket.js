@@ -459,45 +459,35 @@ function handleMediaStream(
 // All other functions remain the same...
 async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
   try {
-    // Optimized Deepgram configuration for speed and natural conversation
+    // Stable Deepgram configuration with performance optimizations
     let deepgramConnection = deepgram.listen.live({
       model: CONFIG.DEEPGRAM_MODEL,
       language: CONFIG.DEEPGRAM_LANGUAGE,
       punctuate: true,
       smart_format: true,
       interim_results: true, // Critical for real-time speech detection
-      endpointing: CONFIG.DEEPGRAM_ENDPOINTING, // Now 200ms for faster response
+      endpointing: CONFIG.DEEPGRAM_ENDPOINTING, // Stable 300ms
       encoding: 'mulaw',
       sample_rate: 8000,
-      utterance_end_ms: CONFIG.SPEECH_PAUSE_THRESHOLD, // Use our custom pause threshold
+      utterance_end_ms: CONFIG.SPEECH_PAUSE_THRESHOLD, // Use our custom pause threshold (600ms)
       vad_events: true, // Enable voice activity detection events
-      // Enhanced settings for better conversation flow
-      filler_words: true, // Remove filler words for cleaner transcription
-      profanity_filter: false, // Keep original speech for better context
-      redact: false, // No redaction for faster processing
-      diarize: false, // Single speaker assumed for speed
-      multichannel: false, // Single channel for speed
-      alternatives: 1, // Only one alternative for speed
-      numerals: true, // Convert numbers to numerals
-      search: [], // No search terms for speed
-      keywords: [], // No keywords for speed
     });
 
     let connectionReady = false;
-    const STARTUP_DELAY = 800; // Further reduced from 1000ms to 800ms for faster startup
+    const STARTUP_DELAY = 2000; // Conservative 2s delay for stability
 
     return new Promise((resolve, reject) => {
-      // Use reduced timeout value
+      // Use stable timeout value
       const connectionTimeout = setTimeout(() => {
         if (!connectionReady) {
           logger.error('Deepgram connection timeout', { callSid, retryCount });
           deepgramConnection.finish();
           reject(new Error('Deepgram connection timeout'));
         }
-      }, CONFIG.DEEPGRAM_CONNECTION_TIMEOUT); // Now 6000ms
+      }, CONFIG.DEEPGRAM_CONNECTION_TIMEOUT); // Now 10000ms
 
       deepgramConnection.on(LiveTranscriptionEvents.Open, () => {
-        logger.info('Deepgram Connected with optimized settings', { 
+        logger.info('Deepgram Connected with stable settings', { 
           callSid, 
           model: CONFIG.DEEPGRAM_MODEL,
           endpointing: CONFIG.DEEPGRAM_ENDPOINTING 
@@ -512,9 +502,9 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
             callSession.hasUserSpoken = false;
             callSession.startupComplete = true;
             callSession.isSpeaking = false; // Initialize speaking state
-            logger.info('Transcription startup complete with optimized timing', { callSid });
+            logger.info('Transcription startup complete with stable timing', { callSid });
           }
-        }, STARTUP_DELAY); // Now 800ms
+        }, STARTUP_DELAY); // Now 2000ms for stability
 
         resolve(deepgramConnection);
       });
