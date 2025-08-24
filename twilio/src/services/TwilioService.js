@@ -29,9 +29,6 @@ class TwilioService {
       text
     );
 
-    // Keep call alive with long pause
-    twiml.pause({ length: 3600 });
-
     return twiml.toString();
   }
 
@@ -80,10 +77,10 @@ class TwilioService {
         // For now, falling back to Twilio's TTS but this is where you'd
         // implement the audio hosting logic
         console.log('Custom audio buffer provided, but using fallback TTS');
-        twiml = `<Response><Say voice="alice">${text}</Say><Pause length="3600"/></Response>`;
+        twiml = `<Response><Say voice="alice">${text}</Say></Response>`;
       } else {
         // Use Twilio's built-in TTS
-        twiml = `<Response><Say voice="alice">${text}</Say><Pause length="3600"/></Response>`;
+        twiml = `<Response><Say voice="alice">${text}</Say></Response>`;
       }
       
       await this.client.calls(callSid).update({ twiml });
@@ -98,13 +95,12 @@ class TwilioService {
   generatePlayResponse(audioUrl) {
     const twiml = this.createVoiceResponse();
     twiml.play(audioUrl);
-    twiml.pause({ length: 3600 }); // Keep call alive
     return twiml;
   }
 
   async playAudioToCustomer(callSid, audioUrl) {
     try {
-      const twiml = `<Response><Play>${audioUrl}</Play><Pause length="3600"/></Response>`;
+      const twiml = `<Response><Play>${audioUrl}</Play></Response>`;
       
       await this.client.calls(callSid).update({ twiml });
       console.log('Audio playback sent successfully - stream continues');
