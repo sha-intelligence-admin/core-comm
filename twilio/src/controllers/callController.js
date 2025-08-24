@@ -127,7 +127,7 @@ export const voiceCall = async (req, res) => {
       }, randomGreeting);
     }
 
-    twiml.pause({ length: 3600 });
+    
 
     const twimlString = twiml.toString();
     console.log('Generated TwiML:', twimlString);
