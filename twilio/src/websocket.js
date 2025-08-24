@@ -459,35 +459,49 @@ function handleMediaStream(
 // All other functions remain the same...
 async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
   try {
-    // FIXED: Use CONFIG values for optimized performance
+    // Optimized Deepgram configuration for speed and natural conversation
     let deepgramConnection = deepgram.listen.live({
       model: CONFIG.DEEPGRAM_MODEL,
       language: CONFIG.DEEPGRAM_LANGUAGE,
       punctuate: true,
       smart_format: true,
-      interim_results: true, // Enable interim results for real-time speech detection
-      endpointing: CONFIG.DEEPGRAM_ENDPOINTING, // Now 250ms for even faster response
+      interim_results: true, // Critical for real-time speech detection
+      endpointing: CONFIG.DEEPGRAM_ENDPOINTING, // Now 200ms for faster response
       encoding: 'mulaw',
       sample_rate: 8000,
       utterance_end_ms: CONFIG.SPEECH_PAUSE_THRESHOLD, // Use our custom pause threshold
       vad_events: true, // Enable voice activity detection events
+      // Enhanced settings for better conversation flow
+      filler_words: true, // Remove filler words for cleaner transcription
+      profanity_filter: false, // Keep original speech for better context
+      redact: false, // No redaction for faster processing
+      diarize: false, // Single speaker assumed for speed
+      multichannel: false, // Single channel for speed
+      alternatives: 1, // Only one alternative for speed
+      numerals: true, // Convert numbers to numerals
+      search: [], // No search terms for speed
+      keywords: [], // No keywords for speed
     });
 
     let connectionReady = false;
-    const STARTUP_DELAY = 1000; // Reduced from 3000ms to 1000ms
+    const STARTUP_DELAY = 800; // Further reduced from 1000ms to 800ms for faster startup
 
     return new Promise((resolve, reject) => {
-      // Use config timeout value
+      // Use reduced timeout value
       const connectionTimeout = setTimeout(() => {
         if (!connectionReady) {
           logger.error('Deepgram connection timeout', { callSid, retryCount });
           deepgramConnection.finish();
           reject(new Error('Deepgram connection timeout'));
         }
-      }, CONFIG.DEEPGRAM_CONNECTION_TIMEOUT); // Now 8000ms
+      }, CONFIG.DEEPGRAM_CONNECTION_TIMEOUT); // Now 6000ms
 
       deepgramConnection.on(LiveTranscriptionEvents.Open, () => {
-        logger.info('Deepgram Connected', { callSid });
+        logger.info('Deepgram Connected with optimized settings', { 
+          callSid, 
+          model: CONFIG.DEEPGRAM_MODEL,
+          endpointing: CONFIG.DEEPGRAM_ENDPOINTING 
+        });
         connectionReady = true;
         clearTimeout(connectionTimeout);
 
@@ -497,9 +511,10 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
             callSession.isTranscriptionReady = true;
             callSession.hasUserSpoken = false;
             callSession.startupComplete = true;
-            logger.info('Transcription startup complete', { callSid });
+            callSession.isSpeaking = false; // Initialize speaking state
+            logger.info('Transcription startup complete with optimized timing', { callSid });
           }
-        }, STARTUP_DELAY); // Now 1000ms instead of 3000ms
+        }, STARTUP_DELAY); // Now 800ms
 
         resolve(deepgramConnection);
       });
@@ -535,13 +550,16 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
           const confidence = transcript.confidence || 0;
           const isFinal = data.is_final;
 
-          // Handle interim results for real-time speech detection
+          // Enhanced interim results handling for better interruption detection
           if (!isFinal) {
-            // Detect speech start
+            // Detect speech start with better sensitivity
             if (rawText && !callSession.isSpeaking) {
               callSession.isSpeaking = true;
               callSession.speechStartTime = Date.now();
-              logger.info('Speech detected - customer is speaking', { callSid });
+              logger.info('Speech detected - customer is speaking', { 
+                callSid, 
+                interimText: rawText.substring(0, 30) 
+              });
               
               // Clear any pending response to avoid interrupting
               if (callSession.pendingResponse) {
@@ -549,23 +567,54 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
                 callSession.pendingResponse = null;
                 logger.info('Pending response cancelled - customer started speaking', { callSid });
               }
+
+              // Clear speech pause timer if customer resumed speaking
+              if (callSession.speechPauseTimer) {
+                clearTimeout(callSession.speechPauseTimer);
+                callSession.speechPauseTimer = null;
+                logger.info('Speech pause timer cleared - customer resumed speaking', { callSid });
+              }
+
+              // Clear max wait timer if customer resumed speaking
+              if (callSession.maxWaitTimer) {
+                clearTimeout(callSession.maxWaitTimer);
+                callSession.maxWaitTimer = null;
+              }
             }
+            
+            // Update ongoing speech tracking
+            if (rawText && callSession.isSpeaking) {
+              callSession.lastInterimTranscript = rawText;
+              callSession.lastInterimTime = Date.now();
+            }
+            
             return; // Don't process interim results further
           }
 
-          // Process final transcript
-          if (rawText.length < 3 || confidence < CONFIG.CONFIDENCE_THRESHOLD * 0.8) return;
+          // Process final transcript with enhanced filtering
+          if (rawText.length < 2 || confidence < (CONFIG.CONFIDENCE_THRESHOLD * 0.7)) {
+            logger.debug('Transcript filtered out - too short or low confidence', {
+              callSid,
+              text: rawText,
+              confidence,
+              length: rawText.length
+            });
+            return;
+          }
 
           const sanitizedText = sanitizeTranscript(rawText);
-          if (callSession.lastProcessedTranscript === sanitizedText) return;
+          if (callSession.lastProcessedTranscript === sanitizedText) {
+            logger.debug('Duplicate transcript ignored', { callSid, text: sanitizedText });
+            return;
+          }
 
-          // Mark speech end time
+          // Mark speech end time with more accurate timing
           callSession.speechEndTime = Date.now();
           const speechDuration = callSession.speechEndTime - (callSession.speechStartTime || callSession.speechEndTime);
 
           if (!callSession.hasUserSpoken) {
             callSession.hasUserSpoken = true;
-            logger.info('First valid user speech detected', {
+            logger.info('First valid user speech detected with enhanced processing', {
               callSid,
               text: sanitizedText,
               confidence,
@@ -580,12 +629,14 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
           CallSessionManager.addTranscript(callSid, {
             text: sanitizedText,
             confidence: Math.round(confidence * 100),
+            timestamp: Date.now(),
+            duration: speechDuration
           });
 
-          // Implement natural pause detection before responding
+          // Enhanced natural pause detection with speech continuation monitoring
           handleSpeechCompletion(callSid, sanitizedText, confidence, speechDuration);
         } catch (error) {
-          logger.error('Error processing transcript', {
+          logger.error('Error processing transcript with enhanced handling', {
             callSid,
             error: error.message,
           });
@@ -649,39 +700,94 @@ function handleSpeechCompletion(callSid, transcript, confidence, speechDuration)
       callSession.speechPauseTimer = null;
     }
 
+    // Clear any existing max wait timer
+    if (callSession.maxWaitTimer) {
+      clearTimeout(callSession.maxWaitTimer);
+      callSession.maxWaitTimer = null;
+    }
+
     // Mark that speech has ended
     callSession.isSpeaking = false;
 
-    // Determine appropriate pause duration based on speech characteristics
+    // Enhanced intelligent pause detection
     let pauseDuration = CONFIG.SPEECH_PAUSE_THRESHOLD;
     
-    // Adjust pause based on speech patterns for more natural flow
-    if (transcript.endsWith('?') || transcript.toLowerCase().includes('question')) {
-      pauseDuration = Math.max(400, pauseDuration * 0.6); // Shorter pause for questions
-    } else if (transcript.endsWith('.') || transcript.endsWith('!')) {
-      pauseDuration = Math.max(600, pauseDuration * 0.8); // Medium pause for statements
-    } else if (speechDuration < CONFIG.MIN_SPEECH_DURATION) {
-      pauseDuration = pauseDuration * 1.2; // Longer pause for very short utterances
+    if (CONFIG.SMART_PAUSE_DETECTION) {
+      const text = transcript.toLowerCase().trim();
+      
+      // Question detection - faster response
+      if (text.endsWith('?') || 
+          text.includes('what') || text.includes('how') || text.includes('when') || 
+          text.includes('where') || text.includes('why') || text.includes('which') ||
+          text.includes('can you') || text.includes('do you') || text.includes('is it') ||
+          text.includes('are you') || text.includes('could you')) {
+        pauseDuration = CONFIG.QUESTION_PAUSE_DURATION;
+        logger.info('Question detected - using short pause', { callSid, pauseDuration });
+      }
+      // Complete statement detection - medium response
+      else if (text.endsWith('.') || text.endsWith('!') || 
+               text.includes('thank you') || text.includes('thanks') ||
+               text.includes('goodbye') || text.includes('bye') ||
+               text.includes('that\'s all') || text.includes('i\'m done')) {
+        pauseDuration = CONFIG.STATEMENT_PAUSE_DURATION;
+        logger.info('Complete statement detected - using medium pause', { callSid, pauseDuration });
+      }
+      // Incomplete thought detection - longer pause
+      else if (text.endsWith(',') || text.includes('and') || text.includes('but') || 
+               text.includes('so') || text.includes('because') ||
+               text.includes('well') || text.includes('um') || text.includes('uh') ||
+               speechDuration < CONFIG.MIN_SPEECH_DURATION) {
+        pauseDuration = CONFIG.INCOMPLETE_PAUSE_DURATION;
+        logger.info('Incomplete thought detected - using long pause', { callSid, pauseDuration });
+      }
+      // Very short utterances - wait longer
+      else if (speechDuration < CONFIG.MIN_SPEECH_DURATION / 2) {
+        pauseDuration = CONFIG.INCOMPLETE_PAUSE_DURATION * 1.2;
+        logger.info('Very short utterance - using extended pause', { callSid, pauseDuration });
+      }
+    } else {
+      // Legacy pause adjustment logic
+      if (transcript.endsWith('?') || transcript.toLowerCase().includes('question')) {
+        pauseDuration = Math.max(400, pauseDuration * 0.6); // Shorter pause for questions
+      } else if (transcript.endsWith('.') || transcript.endsWith('!')) {
+        pauseDuration = Math.max(600, pauseDuration * 0.8); // Medium pause for statements
+      } else if (speechDuration < CONFIG.MIN_SPEECH_DURATION) {
+        pauseDuration = pauseDuration * 1.2; // Longer pause for very short utterances
+      }
     }
 
-    logger.info('Speech completion detected, setting response timer', {
+    logger.info('Speech completion detected, setting intelligent response timer', {
       callSid,
       transcript: transcript.substring(0, 50),
       pauseDuration,
-      speechDuration
+      speechDuration,
+      intelligentDetection: CONFIG.SMART_PAUSE_DETECTION
     });
 
-    // Set timer to respond after natural pause
+    // Set timer to respond after calculated pause
     callSession.speechPauseTimer = setTimeout(() => {
       // Double-check the user hasn't started speaking again
       if (!callSession.isSpeaking && !callSession.isEnding) {
         handleCustomerSpeech(callSid, transcript, confidence);
+      } else {
+        logger.info('Response cancelled - customer resumed speaking or call ended', { callSid });
       }
       callSession.speechPauseTimer = null;
     }, pauseDuration);
 
+    // Set a maximum wait time to prevent indefinite delays
+    callSession.maxWaitTimer = setTimeout(() => {
+      if (callSession.speechPauseTimer && !callSession.isSpeaking && !callSession.isEnding) {
+        logger.info('Maximum wait time reached - responding now', { callSid });
+        clearTimeout(callSession.speechPauseTimer);
+        callSession.speechPauseTimer = null;
+        handleCustomerSpeech(callSid, transcript, confidence);
+      }
+      callSession.maxWaitTimer = null;
+    }, CONFIG.MAX_SPEECH_EXTENSION);
+
   } catch (error) {
-    logger.error('Error in speech completion handling', {
+    logger.error('Error in enhanced speech completion handling', {
       callSid,
       error: error.message
     });
@@ -696,12 +802,13 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
     const callSession = CallSessionManager.getCallSession(callSid);
     if (!callSession?.hasUserSpoken || !callSession?.isTranscriptionReady)
       return;
-    if (!transcript || transcript.trim().length < 3) return;
+    if (!transcript || transcript.trim().length < 2) return; // Reduced from 3 to 2
 
     const now = Date.now();
+    // Reduced duplicate response prevention from 500ms to 300ms
     if (
       callSession.lastResponseTime &&
-      now - callSession.lastResponseTime < 500
+      now - callSession.lastResponseTime < 300
     )
       return;
 
@@ -759,46 +866,67 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
       return; // Don't process as regular conversation
     }
 
-    // Regular conversation handling (existing logic)
+    // Regular conversation handling with optimized processing
     let response;
     if (confidence < CONFIG.CONFIDENCE_THRESHOLD) {
       response =
-        "I'm sorry, I didn't quite catch that. Could you please repeat?";
+        "I'm sorry, I didn't quite catch that. Could you please repeat your question?";
     } else {
       const currentSession = CallSessionManager.getCallSession(callSid);
       if (!currentSession || currentSession.isEnding) return;
+      
+      // Start response generation immediately for faster results
+      const responseStartTime = Date.now();
       response = await generateAdvancedResponse(
         transcript.toLowerCase(),
         callSid
       );
+      const responseGenerationTime = Date.now() - responseStartTime;
+      
+      logger.info('Response generated', {
+        callSid,
+        generationTime: responseGenerationTime,
+        responseLength: response?.length || 0
+      });
     }
 
     if (!response) return;
 
-    logger.info('Sending response to customer', {
+    logger.info('Sending response to customer with optimized timing', {
       callSid,
       responseLength: response.length,
-      transcript,
+      transcript: transcript.substring(0, 30),
     });
 
-    // Add natural response delay to make conversation feel more human
+    // Reduced response delay for more natural conversation
     const responseDelay = CONFIG.RESPONSE_DELAY_AFTER_SPEECH;
     
-    logger.info('Adding natural response delay', {
+    logger.info('Adding minimal natural response delay', {
       callSid,
       delay: responseDelay,
       responsePreview: response.substring(0, 50)
     });
 
-    setTimeout(async () => {
-      // Final check that user hasn't started speaking again
+    // Use immediate response for very short delays or start processing in parallel
+    if (responseDelay <= 100) {
+      // Immediate response for ultra-fast conversation
       const currentSession = CallSessionManager.getCallSession(callSid);
       if (!currentSession?.isSpeaking && !currentSession?.isEnding) {
         await speakToCustomerEnhanced(callSid, response);
       } else {
-        logger.info('Response cancelled - user is speaking or call ended', { callSid });
+        logger.info('Immediate response cancelled - user is speaking or call ended', { callSid });
       }
-    }, responseDelay);
+    } else {
+      setTimeout(async () => {
+        // Final check that user hasn't started speaking again
+        const currentSession = CallSessionManager.getCallSession(callSid);
+        if (!currentSession?.isSpeaking && !currentSession?.isEnding) {
+          await speakToCustomerEnhanced(callSid, response);
+        } else {
+          logger.info('Response cancelled - user is speaking or call ended', { callSid });
+        }
+      }, responseDelay);
+    }
   } catch (error) {
     logger.error('Error handling customer speech', {
       callSid,
@@ -834,14 +962,19 @@ async function generateAdvancedResponse(transcript, callSid) {
     const conversationHistory = callSession?.conversationHistory || [];
     const lowerTranscript = transcript.toLowerCase();
 
-    // Quick responses for common patterns (fastest response time)
+    // Expand quick responses cache with more patterns (fastest response time)
     const quickResponses = {
       'hello': "Hello! Welcome to Sha Intelligence. I'm here to help you learn about our AI solutions. How can I assist you today?",
       'hi': "Hi there! Thanks for calling Sha Intelligence. How can I help you with our AI services?",
       'yes': "Great! What would you like to know more about?",
       'no': "No problem. Is there anything else I can help you with regarding our AI services?",
       'okay': "Perfect. What other questions do you have?",
-      'thanks': "You're very welcome! Is there anything else you'd like to know about Sha Intelligence?"
+      'thanks': "You're very welcome! Is there anything else you'd like to know about Sha Intelligence?",
+      'thank you': "My pleasure! What other questions can I answer for you?",
+      // Add more contextual quick responses
+      'services': "We offer cutting-edge AI solutions including machine learning, natural language processing, and intelligent automation. What specific area interests you?",
+      'pricing': "Our pricing depends on your specific needs and scale. I'd be happy to connect you with our team for a detailed quote. What type of AI solution are you considering?",
+      'contact': "You can reach us at info@shaintelligence.com or through our website. What specific information would you like to discuss with our team?"
     };
 
     // Check for exact quick matches first (sub-100ms response)
@@ -852,34 +985,55 @@ async function generateAdvancedResponse(transcript, callSid) {
       }
     }
 
-    // Parallel processing: Start both legacy KB and OpenAI simultaneously for better performance
+    // Enhanced parallel processing with intelligent routing
     const promises = [];
+    let legacyPromise, openaiPromise;
     
-    // Legacy KB (usually faster)
-    promises.push(
-      qna.getBestAnswer('en', lowerTranscript).catch(error => {
+    // Legacy KB (usually faster) - prioritize for common business queries
+    const isBusinessQuery = lowerTranscript.includes('business') || lowerTranscript.includes('company') || 
+                           lowerTranscript.includes('service') || lowerTranscript.includes('product') ||
+                           lowerTranscript.includes('price') || lowerTranscript.includes('cost');
+    
+    if (isBusinessQuery) {
+      logger.info('Business query detected - prioritizing legacy KB', { callSid });
+      legacyPromise = qna.getBestAnswer('en', lowerTranscript).catch(error => {
         logger.warn('Legacy KB lookup failed', { callSid, error: error.message });
         return null;
-      })
-    );
+      });
+      promises.push(legacyPromise);
+    }
 
-    // OpenAI (more intelligent but slower)
-    promises.push(
-      openaiService.generateResponse(transcript, conversationHistory.slice(-6)).catch(error => {
-        logger.warn('OpenAI generation failed', { callSid, error: error.message });
+    // OpenAI (more intelligent but slower) - always start for complex queries
+    openaiPromise = openaiService.generateResponse(transcript, conversationHistory.slice(-6)).catch(error => {
+      logger.warn('OpenAI generation failed', { callSid, error: error.message });
+      return null;
+    });
+    promises.push(openaiPromise);
+
+    // Add legacy KB as fallback if not already added
+    if (!isBusinessQuery) {
+      legacyPromise = qna.getBestAnswer('en', lowerTranscript).catch(error => {
+        logger.warn('Legacy KB lookup failed', { callSid, error: error.message });
         return null;
-      })
-    );
+      });
+      promises.push(legacyPromise);
+    }
 
-    // Race both approaches, but with intelligent selection
-    const [legacyResult, openaiResult] = await Promise.allSettled(promises);
+    // Intelligent response selection with faster resolution
+    const results = await Promise.allSettled(promises);
+    
+    let legacyAnswer, openaiAnswer;
+    if (isBusinessQuery && results.length >= 2) {
+      legacyAnswer = results[0].status === 'fulfilled' ? results[0].value : null;
+      openaiAnswer = results[1].status === 'fulfilled' ? results[1].value : null;
+    } else {
+      openaiAnswer = results[0].status === 'fulfilled' ? results[0].value : null;
+      legacyAnswer = results[1] && results[1].status === 'fulfilled' ? results[1].value : null;
+    }
 
-    // Prefer legacy KB if it has high confidence and completes first
-    const legacyAnswer = legacyResult.status === 'fulfilled' ? legacyResult.value : null;
-    const openaiAnswer = openaiResult.status === 'fulfilled' ? openaiResult.value : null;
-
-    if (legacyAnswer?.answer && legacyAnswer.score > CONFIG.NLP_CONFIDENCE_THRESHOLD) {
-      logger.info('Using legacy KB response (high confidence)', {
+    // Prefer legacy KB for business queries with high confidence
+    if (isBusinessQuery && legacyAnswer?.answer && legacyAnswer.score > CONFIG.NLP_CONFIDENCE_THRESHOLD) {
+      logger.info('Using legacy KB response (business query, high confidence)', {
         callSid,
         score: legacyAnswer.score,
         transcript: transcript.substring(0, 50),
@@ -887,15 +1041,16 @@ async function generateAdvancedResponse(transcript, callSid) {
       return legacyAnswer.answer;
     }
 
-    // Use OpenAI result if available
-    if (openaiAnswer?.response) {
+    // Use OpenAI result if available and of good quality
+    if (openaiAnswer?.response && openaiAnswer.response.length > 10) {
       logger.info('Using OpenAI response', {
         callSid,
         transcript: transcript.substring(0, 50),
         historyLength: conversationHistory.length,
+        responseLength: openaiAnswer.response.length
       });
 
-      // Update conversation history
+      // Update conversation history efficiently
       if (callSession) {
         callSession.conversationHistory = callSession.conversationHistory || [];
         callSession.conversationHistory.push(
@@ -913,7 +1068,7 @@ async function generateAdvancedResponse(transcript, callSid) {
     }
 
     // Fallback to legacy KB even with lower confidence
-    if (legacyAnswer?.answer && legacyAnswer.score > 0.3) {
+    if (legacyAnswer?.answer && legacyAnswer.score > 0.25) {
       logger.info('Using legacy KB response (fallback)', {
         callSid,
         score: legacyAnswer.score,
@@ -931,14 +1086,15 @@ async function generateAdvancedResponse(transcript, callSid) {
       transcript: transcript.substring(0, 50),
     });
 
-    // Ultra-fast fallback responses
-    const fallbackResponses = [
-      "I'd be happy to help you with that. Can you tell me more about what you're looking for?",
-      "That's a great question. Let me help you find the information you need about our AI services.",
-      'For detailed information, you can reach us at info@shaintelligence.com. What else can I help you with today?',
+    // Ultra-fast fallback responses with context
+    const contextualFallbacks = [
+      "I'd be happy to help you with that. Can you tell me more about what you're looking for regarding our AI services?",
+      "That's a great question about our AI solutions. Let me connect you with more detailed information - you can reach us at info@shaintelligence.com.",
+      "I want to make sure I give you the most accurate information. For specific details about our services, please contact info@shaintelligence.com. What else can I help you with?",
+      "Our AI expertise covers many areas. What specific aspect of artificial intelligence or automation interests you most?"
     ];
 
-    return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+    return contextualFallbacks[Math.floor(Math.random() * contextualFallbacks.length)];
   }
 }
 

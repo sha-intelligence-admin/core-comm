@@ -4,16 +4,23 @@ export const CONFIG = {
   NLP_CONFIDENCE_THRESHOLD: 0.7,
   
   // Deepgram configuration - optimized for speed and natural conversation flow
-  DEEPGRAM_MODEL: 'nova-2',
+  DEEPGRAM_MODEL: 'nova-2-general', // Updated to nova-2-general for better speed/accuracy balance
   DEEPGRAM_LANGUAGE: 'en-US',
-  DEEPGRAM_ENDPOINTING: 250, // Further reduced for faster response while maintaining quality
-  DEEPGRAM_CONNECTION_TIMEOUT: 8000, // Reduced from 10s to 8s
+  DEEPGRAM_ENDPOINTING: 200, // Reduced to 200ms for even faster detection
+  DEEPGRAM_CONNECTION_TIMEOUT: 6000, // Further reduced to 6s for faster failover
   
-  // Voice Activity Detection and Speech Processing
-  SPEECH_PAUSE_THRESHOLD: 800, // ms - Time to wait after speech ends before responding
-  MIN_SPEECH_DURATION: 500, // ms - Minimum speech duration to consider valid input
-  RESPONSE_DELAY_AFTER_SPEECH: 300, // ms - Brief pause before agent responds
-  MAX_SPEECH_BUFFER_TIME: 5000, // ms - Maximum time to buffer speech for complete thoughts
+  // Enhanced Voice Activity Detection and Speech Processing
+  SPEECH_PAUSE_THRESHOLD: 600, // Reduced from 800ms to 600ms for faster responses
+  MIN_SPEECH_DURATION: 400, // Reduced from 500ms to 400ms
+  RESPONSE_DELAY_AFTER_SPEECH: 200, // Reduced from 300ms to 200ms
+  MAX_SPEECH_BUFFER_TIME: 4000, // Reduced from 5000ms to 4000ms
+  
+  // New: Advanced speech completion detection
+  SMART_PAUSE_DETECTION: true, // Enable intelligent pause detection
+  QUESTION_PAUSE_DURATION: 350, // ms - Shorter pause for questions
+  STATEMENT_PAUSE_DURATION: 500, // ms - Medium pause for statements
+  INCOMPLETE_PAUSE_DURATION: 800, // ms - Longer pause for incomplete thoughts
+  MAX_SPEECH_EXTENSION: 2000, // ms - Maximum time to wait for speech continuation
   
   // Timeout settings (in milliseconds)
   WEBSOCKET_TIMEOUT: 30000, // 30 seconds
