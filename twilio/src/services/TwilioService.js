@@ -69,32 +69,30 @@ class TwilioService {
   }
 
   async updateCall(callSid, twimlResponse) {
-    try {
-      const twimlString = twimlResponse.toString();
-      console.log(`Sending TwiML to Twilio for call SID ${callSid}:`);
-      console.log(twimlString); // Log the TwiML string here
+  try {
+    const twimlString = twimlResponse.toString();
+    console.log(`Sending TwiML to Twilio for call SID ${callSid}:`);
+    console.log(twimlString); // Log the TwiML string here
 
-      await this.client.calls(callSid).update({
-        twiml: twimlString,
-      });
-      return true;
-    } catch (error) {
-      console.error('Error updating call:', error);
-      throw error;
-    }
+    await this.client.calls(callSid).update({
+      twiml: twimlString,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error updating call:', error);
+    throw error;
   }
+}
 
-  async speakToCustomer(callSid, text) {
+  async speakToCustomer(callSid, text, streamUrl) {
     try {
-      // Use Twilio REST API to speak without interrupting the stream
-      await this.client.calls(callSid).update({
-        twiml: `<Response><Say voice="alice">${text}</Say><Pause length="1"/></Response>`,
-      });
-
+      // Use the new, correct TwiML generator
+      const twiml = this.generateSayAndConnectResponse(text, streamUrl);
+      await this.updateCall(callSid, twiml);
       console.log('TTS sent successfully - stream continues');
       return true;
     } catch (error) {
-      console.error('Error sending TTS:', error);
+      console.error('Error sending TwiML response:', error);
       throw error;
     }
   }
