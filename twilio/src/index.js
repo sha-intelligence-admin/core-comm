@@ -22,11 +22,11 @@ const PORT = process.env.PORT || 3000;
 // Routes
 import callRoutes from './routes/callRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
-import audiRoutes from './routes/audioRoutes.js';
+import audioRoutes from './routes/audioRoutes.js';
 
 app.use('/api/calls', callRoutes);
 app.use('/api', healthRoutes);
-app.use('/api/audio', audiRoutes);
+app.use('/api/audio', audioRoutes);
 
 // Initialize native WebSocket server
 initializeWebSocket(server, deepgram);

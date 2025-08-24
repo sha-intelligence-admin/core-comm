@@ -32,6 +32,39 @@ export const generateGreetingAudio = async (req, res) => {
   }
 };
 
+// Dynamic audio endpoint for any text during conversation
+export const generateDynamicAudio = async (req, res) => {
+  try {
+    // Get text from query parameter (base64 encoded)
+    const encodedText = req.query.text;
+    if (!encodedText) {
+      return res.status(400).json({ error: 'Missing text parameter' });
+    }
+    
+    // Decode the text
+    const text = Buffer.from(encodedText, 'base64').toString('utf-8');
+    console.log('Generating dynamic ElevenLabs audio for:', text.substring(0, 50));
+    
+    const result = await elevenLabsService.generateSpeech(text);
+    
+    if (result.success) {
+      // Set proper headers for audio
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', result.audioBuffer.length);
+      res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
+      
+      // Send the audio buffer
+      res.send(result.audioBuffer);
+    } else {
+      console.error('ElevenLabs generation failed:', result.error);
+      res.status(500).json({ error: 'Failed to generate audio', details: result.error });
+    }
+  } catch (error) {
+    console.error('Error generating dynamic audio:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Updated voice call handler
 export const voiceCall = async (req, res) => {
   console.log('Incoming Call');
@@ -56,17 +89,20 @@ export const voiceCall = async (req, res) => {
       url: websocketUrl,
     });
 
-    // Try ElevenLabs first, with Twilio fallback
-    try {
+    // Use ElevenLabs audio URL if available, with Twilio fallback
+    const useElevenLabs = process.env.USE_ELEVENLABS_TTS === 'true';
+    
+    if (useElevenLabs) {
       const greetingAudioUrl = `https://${req.headers.host}/api/audio/greeting`;
       twiml.play(greetingAudioUrl);
-    } catch (audioError) {
+      console.log('Using ElevenLabs greeting audio:', greetingAudioUrl);
+    } else {
       // Fallback to Twilio TTS
-      console.warn('ElevenLabs audio failed, using Twilio TTS fallback');
       twiml.say({
         voice: 'alice',
         language: 'en-US',
       }, 'Hello, Welcome to our demo. How can I assist you today?');
+      console.log('Using Twilio TTS fallback for greeting');
     }
 
     twiml.pause({ length: 3600 });

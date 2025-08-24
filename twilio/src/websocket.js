@@ -627,46 +627,30 @@ async function generateAdvancedResponse(transcript, callSid) {
 }
 
 async function speakToCustomerEnhanced(callSid, text) {
-  try {
-    // For now, we'll use Twilio's TTS as ElevenLabs integration
-    // requires hosting audio files or streaming setup
-    // This is where you would implement ElevenLabs audio hosting
-    
+  try {    
     const useElevenLabs = process.env.USE_ELEVENLABS_TTS === 'true';
     
     if (useElevenLabs) {
-      logger.info('Attempting ElevenLabs TTS', { 
+      logger.info('Using ElevenLabs TTS with dynamic audio hosting', { 
         callSid, 
         textLength: text.length 
       });
       
-      // Generate speech with ElevenLabs
-      const optimizedText = elevenLabsService.optimizeTextForTTS(text);
-      const speechResult = await elevenLabsService.generateSpeech(optimizedText);
+      // Create a dynamic audio URL for this specific text
+      // We'll pass the text as a base64-encoded query parameter
+      const encodedText = Buffer.from(text).toString('base64');
+      const audioUrl = `https://${process.env.NGROK_URL || 'localhost:3001'}/api/audio/dynamic?text=${encodedText}`;
       
-      if (speechResult.success && speechResult.audioBuffer) {
-        // In a production setup, you would:
-        // 1. Upload the audio buffer to a hosting service (S3, etc.)
-        // 2. Get a public URL
-        // 3. Use twilioService.playAudioToCustomer(callSid, audioUrl)
-        
-        logger.info('ElevenLabs speech generated successfully', {
-          callSid,
-          audioSize: speechResult.audioBuffer.length
-        });
-        
-        // For now, fall back to Twilio TTS with a note
-        console.log('ElevenLabs audio generated but no hosting configured, using Twilio fallback');
-        await twilioService.speakToCustomer(callSid, text);
-      } else {
-        logger.warn('ElevenLabs TTS failed, falling back to Twilio', {
-          callSid,
-          error: speechResult.error
-        });
-        await twilioService.speakToCustomer(callSid, text);
-      }
+      logger.info('Playing ElevenLabs audio from dynamic endpoint', {
+        callSid,
+        audioUrl: audioUrl.substring(0, 100) + '...' // Log truncated URL
+      });
+      
+      await twilioService.playAudioToCustomer(callSid, audioUrl);
+      
     } else {
       // Use standard Twilio TTS
+      logger.info('Using Twilio TTS fallback', { callSid });
       await twilioService.speakToCustomer(callSid, text);
     }
     
