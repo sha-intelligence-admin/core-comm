@@ -3,11 +3,17 @@ export const CONFIG = {
   CONFIDENCE_THRESHOLD: 0.6,
   NLP_CONFIDENCE_THRESHOLD: 0.7,
   
-  // Deepgram configuration - optimized for speed
+  // Deepgram configuration - optimized for speed and natural conversation flow
   DEEPGRAM_MODEL: 'nova-2',
   DEEPGRAM_LANGUAGE: 'en-US',
-  DEEPGRAM_ENDPOINTING: 300, // Reduced from 1000ms to 300ms for faster response
+  DEEPGRAM_ENDPOINTING: 250, // Further reduced for faster response while maintaining quality
   DEEPGRAM_CONNECTION_TIMEOUT: 8000, // Reduced from 10s to 8s
+  
+  // Voice Activity Detection and Speech Processing
+  SPEECH_PAUSE_THRESHOLD: 800, // ms - Time to wait after speech ends before responding
+  MIN_SPEECH_DURATION: 500, // ms - Minimum speech duration to consider valid input
+  RESPONSE_DELAY_AFTER_SPEECH: 300, // ms - Brief pause before agent responds
+  MAX_SPEECH_BUFFER_TIME: 5000, // ms - Maximum time to buffer speech for complete thoughts
   
   // Timeout settings (in milliseconds)
   WEBSOCKET_TIMEOUT: 30000, // 30 seconds

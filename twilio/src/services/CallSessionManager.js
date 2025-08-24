@@ -93,6 +93,12 @@ class CallSessionManager {
       speechBuffer: [],
       isEnding: false, // NEW: Flag to indicate call is ending
       endingInitiatedAt: null,
+      // Enhanced speech detection for natural conversation flow
+      speechStartTime: null,
+      speechEndTime: null,
+      isSpeaking: false,
+      speechPauseTimer: null,
+      pendingResponse: null,
     };
 
     this.activeCalls.set(callSid, newSession);
@@ -145,6 +151,16 @@ class CallSessionManager {
     if (!session) {
       console.warn(`Attempted to remove non-existent call session: ${callSid}`);
       return null;
+    }
+
+    // Clean up timers
+    if (session.speechPauseTimer) {
+      clearTimeout(session.speechPauseTimer);
+      session.speechPauseTimer = null;
+    }
+    if (session.pendingResponse) {
+      clearTimeout(session.pendingResponse);
+      session.pendingResponse = null;
     }
 
     // Clean up Deepgram connection
