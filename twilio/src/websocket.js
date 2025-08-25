@@ -14,6 +14,7 @@ import {
 import qna from './nlp/secure-kb.js';
 import OpenAIService from './services/OpenAIService.js';
 import ElevenLabsService from './services/ElevenLabsService.js';
+import StreamingPipelineService from './services/StreamingPipelineService.js';
 
 // Call ending detection patterns
 const CALL_END_PATTERNS = [
@@ -147,6 +148,7 @@ async function generateGoodbyeResponse(transcript, callSid) {
 const twilioService = new TwilioService();
 const openaiService = new OpenAIService();
 const elevenLabsService = new ElevenLabsService();
+const streamingPipeline = StreamingPipelineService.getInstance();
 const activeConnections = new Set();
 
 // WebSocketServer with path-based parameter handling
@@ -356,6 +358,12 @@ function handleMediaStream(
           callSession.isReadyForEvents = true;
           callSession.isEnding = false;
 
+          // Initialize streaming pipeline if enabled
+          if (CONFIG.ENABLE_STREAMING_PIPELINE) {
+            streamingPipeline.initializeStream(callSid);
+            logger.info('Streaming pipeline initialized for call', { callSid });
+          }
+
           try {
             const deepgramConnection = await startTranscription(
               callSid,
@@ -436,6 +444,11 @@ function handleMediaStream(
     isCallActive = false;
     clearTimeout(wsTimeout);
 
+    // Cleanup streaming pipeline
+    if (CONFIG.ENABLE_STREAMING_PIPELINE && callSid) {
+      streamingPipeline.cleanupStream(callSid);
+    }
+
     // if (callSid && callSession) {
     //   await logConversation(
     //     callSession.callerNumber,
@@ -474,7 +487,7 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
     });
 
     let connectionReady = false;
-    const STARTUP_DELAY = 2000; // Conservative 2s delay for stability
+    const STARTUP_DELAY = CONFIG.STARTUP_DELAY; // Ultra-fast startup for streaming
 
     return new Promise((resolve, reject) => {
       // Use stable timeout value
@@ -550,6 +563,11 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
                 callSid, 
                 interimText: rawText.substring(0, 30) 
               });
+              
+              // Handle streaming pipeline interruption
+              if (CONFIG.ENABLE_STREAMING_PIPELINE) {
+                streamingPipeline.handleInterruption(callSid);
+              }
               
               // Clear any pending response to avoid interrupting
               if (callSession.pendingResponse) {
@@ -678,7 +696,7 @@ function isCompleteThought(text) {
   );
 }
 
-// New function to handle natural speech completion detection
+// New function to handle natural speech completion detection with streaming support
 function handleSpeechCompletion(callSid, transcript, confidence, speechDuration) {
   try {
     const callSession = CallSessionManager.getCallSession(callSid);
@@ -698,6 +716,25 @@ function handleSpeechCompletion(callSid, transcript, confidence, speechDuration)
 
     // Mark that speech has ended
     callSession.isSpeaking = false;
+
+    // For streaming pipeline, process immediately with minimal delay
+    if (CONFIG.ENABLE_STREAMING_PIPELINE) {
+      logger.info('Streaming mode: Processing speech immediately', {
+        callSid,
+        transcript: transcript.substring(0, 50),
+        confidence,
+        speechDuration
+      });
+
+      // Immediate processing with tiny delay to ensure speech has ended
+      setTimeout(() => {
+        if (!callSession.isSpeaking && !callSession.isEnding) {
+          handleCustomerSpeech(callSid, transcript, confidence);
+        }
+      }, CONFIG.SPEECH_PAUSE_THRESHOLD); // Now just 50ms
+
+      return; // Skip the complex pause detection logic below
+    }
 
     // Enhanced intelligent pause detection
     let pauseDuration = CONFIG.SPEECH_PAUSE_THRESHOLD;
@@ -786,7 +823,44 @@ function handleSpeechCompletion(callSid, transcript, confidence, speechDuration)
   }
 }
 
-// Enhanced customer speech handler with call ending
+// Handle call ending with streaming support
+async function handleCallEnding(callSid, transcript) {
+  try {
+    logger.info('Call ending detected', { callSid, transcript });
+
+    // Generate and send goodbye response
+    const goodbyeResponse = await generateGoodbyeResponse(transcript, callSid);
+
+    logger.info('Sending goodbye response', {
+      callSid,
+      response: goodbyeResponse,
+      originalTranscript: transcript,
+    });
+
+    // Send goodbye message
+    await twilioService.speakAndHangup(callSid, goodbyeResponse);
+
+    // Mark session for ending and cleanup streaming pipeline
+    const callSession = CallSessionManager.getCallSession(callSid);
+    if (callSession) {
+      callSession.isEnding = true;
+      callSession.endingInitiatedAt = Date.now();
+    }
+
+    // Cleanup streaming pipeline
+    if (CONFIG.ENABLE_STREAMING_PIPELINE) {
+      streamingPipeline.cleanupStream(callSid);
+    }
+
+  } catch (error) {
+    logger.error('Error handling call ending', {
+      callSid,
+      error: error.message,
+    });
+  }
+}
+
+// Enhanced customer speech handler with call ending and streaming support
 async function handleCustomerSpeech(callSid, transcript, confidence) {
   try {
     const callSession = CallSessionManager.getCallSession(callSid);
@@ -795,65 +869,37 @@ async function handleCustomerSpeech(callSid, transcript, confidence) {
     if (!transcript || transcript.trim().length < 2) return; // Reduced from 3 to 2
 
     const now = Date.now();
-    // Reduced duplicate response prevention from 500ms to 300ms
+    // Ultra-fast duplicate response prevention
     if (
       callSession.lastResponseTime &&
-      now - callSession.lastResponseTime < 300
+      now - callSession.lastResponseTime < 100
     )
       return;
 
     callSession.lastResponseTime = now;
 
-    // Check if customer wants to end the call
-    const isEndingCall = detectCallEndingIntent(transcript);
-
-    if (isEndingCall) {
-      logger.info('Call ending detected', { callSid, transcript });
-
-      // Generate and send goodbye response
-      const goodbyeResponse = await generateGoodbyeResponse(
-        transcript,
-        callSid
-      );
-
-      logger.info('Sending goodbye response', {
+    // Use streaming pipeline if enabled
+    if (CONFIG.ENABLE_STREAMING_PIPELINE) {
+      logger.info('Using streaming pipeline for response', {
         callSid,
-        response: goodbyeResponse,
-        originalTranscript: transcript,
+        transcript: transcript.substring(0, 30)
       });
+      
+      // Check for call ending first
+      const isEndingCall = detectCallEndingIntent(transcript);
+      if (isEndingCall) {
+        return handleCallEnding(callSid, transcript);
+      }
+      
+      // Process with streaming pipeline for instant response
+      await streamingPipeline.processStreamingResponse(callSid, transcript);
+      return;
+    }
 
-      // Send goodbye message
-      await twilioService.speakAndHangup(callSid, goodbyeResponse);
-
-      // Mark session for ending and schedule hangup
-      callSession.isEnding = true;
-      callSession.endingInitiatedAt = now;
-
-      // Give time for goodbye message to play, then hang up
-    //   setTimeout(async () => {
-    //     try {
-    //       await twilioService.hangupCall(callSid);
-    //       logger.info('Call ended gracefully', { callSid });
-
-    //       // Log the conversation before cleanup
-    //       if (callSession) {
-    //         // await logConversation(
-    //         //   callSession.callerNumber,
-    //         //   callSession.receivingNumber,
-    //         //   callSession.startTime,
-    //         //   callSession.transcripts
-    //         // );
-    //         CallSessionManager.removeCallSession(callSid, 'completed-goodbye');
-    //       }
-    //     } catch (error) {
-    //       logger.error('Error ending call gracefully', {
-    //         callSid,
-    //         error: error.message,
-    //       });
-    //     }
-    //   }, 4000); // Wait 4 seconds for goodbye message to complete
-
-      return; // Don't process as regular conversation
+    // Fallback to legacy call ending handling
+    const isEndingCall = detectCallEndingIntent(transcript);
+    if (isEndingCall) {
+      return handleCallEnding(callSid, transcript);
     }
 
     // Regular conversation handling with optimized processing

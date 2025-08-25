@@ -9,22 +9,30 @@ export const CONFIG = {
   DEEPGRAM_ENDPOINTING: 300, // Conservative 300ms for stability
   DEEPGRAM_CONNECTION_TIMEOUT: 10000, // Stable 10s timeout
   
-  // Enhanced Voice Activity Detection and Speech Processing
-  SPEECH_PAUSE_THRESHOLD: 600, // Reduced from 800ms to 600ms for faster responses
-  MIN_SPEECH_DURATION: 400, // Reduced from 500ms to 400ms
-  RESPONSE_DELAY_AFTER_SPEECH: 200, // Reduced from 300ms to 200ms
-  MAX_SPEECH_BUFFER_TIME: 4000, // Reduced from 5000ms to 4000ms
+  // Ultra-fast Voice Activity Detection and Speech Processing
+  SPEECH_PAUSE_THRESHOLD: 50, // Minimal pause for instant processing
+  MIN_SPEECH_DURATION: 200, // Very short minimum duration
+  RESPONSE_DELAY_AFTER_SPEECH: 0, // No artificial delay
+  MAX_SPEECH_BUFFER_TIME: 1000, // Reduced buffer time
   
-  // New: Advanced speech completion detection
-  SMART_PAUSE_DETECTION: true, // Enable intelligent pause detection
-  QUESTION_PAUSE_DURATION: 350, // ms - Shorter pause for questions
-  STATEMENT_PAUSE_DURATION: 500, // ms - Medium pause for statements
-  INCOMPLETE_PAUSE_DURATION: 800, // ms - Longer pause for incomplete thoughts
-  MAX_SPEECH_EXTENSION: 2000, // ms - Maximum time to wait for speech continuation
+  // Streaming-first speech completion detection
+  SMART_PAUSE_DETECTION: false, // Disable complex logic for speed
+  QUESTION_PAUSE_DURATION: 10, // Near-instant for questions
+  STATEMENT_PAUSE_DURATION: 10, // Near-instant for statements
+  INCOMPLETE_PAUSE_DURATION: 25, // Very short for incomplete thoughts
+  MAX_SPEECH_EXTENSION: 200, // Minimal wait for speech continuation
+  
+  // New: Streaming pipeline configuration
+  ENABLE_STREAMING_PIPELINE: true, // Enable the new streaming architecture
+  STREAM_CHUNK_SIZE: 1024, // Audio chunk size in bytes
+  STREAM_BUFFER_SIZE: 8192, // Maximum buffer size
+  TEXT_CHUNK_MIN_LENGTH: 8, // Start TTS after 8 characters
+  PARALLEL_TTS_GENERATION: true, // Generate TTS in parallel with text streaming
   
   // Timeout settings (in milliseconds)
   WEBSOCKET_TIMEOUT: 30000, // 30 seconds
-  DEEPGRAM_RETRY_TIMEOUT: 3000, // Reduced from 5s to 3s
+  DEEPGRAM_RETRY_TIMEOUT: 1000, // Ultra-fast retry for streaming
+  STARTUP_DELAY: 250, // Ultra-fast startup for streaming
   
   // Retry configuration
   MAX_DEEPGRAM_RETRIES: 2, // Reduced from 3 to 2 for faster failover
