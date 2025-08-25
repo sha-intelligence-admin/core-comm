@@ -6,11 +6,14 @@ import { createClient } from '@deepgram/sdk';
 import http from 'http';
 import logger from './services/LoggingService.js';
 import { generalRateLimiter } from './middleware/rateLimiter.js';
+import ElevenLabsService from './services/ElevenLabsService.js';
 
 const app = express();
 const server = http.createServer(app);
 
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
+
+const elevenLabsService = new ElevenLabsService();
 
 // Middleware
 app.use(express.urlencoded({ extended: false }));
@@ -30,6 +33,18 @@ app.use('/api/audio', audioRoutes);
 
 // Initialize native WebSocket server
 initializeWebSocket(server, deepgram);
+
+if (process.env.USE_ELEVENLABS_TTS === 'true') {
+  logger.info('Starting ElevenLabs audio preloading...');
+  try {
+    await elevenLabsService.preloadCommonAudio();
+    logger.info('ElevenLabs preloading completed successfully');
+  } catch (error) {
+    logger.warn('ElevenLabs preloading failed, continuing without cache', {
+      error: error.message
+    });
+  }
+}
 
 // Graceful shutdown handling
 process.on('SIGTERM', () => {

@@ -16,105 +16,109 @@ class OpenAIService {
   }
 
   getOptimizedSystemPrompt() {
-    return `
-[ROLE]
-You are the AI assistant for Sha Intelligence on phone calls and live chat. Your job is to clearly, briefly, and helpfully represent the company while protecting user privacy.
+  return `You are the AI assistant for Sha Intelligence on phone calls. Represent the company clearly, briefly, and helpfully while protecting privacy.
 
-[CONTEXT: COMPANY FACTS]
-- Name: Sha Intelligence
-- Mission: Build AI systems that are safe, secure, and privacy-first—designed to serve people, not exploit them.
-- Vision: A future where AI empowers humanity with trust, safety, and purpose.
-- Founded by: Ibrahim BK (Founder & CEO), Ibrahim B Balogun (Head of Security), Yaqub Ja'e (Co-Founder & CTO), Neemah Lawal (Co-Founder & COO)
-- Business Model: Scalable B2B—subscription services, enterprise licensing, and custom API deployments.
-- Revenue: $150k+ from pilot subscriptions and API access on Core Comm.
-- Market: AI market projected to reach $3.68T by 2034 (Precedence Research).
-- User Growth: 45.86% growth rate; 100+ users onboarded.
-- Solution: Decentralized, safety-first AI systems.
-- Services: Signal AI for telcos, custom API deployments for fintechs/banks, subscription services.
-- Contact: shaintelligence.com | info@shaintelligence.com | +44 7853 257472
+COMPANY FACTS:
+- Sha Intelligence: Safe, secure, privacy-first AI systems designed to serve people, not exploit them
+- Founded by: Ibrahim BK (CEO), Yaqub Ja'e (CTO), Ibrahim B Balogun (Head of Security), Neemah Lawal (COO)
+- Business: B2B subscriptions, enterprise licensing, custom API deployments
+- Revenue: $150k+ from pilots; 45.86% growth; 100+ users onboarded
+- Services: Signal AI for telcos, custom APIs for fintechs/banks, subscription services
+- Market: AI projected to reach $3.68T by 2034 (19.20% growth rate)
+- Contact: info@shaintelligence.com | +44 7853 257472 | shaintelligence.com
 
-[PRIMARY GOALS]
-1) Answer questions about Sha Intelligence, products, and security posture.
-2) Build trust (privacy-first, safety, alignment).
-3) Capture intent and next steps (book a demo, send deck, connect to sales).
-4) Redirect anything unrelated to Sha Intelligence to official contact channels.
+KEY KNOWLEDGE:
+Mission: Build AI systems that are safe, secure, privacy-first—serve people, not exploit them
+Vision: Future where AI empowers humanity with trust, safety, and purpose
+Problem: Most AI systems overlook safety/privacy, putting people at risk. Trust is missing.
+Solution: Decentralized AI systems, safe/secure/privacy-first by design, people in control
+Timing: Critical time to build trustworthy AI. Must build it now, before it's too late.
 
-[STYLE & TONE]
-- Phone-friendly, conversational, and concise.
-- Plain language; avoid heavy jargon unless asked.
-- Be transparent about uncertainties; never guess.
-- Respect privacy; don't request sensitive data.
+RESPONSE STYLE:
+- Phone-friendly, conversational, 1-3 sentences default
+- Plain language, avoid jargon unless asked
+- Structure: Direct answer → helpful detail → next step offer
+- Be transparent about uncertainties; redirect off-topic questions to contact info
 
-[HARD RULES]
-- Pricing: Say "pricing is available upon request" and offer to connect to sales.
-- Scope: Stay on Sha Intelligence topics. If outside scope, politely redirect to contact info.
-- Privacy: Do not collect sensitive personal data. If shared, acknowledge and treat as confidential.
-- No hallucinations: If unsure, say so and offer to follow up via contact channels.
-- Security: Never share internal processes, credentials, or non-public details.
+CORE RULES:
+- Pricing: "Available upon request" → connect to sales
+- Stay on Sha Intelligence topics or redirect to contact channels  
+- No sensitive data collection; treat shared info as confidential
+- No hallucinations; if unsure, offer to follow up via contact
 
-[OUTPUT FORMAT]
-- Default answer in 2-5 sentences.
-- Structure answers as:
-  1) Direct, brief answer.
-  2) One helpful detail or example (optional).
-  3) Offer a next step (demo, email, call).
-- Use bullet points only when listing options.
-- Mirror the user's language (default to clear English).
-- No emojis unless the user uses them first.
-
-[REDIRECT TEMPLATE]
-"I'm focused on Sha Intelligence topics. For {request}, please reach us at info@shaintelligence.com or +44 7853 257472."
-
-[NEXT-STEP OPTIONS]
-- Book a demo
-- Send product deck / security overview
-- Intro to sales/partnerships
-- Share contact email to continue the thread (optional, never required)
-
-[FEW-SHOT EXAMPLES]
+EXAMPLE RESPONSES:
 
 Q: "What does Sha Intelligence do?"
-A: "We build safe, secure, privacy-first AI systems for enterprises. Our offering includes Signal AI for telcos, custom API deployments for fintechs and banks, and subscription services. Would you like a brief deck or to book a 20-minute demo?"
+A: "We build safe, secure, privacy-first AI systems for enterprises—AI that amplifies your intelligence while maintaining trust and safety. Our services include Signal AI for telcos, custom API deployments for fintechs/banks, and subscription services. Would you like a demo or product overview?"
 
-Q: "How much does Signal AI cost?"
-A: "Pricing is available upon request and depends on volume and deployment model. I can loop in sales at info@shaintelligence.com or set up a quick call at +44 7853 257472—what works for you?"
+Q: "Who are the founders?"
+A: "Founded by Ibrahim BK as CEO, with Yaqub Ja'e as CTO, Ibrahim B Balogun as Head of Security, and Neemah Lawal as COO. Our experienced team offers strategic guidance and industry expertise. Should I send you a company overview?"
 
-Q: "Can you integrate with our bank's private cloud?"
-A: "Yes—our deployments support on-prem and private cloud with strict security controls. We can share a short security overview and discuss your requirements on a demo. Should I send the overview to your email?"
+Q: "What's your revenue?"
+A: "We've generated over $150k in revenue from pilot subscriptions and API access, with 45.86% month-over-month user growth and 100+ users onboarded. Strong early traction in a $3.68 trillion market. Would you like our growth metrics?"
 
-Q: "Is your data safe?"
-A: "Yes—privacy is core to our design. We minimize data collection, support decentralized patterns, and align with strict security practices. If you'd like, I can share our high-level security overview or set a call with our team."
+Q: "How much does it cost?"
+A: "Pricing is available upon request and depends on your specific needs and deployment model. I can connect you with sales at info@shaintelligence.com or +44 7853 257472. What works better for you?"
 
-Q: "Help me debug my Python code?"
-A: "I'm focused on Sha Intelligence products and services. For coding help, please use your internal channels. If you're exploring our APIs, I can connect you with our team at info@shaintelligence.com."
+Q: "Help me with my Python code"
+A: "I'm focused on Sha Intelligence products and services. For coding help, please use your internal channels or reach us at info@shaintelligence.com for API-related questions."
 
-Q: "Who founded the company?"
-A: "Our founders are Ibrahim BK (CEO), Ibrahim B Balogun (Head of Security), Yaqub Ja'e (CTO), and Neemah Lawal (COO). Would you like a short company one-pager?"
-
-[ESCALATION]
-If the user requests info you don't have or asks for detailed pricing/SLAs: be transparent, then offer to connect them with sales or schedule a demo.
-
-[END OF SYSTEM PROMPT]
-`;
-  }
+NEXT STEPS TO OFFER: Demo booking, product deck, security overview, sales intro, or contact email follow-up.`;
+}
 
   loadCommonResponses() {
     return new Map([
       [
         'company info',
-        "We're Sha Intelligence, focused on safe, secure AI systems that prioritize privacy and serve people without exploitation.",
+        "We're Sha Intelligence, building safe, secure, privacy-first AI systems that amplify your intelligence while maintaining trust, safety, and purpose.",
       ],
       [
         'services',
-        'We offer Signal AI for telcos, custom API deployments for fintechs/banks, and subscription-based AI services.',
+        'We offer subscription-based models, enterprise licensing of Signal AI for telcos and large institutions, and custom API deployments for fintechs, banks, and secure environments.',
       ],
       [
         'contact',
-        'You can reach us at info@shaintelligence.com or through our website for more information.',
+        'You can reach us at info@shaintelligence.com, visit shaintelligence.com, or call +44 7853 257472.',
       ],
       [
         'founders',
-        "Founded by Ibrahim BK as CEO, with team members Ibrahim B Balogun, Yaqub Ja'e, and Neemah Lawal.",
+        "Founded by Ibrahim BK as CEO, with Yaqub Ja'e as CTO, Ibrahim B Balogun as Head of Security, and Neemah Lawal as COO.",
+      ],
+      [
+        'business model',
+        "Scalable B2B model with subscription services, enterprise licensing, and custom API deployments. We've generated $150k+ in early revenue.",
+      ],
+      [
+        'revenue',
+        'We have generated over $150,000 in revenue through pilot subscriptions and API access on Core Comm, demonstrating strong early traction.',
+      ],
+      [
+        'market size',
+        'AI market projected to reach $3.68 trillion by 2034 with 19.20% annual growth rate according to Precedence Research.',
+      ],
+      [
+        'growth',
+        'We have 45.86% month-on-month user growth rate and have onboarded over 100 users so far.',
+      ],
+      [
+        'problem',
+        'Most AI systems overlook safety, privacy, and human alignment, putting people at risk. Trust is missing in AI.',
+      ],
+      [
+        'solution',
+        'We build decentralized AI systems that are safe, secure, and privacy-first by design, putting people in control.',
+      ],
+      [
+        'mission',
+        'Build AI systems that are safe, secure, and privacy-first, designed to serve people, not exploit them.',
+      ],
+      [
+        'vision',
+        'Shape a future where AI empowers humanity with trust, safety, and purpose.',
+      ],
+      [
+        'timing',
+        "Now is the critical time to build trustworthy AI. We must build it now, before it's too late.",
       ],
     ]);
   }
@@ -244,18 +248,91 @@ If the user requests info you don't have or asks for detailed pricing/SLAs: be t
   getQuickResponse(prompt) {
     const lowerPrompt = prompt.toLowerCase();
 
-    // Quick pattern matching for instant responses
-    if (lowerPrompt.includes('company') || lowerPrompt.includes('about')) {
+    // Enhanced quick pattern matching for instant responses
+    if (
+      lowerPrompt.includes('company') ||
+      lowerPrompt.includes('about') ||
+      lowerPrompt.includes('sha intelligence')
+    ) {
       return this.commonResponses.get('company info');
     }
-    if (lowerPrompt.includes('service') || lowerPrompt.includes('offer')) {
+    if (
+      lowerPrompt.includes('service') ||
+      lowerPrompt.includes('offer') ||
+      lowerPrompt.includes('product')
+    ) {
       return this.commonResponses.get('services');
     }
-    if (lowerPrompt.includes('contact') || lowerPrompt.includes('reach')) {
+    if (
+      lowerPrompt.includes('contact') ||
+      lowerPrompt.includes('reach') ||
+      lowerPrompt.includes('email') ||
+      lowerPrompt.includes('phone')
+    ) {
       return this.commonResponses.get('contact');
     }
-    if (lowerPrompt.includes('founder') || lowerPrompt.includes('ceo')) {
+    if (
+      lowerPrompt.includes('founder') ||
+      lowerPrompt.includes('ceo') ||
+      lowerPrompt.includes('team') ||
+      lowerPrompt.includes('ibrahim')
+    ) {
       return this.commonResponses.get('founders');
+    }
+    if (
+      lowerPrompt.includes('business model') ||
+      lowerPrompt.includes('make money') ||
+      lowerPrompt.includes('revenue stream')
+    ) {
+      return this.commonResponses.get('business model');
+    }
+    if (
+      lowerPrompt.includes('revenue') ||
+      lowerPrompt.includes('sales') ||
+      lowerPrompt.includes('traction')
+    ) {
+      return this.commonResponses.get('revenue');
+    }
+    if (
+      lowerPrompt.includes('market size') ||
+      lowerPrompt.includes('market') ||
+      lowerPrompt.includes('3.68 trillion')
+    ) {
+      return this.commonResponses.get('market size');
+    }
+    if (
+      lowerPrompt.includes('growth') ||
+      lowerPrompt.includes('user growth') ||
+      lowerPrompt.includes('45.86')
+    ) {
+      return this.commonResponses.get('growth');
+    }
+    if (
+      lowerPrompt.includes('problem') ||
+      lowerPrompt.includes('solving') ||
+      lowerPrompt.includes('ai safety')
+    ) {
+      return this.commonResponses.get('problem');
+    }
+    if (
+      lowerPrompt.includes('solution') ||
+      lowerPrompt.includes('decentralized') ||
+      lowerPrompt.includes('privacy-first')
+    ) {
+      return this.commonResponses.get('solution');
+    }
+    if (lowerPrompt.includes('mission') || lowerPrompt.includes('purpose')) {
+      return this.commonResponses.get('mission');
+    }
+    if (lowerPrompt.includes('vision') || lowerPrompt.includes('future')) {
+      return this.commonResponses.get('vision');
+    }
+    if (
+      lowerPrompt.includes('why now') ||
+      lowerPrompt.includes('timing') ||
+      lowerPrompt.includes('urgency')
+    ) {
+      return this.commonResponses.get('timing');
     }
 
     return null;
