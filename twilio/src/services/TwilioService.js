@@ -1,6 +1,7 @@
 import twilio from 'twilio';
 import { CONFIG } from '../config/config.js';
 import CallSessionManager from '../services/CallSessionManager.js';
+import logger from './LoggingService.js';
 
 class TwilioService {
   constructor() {
@@ -104,7 +105,7 @@ class TwilioService {
       const twiml = `<Response><Play>${audioUrl}</Play><Pause length="3600"/></Response>`;
 
       await this.client.calls(callSid).update({ twiml });
-      console.log('Audio playback sent successfully - stream continues');
+      logger.info('Audio playback sent successfully - stream continues');
       return true;
     } catch (error) {
       console.error('Error playing audio:', error);

@@ -23,14 +23,15 @@ class ElevenLabsService {
 
   async generateSpeech(text, options = {}) {
     const startTime = Date.now();
+    const cacheKey = options.cacheKey || `${text}:${this.voiceId}`;
 
     try {
       // Check cache first for exact text matches
-      const cacheKey = `${text}:${this.voiceId}`;
       if (this.audioCache.has(cacheKey)) {
         logger.info('Using cached ElevenLabs audio', {
           textLength: text.length,
           responseTime: Date.now() - startTime,
+          cached: true,
         });
         return this.audioCache.get(cacheKey);
       }
@@ -65,6 +66,7 @@ class ElevenLabsService {
       }
 
       const audioBuffer = await response.buffer();
+      this.audioCache.set(cacheKey, audioBuffer);
 
       // Cache successful results
       if (this.audioCache.size >= this.maxCacheSize) {
@@ -72,7 +74,6 @@ class ElevenLabsService {
         const firstKey = this.audioCache.keys().next().value;
         this.audioCache.delete(firstKey);
       }
-      this.audioCache.set(cacheKey, audioBuffer);
 
       const responseTime = Date.now() - startTime;
       logger.info('ElevenLabs speech generated', {

@@ -3,8 +3,17 @@ import dotenv from 'dotenv';
 import twilio from 'twilio';
 import ElevenLabsService from '../services/ElevenLabsService.js';
 import logger from '../services/LoggingService.js';
+import crypto from 'crypto';
 
 dotenv.config();
+
+const stripAndNormalizeText = (text) => {
+  return text
+    .toLowerCase() // Convert to lowercase
+    .replace(/[^a-z0-9\s]/g, '') // Remove punctuation and special characters
+    .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
+    .trim(); // Remove leading/trailing whitespace
+};
 
 const elevenLabsService = new ElevenLabsService();
 
@@ -13,13 +22,13 @@ const greetingOptions = [
   "Hi there! Thanks for calling Sha Intelligence. I'm here to help - what can I do for you today?",
   "Good day! Thanks for calling Sha Intelligence. I'd be happy to assist you - what would you like to know?",
   "Hello! You've reached Sha Intelligence. What brings you to us today?",
-  "Hey, thanks for calling! This is Sha Intelligence. How can I help you out?",
-  "Hi! Thanks for reaching out to Sha Intelligence. What can I help you with today?",
+  'Hey, thanks for calling! This is Sha Intelligence. How can I help you out?',
+  'Hi! Thanks for reaching out to Sha Intelligence. What can I help you with today?',
   "Hello, and thank you for calling Sha Intelligence. I'd be happy to assist you - what's on your mind?",
   "Hi! You've connected with Sha Intelligence. I'm here to answer any questions you might have.",
   "Good day! You've reached Sha Intelligence. What would you like to learn about today?",
-  "Hello! Thanks for calling Sha Intelligence. What can I tell you about our AI solutions?",
-  "Hi there! You've reached Sha Intelligence. I'm ready to help - what brings you here today?"
+  'Hello! Thanks for calling Sha Intelligence. What can I tell you about our AI solutions?',
+  "Hi there! You've reached Sha Intelligence. I'm ready to help - what brings you here today?",
 ];
 
 // Function to get random greeting
@@ -33,31 +42,30 @@ export const generateGreetingAudio = async (req, res) => {
   try {
     const greetingText = getRandomGreeting();
     console.log('Using greeting:', greetingText);
-    
+
     // ElevenLabsService.generateSpeech likely returns the buffer directly
     const audioBuffer = await elevenLabsService.generateSpeech(greetingText);
-    
+
     // Set proper headers for audio
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Length', audioBuffer.length);
     res.setHeader('Cache-Control', 'no-cache'); // Don't cache random greetings
-    
+
     logger.info('Greeting audio generated successfully:', {
       textLength: greetingText.length,
       audioSize: audioBuffer.length,
-      servingUrl: `${req.protocol}://${req.get('host')}/api/audio/greeting`
+      servingUrl: `${req.protocol}://${req.get('host')}/api/audio/greeting`,
     });
-    
+
     // Send the audio buffer
     res.send(audioBuffer);
-    
   } catch (error) {
     console.error('Error generating greeting audio:', error.message);
-    
+
     // Return proper HTTP error status
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to generate greeting audio',
-      message: error.message 
+      message: error.message,
     });
   }
 };
@@ -69,28 +77,31 @@ export const generateDynamicAudio = async (req, res) => {
     if (!encodedText) {
       return res.status(400).json({ error: 'Missing text parameter' });
     }
-    
-    const text = Buffer.from(encodedText, 'base64').toString('utf-8');
-    console.log('Generating dynamic ElevenLabs audio for:', text.substring(0, 50));
-    
-    // ElevenLabsService returns buffer directly, not wrapped in success object
-    const audioBuffer = await elevenLabsService.generateSpeech(text);
-    
-    // Check if we got a valid buffer
+
+    const originalText = Buffer.from(encodedText, 'base64').toString('utf-8'); // Step 1: Create a standardized cache key from a cleaned-up version of the text
+
+    const cacheKey = stripAndNormalizeText(originalText); // Step 2: Use the existing generateSpeech method which handles all caching logic // Pass the ORIGINAL text to generateSpeech so the audio quality is preserved
+
+    const audioBuffer = await elevenLabsService.generateSpeech(originalText, {
+      cacheKey,
+    }); // Check if we got a valid buffer
+
     if (Buffer.isBuffer(audioBuffer) && audioBuffer.length > 0) {
       res.set({
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBuffer.length,
-        'Cache-Control': 'public, max-age=300'
+        'Cache-Control': 'public, max-age=300',
       });
       res.send(audioBuffer);
     } else {
-      console.error('ElevenLabs returned invalid audio buffer');
+      console.error('ElevenLabs returned an invalid audio buffer');
       res.status(500).json({ error: 'Failed to generate audio' });
     }
   } catch (error) {
     console.error('Error generating dynamic audio:', error.message);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+    res
+      .status(500)
+      .json({ error: 'Internal server error', details: error.message });
   }
 };
 
@@ -106,9 +117,13 @@ export const voiceCall = async (req, res) => {
 
     const fromNumber = req.body.From ? req.body.From.trim() : '';
     const toNumber = req.body.To ? req.body.To.trim() : '';
-    
-    const websocketUrl = `wss://${req.headers.host}/api/calls/media-stream/${encodeURIComponent(fromNumber)}/${encodeURIComponent(toNumber)}`;
-    
+
+    const websocketUrl = `wss://${
+      req.headers.host
+    }/api/calls/media-stream/${encodeURIComponent(
+      fromNumber
+    )}/${encodeURIComponent(toNumber)}`;
+
     console.log('WebSocket URL:', websocketUrl);
 
     // Start stream
@@ -120,7 +135,7 @@ export const voiceCall = async (req, res) => {
 
     // Use ElevenLabs audio URL if available, with Twilio fallback
     const useElevenLabs = process.env.USE_ELEVENLABS_TTS === 'true';
-    
+
     if (useElevenLabs) {
       const greetingAudioUrl = `https://${req.headers.host}/api/audio/greeting`;
       twiml.play(greetingAudioUrl);
@@ -129,11 +144,14 @@ export const voiceCall = async (req, res) => {
       // Fallback to Twilio TTS with random greeting
       const randomGreeting = getRandomGreeting();
       console.log('Using Twilio TTS with greeting:', randomGreeting);
-      
-      twiml.say({
-        voice: 'alice',
-        language: 'en-US',
-      }, randomGreeting);
+
+      twiml.say(
+        {
+          voice: 'alice',
+          language: 'en-US',
+        },
+        randomGreeting
+      );
     }
 
     twiml.pause({ length: 3600 });
@@ -143,7 +161,6 @@ export const voiceCall = async (req, res) => {
 
     res.type('text/xml');
     res.send(twimlString);
-    
   } catch (error) {
     console.error('Error handling voice call:', error);
     const fallbackTwiml = new twilio.twiml.VoiceResponse();
