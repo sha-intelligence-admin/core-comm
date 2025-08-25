@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import twilio from 'twilio';
 import ElevenLabsService from '../services/ElevenLabsService.js';
+import logger from '../services/LoggingService.js';
 
 dotenv.config();
 
@@ -33,55 +34,63 @@ export const generateGreetingAudio = async (req, res) => {
     const greetingText = getRandomGreeting();
     console.log('Using greeting:', greetingText);
     
-    const result = await elevenLabsService.generateSpeech(greetingText);
+    // ElevenLabsService.generateSpeech likely returns the buffer directly
+    const audioBuffer = await elevenLabsService.generateSpeech(greetingText);
     
-    if (result.success) {
-      // Set proper headers for audio
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Length', result.audioBuffer.length);
-      res.setHeader('Cache-Control', 'public, max-age=300'); // Shorter cache for random greetings
-      
-      // Send the audio buffer
-      res.send(result.audioBuffer);
-    } else {
-      console.error('ElevenLabs generation failed:', result.error);
-      res.status(500).json({ error: 'Failed to generate audio', details: result.error });
-    }
+    // Set proper headers for audio
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Length', audioBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache'); // Don't cache random greetings
+    
+    logger.info('Greeting audio generated successfully:', {
+      textLength: greetingText.length,
+      audioSize: audioBuffer.length,
+      servingUrl: `${req.protocol}://${req.get('host')}/api/audio/greeting`
+    });
+    
+    // Send the audio buffer
+    res.send(audioBuffer);
+    
   } catch (error) {
-    console.error('Error generating greeting audio:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error generating greeting audio:', error.message);
+    
+    // Return proper HTTP error status
+    res.status(500).json({ 
+      error: 'Failed to generate greeting audio',
+      message: error.message 
+    });
   }
 };
 
 // Dynamic audio endpoint for any text during conversation
 export const generateDynamicAudio = async (req, res) => {
   try {
-    // Get text from query parameter (base64 encoded)
     const encodedText = req.query.text;
     if (!encodedText) {
       return res.status(400).json({ error: 'Missing text parameter' });
     }
     
-    // Decode the text
     const text = Buffer.from(encodedText, 'base64').toString('utf-8');
     console.log('Generating dynamic ElevenLabs audio for:', text.substring(0, 50));
     
-    const result = await elevenLabsService.generateSpeech(text);
+    // ElevenLabsService returns buffer directly, not wrapped in success object
+    const audioBuffer = await elevenLabsService.generateSpeech(text);
     
-    if (result.success && Buffer.isBuffer(result.audioBuffer) && result.audioBuffer.length > 0) {
-      res.writeHead(200, {
+    // Check if we got a valid buffer
+    if (Buffer.isBuffer(audioBuffer) && audioBuffer.length > 0) {
+      res.set({
         'Content-Type': 'audio/mpeg',
-        'Content-Length': result.audioBuffer.length,
+        'Content-Length': audioBuffer.length,
         'Cache-Control': 'public, max-age=300'
       });
-      res.end(result.audioBuffer);
+      res.send(audioBuffer);
     } else {
-      console.error('ElevenLabs generation failed:', result.error);
-      res.status(500).json({ error: 'Failed to generate audio', details: result.error });
+      console.error('ElevenLabs returned invalid audio buffer');
+      res.status(500).json({ error: 'Failed to generate audio' });
     }
   } catch (error) {
-    console.error('Error generating dynamic audio:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error generating dynamic audio:', error.message);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 };
 

@@ -969,10 +969,7 @@ async function generateAdvancedResponse(transcript, callSid) {
     const legacyResult = await qna.getBestAnswer('en', lowerTranscript);
 
     // If legacy KB has high confidence, use it (faster response)
-    if (
-      legacyResult?.answer &&
-      legacyResult.score > CONFIG.NLP_CONFIDENCE_THRESHOLD
-    ) {
+    if (legacyResult?.answer && legacyResult.score > CONFIG.NLP_CONFIDENCE_THRESHOLD) {
       logger.info('Using legacy KB response', {
         callSid,
         score: legacyResult.score,
@@ -1001,10 +998,9 @@ async function generateAdvancedResponse(transcript, callSid) {
         { role: 'assistant', content: openaiResult.response }
       );
 
-      // Keep only last 10 exchanges (20 messages) for performance
-      if (callSession.conversationHistory.length > 20) {
-        callSession.conversationHistory =
-          callSession.conversationHistory.slice(-20);
+      // Keep only last exchanges
+      if (callSession.conversationHistory.length > CONFIG.MAX_CONVERSATION_HISTORY) {
+        callSession.conversationHistory = callSession.conversationHistory.slice(-CONFIG.MAX_CONVERSATION_HISTORY);
       }
     }
 
@@ -1016,56 +1012,60 @@ async function generateAdvancedResponse(transcript, callSid) {
       transcript: transcript.substring(0, 50),
     });
 
-    // Fallback to simple responses
+    // Fallback responses
     const fallbackResponses = [
       "I apologize, I'm having trouble processing that right now. Could you please rephrase your question?",
       "I'm experiencing some technical difficulties. Please try asking your question differently.",
       'Let me help you with that. You can reach us directly at info@shaintelligence.com for immediate assistance.',
     ];
 
-    return fallbackResponses[
-      Math.floor(Math.random() * fallbackResponses.length)
-    ];
+    return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
   }
 }
 
 async function speakToCustomerEnhanced(callSid, text) {
+  const startTime = Date.now();
+  
   try {
+    // Truncate text if too long
+    const truncatedText = text.length > CONFIG.MAX_RESPONSE_LENGTH 
+      ? text.substring(0, CONFIG.MAX_RESPONSE_LENGTH) + '...'
+      : text;
+
     const useElevenLabs = process.env.USE_ELEVENLABS_TTS === 'true';
 
     if (useElevenLabs) {
-      logger.info('Using ElevenLabs TTS with dynamic audio hosting', {
+      logger.info('Using optimized ElevenLabs TTS', {
         callSid,
-        textLength: text.length,
+        textLength: truncatedText.length,
       });
 
-      // Create a dynamic audio URL for this specific text
-      // We'll pass the text as a base64-encoded query parameter
-      const encodedText = Buffer.from(text).toString('base64');
-      const audioUrl = `${
-        process.env.NGROK_URL || 'localhost:3001'
-      }/api/audio/dynamic?text=${encodedText}`;
-
-      logger.info('Playing ElevenLabs audio from dynamic endpoint', {
-        callSid,
-        audioUrl: audioUrl, // Log full URL
-      });
+      const encodedText = Buffer.from(truncatedText).toString('base64');
+      const audioUrl = `${process.env.NGROK_URL || 'localhost:3001'}/api/audio/dynamic?text=${encodedText}`;
 
       await twilioService.playAudioToCustomer(callSid, audioUrl);
     } else {
-      // Use standard Twilio TTS
-      logger.info('Using Twilio TTS fallback', { callSid });
-      await twilioService.speakToCustomer(callSid, text);
+      logger.info('Using Twilio TTS', { callSid });
+      await twilioService.speakToCustomer(callSid, truncatedText);
     }
-  } catch (error) {
-    logger.error('Error in enhanced TTS', {
+
+    const totalTime = Date.now() - startTime;
+    logger.info('TTS delivery completed', {
       callSid,
-      error: error.message,
-      textPreview: text.substring(0, 50),
+      deliveryTime: totalTime,
+      textLength: truncatedText.length
     });
 
-    // Final fallback to Twilio TTS
-    await twilioService.speakToCustomer(callSid, text);
+  } catch (error) {
+    const totalTime = Date.now() - startTime;
+    logger.error('Error in optimized TTS', {
+      callSid,
+      error: error.message,
+      deliveryTime: totalTime
+    });
+
+    // Fast fallback to Twilio TTS
+    await twilioService.speakToCustomer(callSid, text.substring(0, 200));
   }
 }
 

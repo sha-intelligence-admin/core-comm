@@ -33,5 +33,36 @@ export const CONFIG = {
     'DEEPGRAM_API_KEY',
     'OPENAI_API_KEY',
     'ELEVENLABS_API_KEY'
-  ]
+  ],
+
+    OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+  OPENAI_TEMPERATURE: parseFloat(process.env.OPENAI_TEMPERATURE) || 0.3, // Reduced from 0.7
+  OPENAI_MAX_TOKENS: parseInt(process.env.OPENAI_MAX_TOKENS) || 80, // Reduced from 150
+  OPENAI_TIMEOUT: parseInt(process.env.OPENAI_TIMEOUT) || 8000, // 8 second timeout
+  
+  // ElevenLabs Optimization
+  ELEVENLABS_STABILITY: parseFloat(process.env.ELEVENLABS_STABILITY) || 0.5, // Faster generation
+  ELEVENLABS_SIMILARITY_BOOST: parseFloat(process.env.ELEVENLABS_SIMILARITY_BOOST) || 0.75,
+  ELEVENLABS_OPTIMIZE_LATENCY: parseInt(process.env.ELEVENLABS_OPTIMIZE_LATENCY) || 3,
+  ELEVENLABS_OUTPUT_FORMAT: process.env.ELEVENLABS_OUTPUT_FORMAT || 'mp3_22050_32',
+  
+  // Response Management
+  MAX_RESPONSE_LENGTH: parseInt(process.env.MAX_RESPONSE_LENGTH) || 200,
+  ENABLE_RESPONSE_CHUNKING: process.env.ENABLE_RESPONSE_CHUNKING === 'true',
+  ENABLE_RESPONSE_CACHING: process.env.ENABLE_RESPONSE_CACHING !== 'false',
+  CACHE_DURATION: parseInt(process.env.CACHE_DURATION) || 300000, // 5 minutes
+  
+  // Performance Settings
+  CONCURRENT_PROCESSING: process.env.CONCURRENT_PROCESSING !== 'false',
+  PRELOAD_COMMON_RESPONSES: process.env.PRELOAD_COMMON_RESPONSES !== 'false',
+  
+  // Conversation History Limits
+  MAX_CONVERSATION_HISTORY: parseInt(process.env.MAX_CONVERSATION_HISTORY) || 6, // Reduced from 20
+  
+  // Existing Deepgram settings...
+  DEEPGRAM_ENDPOINTING: parseInt(process.env.DEEPGRAM_ENDPOINTING) || 250, // Reduced from 300
+  
+  // Response timeouts
+  RESPONSE_TIMEOUT: parseInt(process.env.RESPONSE_TIMEOUT) || 5000,
+  TTS_TIMEOUT: parseInt(process.env.TTS_TIMEOUT) || 8000,
 };
