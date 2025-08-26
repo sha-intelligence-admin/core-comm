@@ -8,7 +8,7 @@ class ElevenLabsService {
     });
 
     // Default voice settings - you can customize these
-    this.defaultVoiceId = '21m00Tcm4TlvDq8ikWAM';
+    this.defaultVoiceId = 'EXAVITQu4vr4xnSDxMaL';
     // Alternative voices:
     // 'pNInz6obpgDQGcFmaJgB' - Adam (professional male)
     // 'EXAVITQu4vr4xnSDxMaL' - Bella (professional female)
@@ -16,10 +16,11 @@ class ElevenLabsService {
     // 'MF3mGyEYCl7XYWbV9V6O' - Elli (young female)
     
     this.voiceSettings = {
-      stability: 0.75,
-      similarity_boost: 0.75,
-      style: 0.5,
-      use_speaker_boost: true
+      stability: 0.75,           // Lower for more variation (less robotic)
+      similarity_boost: 0.75,    // Slightly lower for more natural deviation
+      style: 0.85,              // Higher for more expressive speech
+      use_speaker_boost: true,   // Enhance voice characteristics
+      optimize_streaming_latency: 2,
     };
   }
 
