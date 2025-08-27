@@ -1,8 +1,14 @@
 import express from 'express';
 import DatabaseService from '../services/DatabaseService.js';
 import CallSessionManager from '../services/CallSessionManager.js';
+import StreamingPipelineService from '../services/StreamingPipelineService.js';
+import CircuitBreakerService from '../services/CircuitBreakerService.js';
+import PerformanceMonitorService from '../services/PerformanceMonitorService.js';
+import PredictiveCacheService from '../services/PredictiveCacheService.js';
+import StartupValidationService from '../services/StartupValidationService.js';
 import logger from '../services/LoggingService.js';
 import { webhookRateLimiter } from '../middleware/rateLimiter.js';
+import { CONFIG } from '../config/config.js';
 
 const router = express.Router();
 
@@ -27,12 +33,20 @@ router.get('/health', async (req, res) => {
   }
 });
 
-// Detailed health check with dependencies
+// Production-ready detailed health check
 router.get('/health/detailed', async (req, res) => {
   try {
+    const streamingPipeline = StreamingPipelineService.getInstance();
+    const circuitBreakerService = CircuitBreakerService.getInstance();
+    const performanceMonitor = PerformanceMonitorService.getInstance();
+    const cacheService = PredictiveCacheService.getInstance();
+
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: process.env.npm_package_version || '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
       services: {}
     };
 
@@ -45,6 +59,73 @@ router.get('/health/detailed', async (req, res) => {
       };
     } catch (error) {
       health.services.database = {
+        status: 'unhealthy',
+        message: error.message
+      };
+    }
+
+    // Check streaming pipeline
+    try {
+      const systemHealth = streamingPipeline.getSystemHealth();
+      health.services.streaming = {
+        status: systemHealth.isHealthy ? 'healthy' : 'unhealthy',
+        activeStreams: systemHealth.activeStreams,
+        errorRecovery: systemHealth.errorRecovery,
+        serviceStates: systemHealth.services
+      };
+    } catch (error) {
+      health.services.streaming = {
+        status: 'unhealthy',
+        message: error.message
+      };
+    }
+
+    // Check circuit breakers
+    try {
+      const cbMetrics = circuitBreakerService.getGlobalMetrics();
+      health.services.circuitBreakers = {
+        status: cbMetrics.global.healthScore > 50 ? 'healthy' : 'unhealthy',
+        healthScore: cbMetrics.global.healthScore,
+        totalServices: cbMetrics.global.totalServices,
+        healthyServices: cbMetrics.global.healthyServices,
+        unhealthyServices: cbMetrics.global.unhealthyServices
+      };
+    } catch (error) {
+      health.services.circuitBreakers = {
+        status: 'unhealthy',
+        message: error.message
+      };
+    }
+
+    // Check performance monitor
+    try {
+      const perfSummary = performanceMonitor.getPerformanceSummary();
+      health.services.performance = {
+        status: perfSummary.systemHealth.overall === 'excellent' || 
+                perfSummary.systemHealth.overall === 'good' ? 'healthy' : 'degraded',
+        totalResponses: perfSummary.totalResponses,
+        avgLatency: perfSummary.latency.avgResponse,
+        healthScore: perfSummary.systemHealth.score
+      };
+    } catch (error) {
+      health.services.performance = {
+        status: 'unhealthy',
+        message: error.message
+      };
+    }
+
+    // Check cache service
+    try {
+      const cacheMetrics = cacheService.getMetrics();
+      health.services.cache = {
+        status: 'healthy',
+        hitRate: cacheMetrics.hitRate,
+        responseCacheSize: cacheMetrics.responseCacheSize,
+        audioCacheSize: cacheMetrics.audioCacheSize,
+        memoryUsage: cacheMetrics.totalMemoryUsage
+      };
+    } catch (error) {
+      health.services.cache = {
         status: 'unhealthy',
         message: error.message
       };
@@ -81,21 +162,49 @@ router.get('/health/detailed', async (req, res) => {
       };
     }
 
+    // Add resource monitoring
+    const memory = process.memoryUsage();
+    const memoryPressure = (memory.heapUsed / memory.heapTotal) * 100;
+    
+    health.resources = {
+      memory: {
+        usage: memory,
+        pressure: Math.round(memoryPressure),
+        status: memoryPressure < 80 ? 'healthy' : 'warning'
+      },
+      cpu: process.cpuUsage()
+    };
+
     // Determine overall health
     const unhealthyServices = Object.values(health.services)
-      .filter(service => service.status !== 'healthy');
+      .filter(service => service.status === 'unhealthy');
+    
+    const degradedServices = Object.values(health.services)
+      .filter(service => service.status === 'degraded');
     
     if (unhealthyServices.length > 0) {
-      health.status = 'degraded';
+      health.status = 'unhealthy';
       res.status(503);
+    } else if (degradedServices.length > 0 || memoryPressure > 80) {
+      health.status = 'degraded';
+      res.status(200); // Still operational but degraded
     }
 
     res.json(health);
+
+    logger.debug('Detailed health check completed', {
+      status: health.status,
+      unhealthyServices: unhealthyServices.length,
+      degradedServices: degradedServices.length,
+      ip: req.ip
+    });
+
   } catch (error) {
     logger.logError(error, { endpoint: '/health/detailed' });
     res.status(500).json({
       status: 'unhealthy',
-      error: error.message
+      error: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 });
