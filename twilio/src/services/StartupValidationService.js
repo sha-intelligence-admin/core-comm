@@ -121,10 +121,10 @@ class StartupValidationService {
       // Check required environment variables
       validateEnvironment();
       
-      // Validate NODE_ENV
-      const nodeEnv = process.env.NODE_ENV;
-      if (!nodeEnv || !['development', 'production', 'test'].includes(nodeEnv)) {
-        logger.warn('NODE_ENV not set or invalid, defaulting to development', {
+      // NODE_ENV is now handled by validateEnvironment() with defaults
+      const nodeEnv = CONFIG.NODE_ENV;
+      if (!['development', 'production', 'test'].includes(nodeEnv)) {
+        logger.warn('NODE_ENV is unusual value, using as-is', {
           current: nodeEnv
         });
       }

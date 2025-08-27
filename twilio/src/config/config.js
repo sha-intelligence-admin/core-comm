@@ -88,17 +88,20 @@ export const CONFIG = {
     'TWILIO_AUTH_TOKEN',
     'DEEPGRAM_API_KEY',
     'OPENAI_API_KEY',
-    'ELEVENLABS_API_KEY',
-    'NODE_ENV'
+    'ELEVENLABS_API_KEY'
   ],
   
-  // Development vs Production settings
+  // Development vs Production settings (with fallback defaults)
+  get NODE_ENV() {
+    return process.env.NODE_ENV || 'production'; // Default to production for safety
+  },
+  
   get IS_PRODUCTION() {
-    return process.env.NODE_ENV === 'production';
+    return this.NODE_ENV === 'production';
   },
   
   get LOG_LEVEL() {
-    return this.IS_PRODUCTION ? 'info' : 'debug';
+    return process.env.LOG_LEVEL || (this.IS_PRODUCTION ? 'info' : 'debug');
   },
   
   get ENABLE_DETAILED_LOGGING() {
@@ -108,33 +111,74 @@ export const CONFIG = {
 
 // Environment validation function
 export function validateEnvironment() {
+  const errors = [];
+  const warnings = [];
+  
+  // Check required environment variables
   const missing = CONFIG.REQUIRED_ENV_VARS.filter(envVar => !process.env[envVar]);
   
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    errors.push(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+  
+  // Set NODE_ENV if not provided
+  if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = 'production';
+    warnings.push('NODE_ENV not set, defaulting to production');
   }
   
   // Validate URLs
   if (process.env.SUPABASE_URL && !isValidUrl(process.env.SUPABASE_URL)) {
-    throw new Error('SUPABASE_URL must be a valid URL');
+    errors.push('SUPABASE_URL must be a valid URL');
   }
   
   // Validate API keys (basic format check)
-  const apiKeys = [
-    'TWILIO_ACCOUNT_SID',
-    'TWILIO_AUTH_TOKEN',
-    'DEEPGRAM_API_KEY',
-    'OPENAI_API_KEY',
-    'ELEVENLABS_API_KEY'
+  const apiKeyValidation = [
+    { key: 'TWILIO_ACCOUNT_SID', minLength: 30, startsWith: 'AC' },
+    { key: 'TWILIO_AUTH_TOKEN', minLength: 30 },
+    { key: 'DEEPGRAM_API_KEY', minLength: 30 },
+    { key: 'OPENAI_API_KEY', minLength: 40, startsWith: 'sk-' },
+    { key: 'ELEVENLABS_API_KEY', minLength: 30 }
   ];
   
-  for (const key of apiKeys) {
-    if (process.env[key] && process.env[key].length < 10) {
-      throw new Error(`${key} appears to be invalid (too short)`);
+  for (const validation of apiKeyValidation) {
+    const value = process.env[validation.key];
+    if (value) {
+      if (value.length < validation.minLength) {
+        errors.push(`${validation.key} appears to be invalid (too short, minimum ${validation.minLength} characters)`);
+      }
+      if (validation.startsWith && !value.startsWith(validation.startsWith)) {
+        errors.push(`${validation.key} appears to be invalid (should start with '${validation.startsWith}')`);
+      }
     }
   }
   
+  // Validate port if provided
+  const port = process.env.PORT;
+  if (port) {
+    const portNum = parseInt(port);
+    if (isNaN(portNum) || portNum < 1000 || portNum > 65535) {
+      errors.push(`PORT must be a valid port number between 1000 and 65535, got: ${port}`);
+    }
+  }
+  
+  // Log results
+  if (warnings.length > 0) {
+    console.log('⚠️  Environment validation warnings:');
+    warnings.forEach(warning => console.log(`   - ${warning}`));
+  }
+  
+  if (errors.length > 0) {
+    console.error('❌ Environment validation failed:');
+    errors.forEach(error => console.error(`   - ${error}`));
+    throw new Error(`Environment validation failed: ${errors.join('; ')}`);
+  }
+  
   console.log('✅ Environment validation passed');
+  console.log(`   - Environment: ${CONFIG.NODE_ENV}`);
+  console.log(`   - Log Level: ${CONFIG.LOG_LEVEL}`);
+  console.log(`   - Required variables: ${CONFIG.REQUIRED_ENV_VARS.length} found`);
+  
   return true;
 }
 
