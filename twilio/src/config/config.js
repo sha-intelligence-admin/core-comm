@@ -10,7 +10,7 @@ export const CONFIG = {
   DEEPGRAM_CONNECTION_TIMEOUT: 10000, // Stable 10s timeout
   
   // Ultra-fast Voice Activity Detection and Speech Processing
-  SPEECH_PAUSE_THRESHOLD: 50, // Minimal pause for instant processing
+  SPEECH_PAUSE_THRESHOLD: 300, // Minimal pause for instant processing
   MIN_SPEECH_DURATION: 200, // Very short minimum duration
   RESPONSE_DELAY_AFTER_SPEECH: 0, // No artificial delay
   MAX_SPEECH_BUFFER_TIME: 1000, // Reduced buffer time

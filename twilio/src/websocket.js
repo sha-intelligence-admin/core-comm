@@ -15,6 +15,7 @@ import qna from './nlp/secure-kb.js';
 import OpenAIService from './services/OpenAIService.js';
 import ElevenLabsService from './services/ElevenLabsService.js';
 import StreamingPipelineService from './services/StreamingPipelineService.js';
+import { WebSocket } from 'ws';
 
 // Call ending detection patterns
 const CALL_END_PATTERNS = [
@@ -155,6 +156,7 @@ const activeConnections = new Set();
 export const initializeWebSocket = (server, deepgram) => {
   const wss = new WebSocketServer({ server });
 
+  testDeepgramWebSocket();
   wss.on('connection', (ws, req) => {
     console.log('Native WebSocket connection');
     console.log('Request URL:', req.url);
@@ -472,6 +474,7 @@ function handleMediaStream(
 // All other functions remain the same...
 async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
   try {
+    // testDeepgramWebSocket();
     // Stable Deepgram configuration with performance optimizations
     let deepgramConnection = deepgram.listen.live({
       model: CONFIG.DEEPGRAM_MODEL,
@@ -482,7 +485,7 @@ async function startTranscription(callSid, ws, deepgram, retryCount = 0) {
       endpointing: CONFIG.DEEPGRAM_ENDPOINTING, // Stable 300ms
       encoding: 'mulaw',
       sample_rate: 8000,
-      utterance_end_ms: CONFIG.SPEECH_PAUSE_THRESHOLD, // Use our custom pause threshold (600ms)
+      // utterance_end_ms: CONFIG.SPEECH_PAUSE_THRESHOLD, // This is preventing deepgram connection
       vad_events: true, // Enable voice activity detection events
     });
 
@@ -1184,3 +1187,28 @@ async function speakToCustomerEnhanced(callSid, text) {
 //     logger.logError(error, { event: 'conversation_logging_failed', callerNumber, receivingNumber });
 //   }
 // }
+
+// Add to websocket.js temporarily
+function testDeepgramWebSocket() {
+  console.log('Testing Deepgram WebSocket connection...');
+  
+  const testWs = new WebSocket('wss://api.deepgram.com/v1/listen?model=nova-2&language=en-US', {
+    headers: {
+      'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
+      'User-Agent': 'NodeJS-Test'
+    }
+  });
+
+  testWs.on('open', () => {
+    console.log('SUCCESS: Deepgram WebSocket connected');
+    testWs.close();
+  });
+
+  testWs.on('error', (error) => {
+    console.log('FAILED: Deepgram WebSocket error:', error.code, error.message);
+  });
+
+  testWs.on('close', (code, reason) => {
+    console.log('Deepgram WebSocket closed:', code, reason.toString());
+  });
+}
