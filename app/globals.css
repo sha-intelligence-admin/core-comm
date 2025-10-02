@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientMove 4s ease infinite;
+}
+
 @layer base {
   :root {
     --background: oklch(1 0 0);
@@ -105,4 +122,17 @@
   * {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   }
+}
+
+:root {
+  --font-inter: "Inter", sans-serif;
+  --font-montserrat: "Montserrat", sans-serif;
+}
+
+body {
+  font-family: var(--font-inter); /* Inter as default */
+}
+
+h1, h2, h3, .heading {
+  font-family: var(--font-montserrat); /* Montserrat for headings */
 }

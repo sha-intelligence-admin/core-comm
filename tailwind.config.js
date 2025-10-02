@@ -10,6 +10,11 @@ module.exports = {
   ],
   prefix: "",
   theme: {
+    extend: {
+      fontFamily: {
+        montserrat: ["var(--font-montserrat)", "sans-serif"],
+      },
+    },
     container: {
       center: true,
       padding: "2rem",
@@ -19,6 +24,11 @@ module.exports = {
     },
     extend: {
       colors: {
+        deepBlue: "#0A1A2F",   // brand dark blue
+        electricBlue: "#1A6CFA",
+        neonPurple: "#8A2BE2",
+        aquaGlow: "#00FFD1",
+        softGray: "#A0AEC0",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

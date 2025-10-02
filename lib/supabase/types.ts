@@ -127,6 +127,35 @@ export interface Database {
           error_message?: string | null
         }
       }
+      newsletters: {
+        Row: {
+          id: string
+          email: string
+          subscribed_at: string
+          is_active: boolean
+          unsubscribed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          subscribed_at?: string
+          is_active?: boolean
+          unsubscribed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          subscribed_at?: string
+          is_active?: boolean
+          unsubscribed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
