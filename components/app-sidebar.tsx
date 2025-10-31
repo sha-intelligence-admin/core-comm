@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Phone, Settings, Plug, User, Loader2 } from "lucide-react"
+import { LayoutDashboard, Phone, Settings, User, Loader2, Bot, BookOpen, Hash } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -31,9 +31,19 @@ const menuItems = [
     icon: Phone,
   },
   {
-    title: "Integrations",
-    url: "/integrations",
-    icon: Plug,
+    title: "Voice Agents",
+    url: "/voice-agents",
+    icon: Bot,
+  },
+  {
+    title: "Knowledge Base",
+    url: "/knowledge-base",
+    icon: BookOpen,
+  },
+  {
+    title: "Phone Numbers",
+    url: "/phone-numbers",
+    icon: Hash,
   },
   {
     title: "Settings",

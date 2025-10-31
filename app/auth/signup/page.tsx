@@ -14,7 +14,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { HeadphonesIcon, Eye, EyeOff, CheckCircle } from "lucide-react"
 import { SignupSchema } from "@/lib/validations"
-import axios from "axios";
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -98,12 +97,22 @@ export default function SignUpPage() {
         // ✅ Step 2: After successful Supabase signup,
         // call your API to save the profile info.
         // We pass the user's unique ID to link the tables.
-        await axios.post("/api/auth/signup", {
-          userId: data.user.id,
-          fullName: formData.fullName,
-          phone: formData.phone,
-          email: formData.email,
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: data.user.id,
+            fullName: formData.fullName,
+            phone: formData.phone,
+            email: formData.email,
+          }),
         });
+
+        if (!response.ok) {
+          throw new Error("Failed to create user profile");
+        }
 
         setSuccess(true);
 

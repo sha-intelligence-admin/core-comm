@@ -60,7 +60,7 @@ export const UpdateUserSchema = z.object({
   full_name: z.string().optional(),
   avatar_url: z.string().url('Invalid URL format.').optional(),
   phone: z.string().optional(),
-  role: z.enum(['admin', 'user']).optional(),
+  role: z.enum(['admin', 'member']).optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -68,30 +68,17 @@ export const UpdateUserSchema = z.object({
 export const CreateCallSchema = z.object({
   caller_number: z.string().min(1, 'Caller number is required'),
   recipient_number: z.string().optional(),
-  duration: z.number().int().min(0, 'Duration must be a positive integer'),
+  duration: z.number().int().min(0, 'Duration must be a positive integer').default(0),
   transcript: z.string().optional(),
   resolution_status: z.enum(['pending', 'resolved', 'escalated', 'failed']).default('pending'),
   call_type: z.enum(['inbound', 'outbound']).default('inbound'),
   summary: z.string().optional(),
   sentiment: z.enum(['positive', 'neutral', 'negative']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
-  user_id: z.string().uuid().optional(),
+  company_id: z.string().uuid().optional(),
 });
 
 export const UpdateCallSchema = CreateCallSchema.partial();
-
-// Integration validation schemas
-export const CreateIntegrationSchema = z.object({
-  name: z.string().min(1, 'Integration name is required'),
-  type: z.enum(['mcp', 'webhook', 'api', 'crm', 'helpdesk']),
-  endpoint_url: z.string().url('Must be a valid URL'),
-  status: z.enum(['active', 'inactive', 'error', 'pending']).default('pending'),
-  config: z.record(z.string(), z.any()).default({}),
-  description: z.string().optional(),
-  user_id: z.string().uuid().optional(),
-});
-
-export const UpdateIntegrationSchema = CreateIntegrationSchema.partial();
 
 // Query parameter schemas
 export const PaginationSchema = z.object({
@@ -106,17 +93,98 @@ export const CallsQuerySchema = PaginationSchema.extend({
   search: z.string().optional(),
 });
 
-export const IntegrationsQuerySchema = PaginationSchema.extend({
-  type: z.enum(['mcp', 'webhook', 'api', 'crm', 'helpdesk']).optional(),
-  status: z.enum(['active', 'inactive', 'error', 'pending']).optional(),
-  search: z.string().optional(),
+// ==============================================
+// Vapi Assistant Validation Schemas
+// ==============================================
+
+export const ModelConfigSchema = z.object({
+  provider: z.enum(['openai', 'anthropic', 'google', 'groq']),
+  model: z.string().min(1, 'Model is required'),
+  temperature: z.number().min(0).max(2).default(0.7),
+  maxTokens: z.number().int().positive().optional(),
+  knowledgeBaseId: z.string().optional(),
 });
 
+export const VoiceConfigSchema = z.object({
+  provider: z.enum(['elevenlabs', 'playht', 'azure', 'deepgram']),
+  voiceId: z.string().min(1, 'Voice ID is required'),
+  speed: z.number().min(0.5).max(2).optional(),
+  stability: z.number().min(0).max(1).optional(),
+});
+
+export const CreateAssistantSchema = z.object({
+  name: z.string().min(1, 'Assistant name is required').max(100),
+  description: z.string().max(500).optional(),
+  systemPrompt: z.string().min(10, 'System prompt must be at least 10 characters'),
+  firstMessage: z.string().min(1, 'First message is required'),
+  model: ModelConfigSchema,
+  voice: VoiceConfigSchema,
+  knowledgeBaseId: z.string().uuid().optional(),
+});
+
+export const UpdateAssistantSchema = CreateAssistantSchema.partial();
+
+// ==============================================
+// Vapi Knowledge Base Validation Schemas
+// ==============================================
+
+export const CreateKnowledgeBaseSchema = z.object({
+  name: z.string().min(1, 'Knowledge base name is required').max(100),
+  description: z.string().max(500).optional(),
+  provider: z.enum(['google', 'openai']).default('google'),
+});
+
+export const UpdateKnowledgeBaseSchema = CreateKnowledgeBaseSchema.partial();
+
+// File upload validation
+export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB hard limit
+export const RECOMMENDED_FILE_SIZE = 300 * 1024; // 300KB recommended
+
+export const ALLOWED_FILE_TYPES = [
+  'text/plain',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/csv',
+  'text/markdown',
+  'application/json',
+  'application/xml',
+  'text/xml',
+] as const;
+
+export const ALLOWED_FILE_EXTENSIONS = [
+  '.txt', '.pdf', '.doc', '.docx', '.csv', '.md', '.json', '.xml', '.log'
+] as const;
+
+// ==============================================
+// Vapi Phone Number Validation Schemas
+// ==============================================
+
+export const CreatePhoneNumberSchema = z.object({
+  provider: z.enum(['vapi', 'twilio', 'vonage', 'telnyx', 'byo']).default('vapi'),
+  assistantId: z.string().uuid().optional(),
+  areaCode: z.string().regex(/^\d{3}$/, 'Area code must be 3 digits').optional(),
+  number: z.string().optional(), // For BYO
+  fallbackNumber: z.string().optional(),
+});
+
+export const UpdatePhoneNumberSchema = z.object({
+  assistantId: z.string().uuid().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+// ==============================================
 // Type exports
+// ==============================================
+
 export type CreateCallInput = z.infer<typeof CreateCallSchema>;
 export type UpdateCallInput = z.infer<typeof UpdateCallSchema>;
-export type CreateIntegrationInput = z.infer<typeof CreateIntegrationSchema>;
-export type UpdateIntegrationInput = z.infer<typeof UpdateIntegrationSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 export type CallsQueryInput = z.infer<typeof CallsQuerySchema>;
-export type IntegrationsQueryInput = z.infer<typeof IntegrationsQuerySchema>;
+
+export type CreateAssistantInput = z.infer<typeof CreateAssistantSchema>;
+export type UpdateAssistantInput = z.infer<typeof UpdateAssistantSchema>;
+export type CreateKnowledgeBaseInput = z.infer<typeof CreateKnowledgeBaseSchema>;
+export type UpdateKnowledgeBaseInput = z.infer<typeof UpdateKnowledgeBaseSchema>;
+export type CreatePhoneNumberInput = z.infer<typeof CreatePhoneNumberSchema>;
+export type UpdatePhoneNumberInput = z.infer<typeof UpdatePhoneNumberSchema>;

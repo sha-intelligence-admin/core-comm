@@ -7,23 +7,34 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const queryParams = Object.fromEntries(searchParams.entries())
-    
+
     // Validate query parameters
     const { page, limit, resolution_status, call_type, priority, search } = CallsQuerySchema.parse(queryParams)
-    
+
     const supabase = await createClient()
-    
+
     // Check if user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return createErrorResponse('Unauthorized', 401)
     }
 
-    // Build query
+    // Get user's company_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !userProfile?.company_id) {
+      return createErrorResponse('User not associated with a company', 403)
+    }
+
+    // Build query - fetch calls for user's company
     let query = supabase
       .from('calls')
       .select('*', { count: 'exact' })
-      .eq('user_id', user.id)
+      .eq('company_id', userProfile.company_id)
       .order('created_at', { ascending: false })
 
     // Apply filters
@@ -71,27 +82,38 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
+
     // Validate request body
     const callData = CreateCallSchema.parse(body)
-    
+
     const supabase = await createClient()
-    
+
     // Check if user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return createErrorResponse('Unauthorized', 401)
     }
 
-    // Add user_id to call data
-    const callWithUser = {
+    // Get user's company_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !userProfile?.company_id) {
+      return createErrorResponse('User not associated with a company', 403)
+    }
+
+    // Add company_id to call data
+    const callWithCompany = {
       ...callData,
-      user_id: user.id,
+      company_id: userProfile.company_id,
     }
 
     const { data: call, error } = await supabase
       .from('calls')
-      .insert(callWithUser)
+      .insert(callWithCompany)
       .select()
       .single()
 

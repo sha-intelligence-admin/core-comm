@@ -10,8 +10,9 @@ export interface UserProfile {
   full_name: string
   phone?: string | null
   avatar_url?: string | null
-  role: 'admin' | 'user'
+  role: 'admin' | 'member'
   is_active: boolean
+  company_id: string | null
   created_at: string
   updated_at: string
 }
@@ -117,7 +118,7 @@ export function useUserProfile() {
   const getInitials = (name: string) => {
     return name
       .split(' ')
-      .map(part => part.charAt(0))
+      .map((part: string) => part.charAt(0))
       .join('')
       .toUpperCase()
       .slice(0, 2)

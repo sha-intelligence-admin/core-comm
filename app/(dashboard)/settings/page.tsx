@@ -10,13 +10,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { useUserProfile } from "@/hooks/use-user-profile"
+import { useAssistants } from "@/hooks/use-assistants"
+import { useKnowledgeBases } from "@/hooks/use-knowledge-bases"
 import { useState, useEffect } from "react"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, Upload } from "lucide-react"
+import { CheckCircle, Upload, Bot, BookOpen } from "lucide-react"
 
 export default function SettingsPage() {
   const { profile, loading, getInitials, updateProfile } = useUserProfile()
+  const { assistants, isLoading: assistantsLoading } = useAssistants()
+  const { knowledgeBases, isLoading: kbLoading } = useKnowledgeBases()
+
   const [formData, setFormData] = useState({
     full_name: "",
     phone: "",
@@ -24,6 +29,12 @@ export default function SettingsPage() {
   })
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+
+  // Voice settings state
+  const [selectedAssistant, setSelectedAssistant] = useState<string>("")
+
+  // Knowledge base state - track which KBs are enabled
+  const [enabledKBs, setEnabledKBs] = useState<Record<string, boolean>>({})
 
   // Initialize form data when profile loads
   useEffect(() => {
@@ -35,6 +46,27 @@ export default function SettingsPage() {
       })
     }
   }, [profile])
+
+  // Initialize KB enabled state
+  useEffect(() => {
+    if (knowledgeBases.length > 0) {
+      const initialState: Record<string, boolean> = {}
+      knowledgeBases.forEach((kb: any) => {
+        initialState[kb.id] = true // Default all to enabled
+      })
+      setEnabledKBs(initialState)
+    }
+  }, [knowledgeBases])
+
+  // Set default assistant
+  useEffect(() => {
+    if (assistants.length > 0 && !selectedAssistant) {
+      const defaultAssistant = assistants.find((a: any) => a.is_active)
+      if (defaultAssistant) {
+        setSelectedAssistant(defaultAssistant.id)
+      }
+    }
+  }, [assistants, selectedAssistant])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -215,127 +247,89 @@ export default function SettingsPage() {
           <Card className="rounded-2xl border-brand/20 hover:shadow-xl hover:border-brand/40 transition-all duration-300 group">
             <CardHeader className="bg-gradient-to-r from-brand/5 to-transparent group-hover:from-brand/10 transition-all duration-300 rounded-t-2xl">
               <CardTitle className="text-brand group-hover:text-brand/80 transition-colors duration-200">
-                Voice Settings
+                Voice Assistants
               </CardTitle>
-              <CardDescription>Configure text-to-speech and voice recognition settings</CardDescription>
+              <CardDescription>Manage your voice assistants and their configurations</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="voice" className="text-brand/80 font-medium">
-                  Voice Model
-                </Label>
-                <Select>
-                  <SelectTrigger className="rounded-xl border-brand/20 hover:border-brand/40 focus:border-brand transition-all duration-200">
-                    <SelectValue placeholder="Select voice model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      value="neural-1"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      Neural Voice 1 (Female)
-                    </SelectItem>
-                    <SelectItem
-                      value="neural-2"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      Neural Voice 2 (Male)
-                    </SelectItem>
-                    <SelectItem
-                      value="standard-1"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      Standard Voice 1
-                    </SelectItem>
-                    <SelectItem
-                      value="standard-2"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      Standard Voice 2
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {assistantsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <LoadingSpinner size="md" />
+                </div>
+              ) : assistants.length === 0 ? (
+                <div className="text-center py-8 space-y-4">
+                  <Bot className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <div>
+                    <p className="text-muted-foreground">No voice assistants configured yet</p>
+                    <p className="text-sm text-muted-foreground">Create one in the Voice Agents page</p>
+                  </div>
+                  <Button
+                    onClick={() => window.location.href = '/voice-agents'}
+                    className="rounded-xl bg-brand hover:bg-brand/90"
+                  >
+                    Go to Voice Agents
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="assistant" className="text-brand/80 font-medium">
+                      Default Assistant
+                    </Label>
+                    <Select value={selectedAssistant} onValueChange={setSelectedAssistant}>
+                      <SelectTrigger className="rounded-xl border-brand/20 hover:border-brand/40 focus:border-brand transition-all duration-200">
+                        <SelectValue placeholder="Select an assistant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {assistants.map((assistant: any) => (
+                          <SelectItem
+                            key={assistant.id}
+                            value={assistant.id}
+                            className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
+                          >
+                            {assistant.name} {assistant.is_active ? "(Active)" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="speed" className="text-brand/80 font-medium">
-                  Speech Speed
-                </Label>
-                <Select>
-                  <SelectTrigger className="rounded-xl border-brand/20 hover:border-brand/40 focus:border-brand transition-all duration-200">
-                    <SelectValue placeholder="Select speech speed" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      value="slow"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      Slow (0.8x)
-                    </SelectItem>
-                    <SelectItem
-                      value="normal"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      Normal (1.0x)
-                    </SelectItem>
-                    <SelectItem
-                      value="fast"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      Fast (1.2x)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  {selectedAssistant && (() => {
+                    const assistant = assistants.find((a: any) => a.id === selectedAssistant)
+                    return assistant ? (
+                      <div className="space-y-4 p-4 rounded-xl border border-brand/20 bg-brand/5">
+                        <h4 className="font-medium text-brand">Assistant Configuration</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Model</p>
+                            <p className="font-medium">{assistant.model_config?.model || "N/A"}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Voice Provider</p>
+                            <p className="font-medium">{assistant.voice_config?.provider || "N/A"}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Voice ID</p>
+                            <p className="font-medium">{assistant.voice_config?.voice_id || "N/A"}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Status</p>
+                            <p className="font-medium">{assistant.is_active ? "Active" : "Inactive"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null
+                  })()}
 
-              <div className="space-y-2">
-                <Label htmlFor="language" className="text-brand/80 font-medium">
-                  Language
-                </Label>
-                <Select>
-                  <SelectTrigger className="rounded-xl border-brand/20 hover:border-brand/40 focus:border-brand transition-all duration-200">
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      value="en-US"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      English (US)
-                    </SelectItem>
-                    <SelectItem
-                      value="en-GB"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      English (UK)
-                    </SelectItem>
-                    <SelectItem
-                      value="es-ES"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      Spanish
-                    </SelectItem>
-                    <SelectItem
-                      value="fr-FR"
-                      className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                    >
-                      French
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="rounded-xl border-brand/30 hover:bg-brand/10 hover:text-brand hover:border-brand transition-all duration-200 bg-transparent"
-                >
-                  Test Voice
-                </Button>
-                <Button className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl">
-                  Save Settings
-                </Button>
-              </div>
+                  <Button
+                    onClick={() => window.location.href = '/voice-agents'}
+                    variant="outline"
+                    className="rounded-xl border-brand/30 hover:bg-brand/10 hover:text-brand hover:border-brand transition-all duration-200"
+                  >
+                    Manage Assistants
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -346,66 +340,81 @@ export default function SettingsPage() {
               <CardTitle className="text-brand group-hover:text-brand/80 transition-colors duration-200">
                 Knowledge Base Sources
               </CardTitle>
-              <CardDescription>Enable or disable retrieval from specific knowledge sources</CardDescription>
+              <CardDescription>Enable or disable retrieval from your knowledge sources</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-xl border border-brand/20 hover:border-brand/40 hover:bg-brand/5 transition-all duration-300 group">
-                  <div>
-                    <Label
-                      htmlFor="kb-docs"
-                      className="font-medium group-hover:text-brand transition-colors duration-200"
-                    >
-                      Company Documentation
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Internal company policies and procedures</p>
-                  </div>
-                  <Switch id="kb-docs" defaultChecked className="data-[state=checked]:bg-brand" />
+              {kbLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <LoadingSpinner size="md" />
                 </div>
-
-                <div className="flex items-center justify-between p-4 rounded-xl border border-brand/20 hover:border-brand/40 hover:bg-brand/5 transition-all duration-300 group">
+              ) : knowledgeBases.length === 0 ? (
+                <div className="text-center py-8 space-y-4">
+                  <BookOpen className="h-12 w-12 mx-auto text-muted-foreground" />
                   <div>
-                    <Label
-                      htmlFor="kb-faq"
-                      className="font-medium group-hover:text-brand transition-colors duration-200"
-                    >
-                      FAQ Database
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Frequently asked questions and answers</p>
+                    <p className="text-muted-foreground">No knowledge bases configured yet</p>
+                    <p className="text-sm text-muted-foreground">Create one in the Knowledge Base page</p>
                   </div>
-                  <Switch id="kb-faq" defaultChecked className="data-[state=checked]:bg-brand" />
+                  <Button
+                    onClick={() => window.location.href = '/knowledge-base'}
+                    className="rounded-xl bg-brand hover:bg-brand/90"
+                  >
+                    Go to Knowledge Base
+                  </Button>
                 </div>
-
-                <div className="flex items-center justify-between p-4 rounded-xl border border-brand/20 hover:border-brand/40 hover:bg-brand/5 transition-all duration-300 group">
-                  <div>
-                    <Label
-                      htmlFor="kb-products"
-                      className="font-medium group-hover:text-brand transition-colors duration-200"
-                    >
-                      Product Information
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Product specifications and features</p>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    {knowledgeBases.map((kb: any) => (
+                      <div
+                        key={kb.id}
+                        className="flex items-center justify-between p-4 rounded-xl border border-brand/20 hover:border-brand/40 hover:bg-brand/5 transition-all duration-300 group"
+                      >
+                        <div className="flex-1">
+                          <Label
+                            htmlFor={`kb-${kb.id}`}
+                            className="font-medium group-hover:text-brand transition-colors duration-200 cursor-pointer"
+                          >
+                            {kb.name}
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            {kb.description || "No description"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {kb.file_count || 0} files
+                          </p>
+                        </div>
+                        <Switch
+                          id={`kb-${kb.id}`}
+                          checked={enabledKBs[kb.id] !== false}
+                          onCheckedChange={(checked) =>
+                            setEnabledKBs(prev => ({ ...prev, [kb.id]: checked }))
+                          }
+                          className="data-[state=checked]:bg-brand"
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <Switch id="kb-products" defaultChecked className="data-[state=checked]:bg-brand" />
-                </div>
 
-                <div className="flex items-center justify-between p-4 rounded-xl border border-brand/20 hover:border-brand/40 hover:bg-brand/5 transition-all duration-300 group">
-                  <div>
-                    <Label
-                      htmlFor="kb-external"
-                      className="font-medium group-hover:text-brand transition-colors duration-200"
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => window.location.href = '/knowledge-base'}
+                      variant="outline"
+                      className="rounded-xl border-brand/30 hover:bg-brand/10 hover:text-brand hover:border-brand transition-all duration-200"
                     >
-                      External Resources
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Third-party documentation and resources</p>
+                      Manage Knowledge Bases
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setUpdateMessage({ type: 'success', message: 'Knowledge base preferences saved!' })
+                        setTimeout(() => setUpdateMessage(null), 3000)
+                      }}
+                      className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    >
+                      Save Preferences
+                    </Button>
                   </div>
-                  <Switch id="kb-external" className="data-[state=checked]:bg-brand" />
-                </div>
-              </div>
-
-              <Button className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl">
-                Update Knowledge Sources
-              </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

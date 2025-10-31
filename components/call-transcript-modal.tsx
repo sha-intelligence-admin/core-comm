@@ -6,16 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Download, Copy } from "lucide-react"
 import { useState } from "react"
-
-interface Call {
-  id: string
-  callerName: string
-  callerNumber: string
-  date: Date
-  duration: string
-  status: string
-  transcript: string
-}
+import type { Call } from "@/hooks/use-calls"
 
 interface CallTranscriptModalProps {
   call: Call | null
@@ -42,10 +33,13 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
   if (!call) return null
 
   const handleCopyTranscript = () => {
-    navigator.clipboard.writeText(call.transcript)
+    if (call?.transcript) {
+      navigator.clipboard.writeText(call.transcript)
+    }
   }
 
   const handleDownloadTranscript = () => {
+    if (!call?.transcript) return
     const element = document.createElement("a")
     const file = new Blob([call.transcript], { type: "text/plain" })
     element.href = URL.createObjectURL(file)
@@ -55,18 +49,25 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
     document.body.removeChild(element)
   }
 
+  const formatDuration = (seconds: number | null) => {
+    if (!seconds) return "N/A"
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}m ${secs}s`
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] rounded-2xl backdrop-blur-md bg-background/95 border border-brand/20 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Call Transcript - {call.callerName}</span>
-            <Badge variant="secondary" className={getStatusColor(call.status)}>
-              {call.status}
+            <span>Call Transcript - {call.caller_number}</span>
+            <Badge variant="secondary" className={getStatusColor(call.resolution_status)}>
+              {call.resolution_status}
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            {call.callerNumber} • {call.date.toLocaleDateString()} • {call.duration}
+            {call.caller_number} • {new Date(call.created_at).toLocaleDateString()} • {formatDuration(call.duration)}
           </DialogDescription>
         </DialogHeader>
 

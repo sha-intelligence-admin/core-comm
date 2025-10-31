@@ -5,58 +5,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CallTranscriptModal } from "./call-transcript-modal"
-import { Eye, Download } from "lucide-react"
+import { Eye, Download, Loader2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import { useCalls, type Call } from "@/hooks/use-calls"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
-const callLogs = [
-  {
-    id: "1",
-    callerName: "Sarah Johnson",
-    callerNumber: "+1 (555) 123-4567",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    duration: "3m 45s",
-    status: "resolved",
-    transcript:
-      "Customer called regarding a product return. AI successfully guided them through the return process and provided a return label.",
-  },
-  {
-    id: "2",
-    callerName: "Mike Chen",
-    callerNumber: "+1 (555) 987-6543",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 4),
-    duration: "5m 12s",
-    status: "escalated",
-    transcript:
-      "Technical support request for software installation. Issue was complex and required human intervention.",
-  },
-  {
-    id: "3",
-    callerName: "Emily Davis",
-    callerNumber: "+1 (555) 456-7890",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 6),
-    duration: "2m 15s",
-    status: "resolved",
-    transcript: "Billing inquiry about recent charges. AI explained the charges and provided account details.",
-  },
-  {
-    id: "4",
-    callerName: "Robert Wilson",
-    callerNumber: "+1 (555) 321-0987",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 8),
-    duration: "4m 33s",
-    status: "pending",
-    transcript: "Product configuration question. AI provided initial guidance but follow-up required.",
-  },
-  {
-    id: "5",
-    callerName: "Lisa Anderson",
-    callerNumber: "+1 (555) 654-3210",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 12),
-    duration: "1m 58s",
-    status: "resolved",
-    transcript: "Order status inquiry. AI provided tracking information and delivery estimate.",
-  },
-]
+interface CallLogsTableProps {
+  filters?: {
+    resolution_status?: string
+    call_type?: string
+    search?: string
+  }
+}
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -66,13 +26,53 @@ const getStatusColor = (status: string) => {
       return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
     case "escalated":
       return "bg-red-100 text-red-800 hover:bg-red-200"
+    case "failed":
+      return "bg-gray-100 text-gray-800 hover:bg-gray-200"
     default:
       return "bg-gray-100 text-gray-800 hover:bg-gray-200"
   }
 }
 
-export function CallLogsTable() {
-  const [selectedCall, setSelectedCall] = useState<(typeof callLogs)[0] | null>(null)
+function formatDuration(seconds: number | null): string {
+  if (!seconds) return "N/A"
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}m ${secs}s`
+}
+
+export function CallLogsTable({ filters }: CallLogsTableProps) {
+  const [selectedCall, setSelectedCall] = useState<Call | null>(null)
+  const { calls, isLoading, error } = useCalls({ limit: 50, ...filters })
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          Failed to load call logs: {error.message}
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-brand" />
+        <span className="ml-2 text-muted-foreground">Loading call logs...</span>
+      </div>
+    )
+  }
+
+  if (!calls || calls.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <p className="text-muted-foreground">No calls found</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Call logs will appear here once your voice agents start handling calls
+        </p>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -89,29 +89,29 @@ export function CallLogsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {callLogs.map((call) => (
+            {calls.map((call) => (
               <TableRow
                 key={call.id}
                 className="hover:bg-brand/5 transition-all duration-300 hover:shadow-sm cursor-pointer group"
               >
                 <TableCell className="font-medium group-hover:text-brand transition-colors duration-200">
-                  {call.callerName}
+                  {call.caller_number}
                 </TableCell>
                 <TableCell className="group-hover:text-foreground transition-colors duration-200">
-                  {call.callerNumber}
+                  {call.caller_number}
                 </TableCell>
                 <TableCell className="group-hover:text-foreground transition-colors duration-200">
-                  {formatDistanceToNow(call.date, { addSuffix: true })}
+                  {formatDistanceToNow(new Date(call.created_at), { addSuffix: true })}
                 </TableCell>
                 <TableCell className="group-hover:text-foreground transition-colors duration-200">
-                  {call.duration}
+                  {formatDuration(call.duration)}
                 </TableCell>
                 <TableCell>
                   <Badge
                     variant="secondary"
-                    className={`${getStatusColor(call.status)} transition-all duration-200 group-hover:scale-105`}
+                    className={`${getStatusColor(call.resolution_status)} transition-all duration-200 group-hover:scale-105`}
                   >
-                    {call.status}
+                    {call.resolution_status}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -125,14 +125,17 @@ export function CallLogsTable() {
                       <Eye className="h-4 w-4 mr-1" />
                       View
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg bg-transparent hover:bg-brand hover:text-white hover:border-brand transition-all duration-200 hover:scale-105"
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      Export
-                    </Button>
+                    {call.recording_url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(call.recording_url || '', '_blank')}
+                        className="rounded-lg bg-transparent hover:bg-brand hover:text-white hover:border-brand transition-all duration-200 hover:scale-105"
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Recording
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

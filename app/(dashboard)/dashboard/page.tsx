@@ -1,9 +1,14 @@
+"use client"
+
 import { MetricCard } from "@/components/metric-card"
 import { ActivityFeed } from "@/components/activity-feed"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Phone, CheckCircle, Clock, Zap } from "lucide-react"
+import { Phone, CheckCircle, Clock, Zap, Loader2 } from "lucide-react"
+import { useDashboardStats } from "@/hooks/use-dashboard-stats"
 
 export default function DashboardPage() {
+  const { stats, isLoading } = useDashboardStats()
+
   return (
     <div className="space-y-6">
       <div>
@@ -12,12 +17,42 @@ export default function DashboardPage() {
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Total Calls" value="2,847" change="+12.5%" trend="up" icon={Phone} />
-        <MetricCard title="Resolved Calls" value="2,634" change="+8.2%" trend="up" icon={CheckCircle} />
-        <MetricCard title="Avg Call Duration" value="4m 32s" change="-2.1%" trend="down" icon={Clock} />
-        <MetricCard title="MCP Actions" value="1,429" change="+18.7%" trend="up" icon={Zap} />
-      </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-brand" />
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Total Calls"
+            value={stats.totalCalls.toString()}
+            change={stats.totalCallsChange}
+            trend={stats.totalCallsTrend as "up" | "down"}
+            icon={Phone}
+          />
+          <MetricCard
+            title="Resolved Calls"
+            value={stats.resolvedCalls.toString()}
+            change={stats.resolvedCallsChange}
+            trend={stats.resolvedCallsTrend as "up" | "down"}
+            icon={CheckCircle}
+          />
+          <MetricCard
+            title="Avg Call Duration"
+            value={stats.avgDuration}
+            change={stats.avgDurationChange}
+            trend={stats.avgDurationTrend as "up" | "down"}
+            icon={Clock}
+          />
+          <MetricCard
+            title="Active Calls"
+            value={stats.activeCalls.toString()}
+            change={stats.activeCallsChange}
+            trend={stats.activeCallsTrend}
+            icon={Zap}
+          />
+        </div>
+      )}
 
       {/* Activity Feed */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -42,21 +77,25 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm text-muted-foreground">Active Calls</span>
                 <span className="font-semibold text-primary group-hover:text-brand transition-colors duration-200">
-                  12
+                  {stats.activeCalls}
                 </span>
               </div>
               <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm text-muted-foreground">Queue Length</span>
-                <span className="font-semibold group-hover:text-brand transition-colors duration-200">3</span>
+                <span className="font-semibold group-hover:text-brand transition-colors duration-200">
+                  {stats.queueLength}
+                </span>
               </div>
               <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm text-muted-foreground">Avg Wait Time</span>
-                <span className="font-semibold group-hover:text-brand transition-colors duration-200">1m 23s</span>
+                <span className="font-semibold group-hover:text-brand transition-colors duration-200">
+                  {stats.avgWaitTime}
+                </span>
               </div>
               <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
                 <span className="text-sm text-muted-foreground">Success Rate</span>
                 <span className="font-semibold text-green-600 group-hover:text-green-700 transition-colors duration-200">
-                  94.2%
+                  {stats.successRate}
                 </span>
               </div>
             </CardContent>

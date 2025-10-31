@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createErrorResponse, createSuccessResponse, AuthenticationError } from '@/lib/error-handling';
+import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api';
 
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
-    
+
     // Get the authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
-      throw new AuthenticationError('Authentication required');
+      return createErrorResponse('Authentication required', 401);
     }
 
     // Fetch the user profile from the users table
@@ -22,18 +22,15 @@ export async function GET(req: NextRequest) {
 
     if (profileError) {
       console.error('Profile fetch error:', profileError);
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
+      return createErrorResponse('User profile not found', 404);
     }
 
     return createSuccessResponse(
-      { 
+      {
         user: {
           id: user.id,
           email: user.email,
-          ...profile 
+          ...profile
         }
       },
       'Profile fetched successfully'
@@ -41,19 +38,19 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('User profile API error:', error);
-    return createErrorResponse(error, 'Failed to fetch user profile');
+    return createErrorResponse('Failed to fetch user profile', 500);
   }
 }
 
 export async function PUT(req: NextRequest) {
   try {
     const supabase = await createClient();
-    
+
     // Get the authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
-      throw new AuthenticationError('Authentication required');
+      return createErrorResponse('Authentication required', 401);
     }
 
     const body = await req.json();
@@ -74,15 +71,15 @@ export async function PUT(req: NextRequest) {
 
     if (updateError) {
       console.error('Profile update error:', updateError);
-      return createErrorResponse(updateError, 'Failed to update user profile');
+      return createErrorResponse('Failed to update user profile', 500);
     }
 
     return createSuccessResponse(
-      { 
+      {
         user: {
           id: user.id,
           email: user.email,
-          ...updatedProfile 
+          ...updatedProfile
         }
       },
       'Profile updated successfully'
@@ -90,6 +87,6 @@ export async function PUT(req: NextRequest) {
 
   } catch (error) {
     console.error('Profile update API error:', error);
-    return createErrorResponse(error, 'Failed to update user profile');
+    return createErrorResponse('Failed to update user profile', 500);
   }
 }

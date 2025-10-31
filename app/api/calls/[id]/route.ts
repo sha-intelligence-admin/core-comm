@@ -9,20 +9,31 @@ export async function GET(
 ) {
   try {
     const { id } = params
-    
+
     const supabase = await createClient()
-    
+
     // Check if user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return createErrorResponse('Unauthorized', 401)
     }
 
+    // Get user's company_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !userProfile?.company_id) {
+      return createErrorResponse('User not associated with a company', 403)
+    }
+
     const { data: call, error } = await supabase
       .from('calls')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('company_id', userProfile.company_id)
       .single()
 
     if (error) {
@@ -44,23 +55,34 @@ export async function PUT(
   try {
     const { id } = params
     const body = await request.json()
-    
+
     // Validate request body
     const updateData = UpdateCallSchema.parse(body)
-    
+
     const supabase = await createClient()
-    
+
     // Check if user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return createErrorResponse('Unauthorized', 401)
     }
 
+    // Get user's company_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !userProfile?.company_id) {
+      return createErrorResponse('User not associated with a company', 403)
+    }
+
     const { data: call, error } = await supabase
       .from('calls')
       .update(updateData)
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('company_id', userProfile.company_id)
       .select()
       .single()
 
@@ -85,20 +107,31 @@ export async function DELETE(
 ) {
   try {
     const { id } = params
-    
+
     const supabase = await createClient()
-    
+
     // Check if user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return createErrorResponse('Unauthorized', 401)
     }
 
+    // Get user's company_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !userProfile?.company_id) {
+      return createErrorResponse('User not associated with a company', 403)
+    }
+
     const { error } = await supabase
       .from('calls')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('company_id', userProfile.company_id)
 
     if (error) {
       console.error('Error deleting call:', error)
