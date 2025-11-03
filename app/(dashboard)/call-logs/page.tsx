@@ -1,3 +1,6 @@
+"use client"
+
+import { useState } from "react"
 import { CallLogsTable } from "@/components/call-logs-table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -6,6 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, Download } from "lucide-react"
 
 export default function CallLogsPage() {
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [dateFilter, setDateFilter] = useState("all")
+
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-brand/10 to-transparent p-6 rounded-2xl border border-brand/20">
@@ -27,10 +34,12 @@ export default function CallLogsPage() {
               <Input
                 placeholder="Search by caller name, number, or transcript..."
                 className="pl-10 rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20 hover:border-brand/40 transition-all duration-200"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex gap-2">
-              <Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px] rounded-xl border-brand/20 hover:border-brand/40 focus:border-brand transition-all duration-200">
                   <SelectValue placeholder="Resolution Status" />
                 </SelectTrigger>
@@ -58,11 +67,17 @@ export default function CallLogsPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <Select>
+              <Select value={dateFilter} onValueChange={setDateFilter}>
                 <SelectTrigger className="w-[140px] rounded-xl border-brand/20 hover:border-brand/40 focus:border-brand transition-all duration-200">
                   <SelectValue placeholder="Date Range" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem
+                    value="all"
+                    className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
+                  >
+                    All Time
+                  </SelectItem>
                   <SelectItem
                     value="today"
                     className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
@@ -81,12 +96,6 @@ export default function CallLogsPage() {
                   >
                     This Month
                   </SelectItem>
-                  <SelectItem
-                    value="custom"
-                    className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
-                  >
-                    Custom Range
-                  </SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -100,6 +109,7 @@ export default function CallLogsPage() {
                 variant="outline"
                 size="icon"
                 className="rounded-xl bg-brand/5 border-brand/30 hover:bg-brand hover:text-white hover:scale-110 transition-all duration-200"
+                onClick={() => alert("Export coming soon!")}
               >
                 <Download className="h-4 w-4" />
               </Button>
@@ -116,7 +126,12 @@ export default function CallLogsPage() {
           <CardDescription>Complete log of all customer interactions</CardDescription>
         </CardHeader>
         <CardContent>
-          <CallLogsTable />
+          <CallLogsTable
+            filters={{
+              resolution_status: statusFilter !== "all" ? statusFilter : undefined,
+              search: searchTerm || undefined
+            }}
+          />
         </CardContent>
       </Card>
     </div>

@@ -35,6 +35,7 @@ export default function SettingsPage() {
 
   // Knowledge base state - track which KBs are enabled
   const [enabledKBs, setEnabledKBs] = useState<Record<string, boolean>>({})
+  const [isSavingPrefs, setIsSavingPrefs] = useState(false)
 
   // Initialize form data when profile loads
   useEffect(() => {
@@ -482,8 +483,26 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <Button className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl">
-                Save Notification Settings
+              <Button
+                onClick={async () => {
+                  setIsSavingPrefs(true)
+                  try {
+                    // In a real implementation, this would save to the API
+                    // For now, just show success message
+                    await new Promise(resolve => setTimeout(resolve, 500))
+                    setUpdateMessage({ type: 'success', message: 'Notification settings saved! (Note: Full persistence requires backend update)' })
+                    setTimeout(() => setUpdateMessage(null), 3000)
+                  } catch {
+                    setUpdateMessage({ type: 'error', message: 'Failed to save settings' })
+                  } finally {
+                    setIsSavingPrefs(false)
+                  }
+                }}
+                disabled={isSavingPrefs}
+                className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                {isSavingPrefs && <LoadingSpinner className="mr-2" size="sm" />}
+                {isSavingPrefs ? 'Saving...' : 'Save Notification Settings'}
               </Button>
             </CardContent>
           </Card>

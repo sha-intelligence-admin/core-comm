@@ -64,7 +64,7 @@ export default function VoiceAgentsPage() {
           </div>
           <Button
             className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg"
-            disabled
+            onClick={() => alert("Voice assistant creation coming soon! This requires Vapi API integration.")}
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Assistant
@@ -86,7 +86,7 @@ export default function VoiceAgentsPage() {
             </p>
             <Button
               className="rounded-xl bg-brand hover:bg-brand/90"
-              disabled
+              onClick={() => alert("Voice assistant creation coming soon! This requires Vapi API integration.")}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Assistant

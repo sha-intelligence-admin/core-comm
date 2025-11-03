@@ -10,11 +10,14 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Phone, Server, CheckCircle, Building, Target } from "lucide-react"
+import { Phone, Server, CheckCircle, Building, Target, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     // Step 1: Company Info
     companyName: "",
@@ -74,12 +77,35 @@ export default function OnboardingPage() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1)
     } else {
-      // Complete onboarding
-      router.push("/dashboard")
+      // Complete onboarding - save to database
+      setIsSubmitting(true)
+      setError(null)
+
+      try {
+        const response = await fetch('/api/onboarding', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Failed to save onboarding data')
+        }
+
+        // Success - redirect to dashboard
+        router.push("/dashboard")
+      } catch (err) {
+        console.error('Onboarding error:', err)
+        setError(err instanceof Error ? err.message : 'Failed to complete onboarding')
+        setIsSubmitting(false)
+      }
     }
   }
 
@@ -138,6 +164,11 @@ export default function OnboardingPage() {
             <CardDescription className="text-base">{steps[currentStep - 1].description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {error && (
+              <Alert className="border-red-500 bg-red-50">
+                <AlertDescription className="text-red-700">{error}</AlertDescription>
+              </Alert>
+            )}
             {currentStep === 1 && (
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -490,13 +521,19 @@ export default function OnboardingPage() {
                 <Button
                   variant="ghost"
                   onClick={handleBack}
+                  disabled={isSubmitting}
                   className="rounded-xl hover:bg-brand/10 hover:text-brand"
                 >
                   Back
                 </Button>
               )}
-              <Button onClick={handleNext} className="rounded-xl bg-brand hover:bg-brand/90">
-                {currentStep === 4 ? "Complete Setup" : "Continue"}
+              <Button
+                onClick={handleNext}
+                disabled={isSubmitting}
+                className="rounded-xl bg-brand hover:bg-brand/90"
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {isSubmitting ? "Saving..." : currentStep === 3 ? "Complete Setup" : "Continue"}
               </Button>
             </div>
           </CardContent>

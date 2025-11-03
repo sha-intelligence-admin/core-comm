@@ -11,6 +11,22 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // Check if user has completed onboarding
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .single()
+
+        // Redirect to onboarding if not completed
+        if (userProfile && !userProfile.onboarding_completed) {
+          return NextResponse.redirect(`${origin}/onboarding`)
+        }
+      }
+
       const forwardedHost = request.headers.get("x-forwarded-host") // original origin before load balancer
       const isLocalEnv = process.env.NODE_ENV === "development"
       if (isLocalEnv) {

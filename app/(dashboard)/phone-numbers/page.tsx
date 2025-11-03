@@ -111,7 +111,7 @@ export default function PhoneNumbersPage() {
           </div>
           <Button
             className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg"
-            disabled
+            onClick={() => alert("Phone number provisioning coming soon! This requires Vapi API integration.")}
           >
             <Plus className="h-4 w-4 mr-2" />
             Provision Number
@@ -133,7 +133,7 @@ export default function PhoneNumbersPage() {
             </p>
             <Button
               className="rounded-xl bg-brand hover:bg-brand/90"
-              disabled
+              onClick={() => alert("Phone number provisioning coming soon! This requires Vapi API integration.")}
             >
               <Plus className="h-4 w-4 mr-2" />
               Provision Your First Number

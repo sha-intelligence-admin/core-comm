@@ -153,18 +153,15 @@ export default function SignUpPage() {
               </div>
               <div className="space-y-2">
                 <Button onClick={() => router.push("/onboarding")} className="w-full bg-brand hover:bg-brand/90">
-                  Setup Company
+                  Complete Setup
                 </Button>
-                <Button variant="outline" onClick={() => router.push("/join")} className="w-full border-brand/30 hover:bg-brand/10 hover:text-brand">
-                  Join Company
-                </Button>
-                {/* <Button
+                <Button
                   variant="outline"
                   onClick={() => router.push("/dashboard")}
                   className="w-full border-brand/30 hover:bg-brand/10 hover:text-brand"
                 >
-                  Skip Setup (Go to Dashboard)
-                </Button> */}
+                  Skip for Now
+                </Button>
               </div>
             </div>
           </CardContent>

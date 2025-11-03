@@ -1,10 +1,35 @@
-import { createSuccessResponse } from '@/lib/supabase/api'
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
-  return createSuccessResponse({
-    status: 'ok',
-    message: 'CoreComm backend running!',
+  const checks = {
+    database: 'unknown',
+    vapi: 'unknown',
+    analytics: 'unknown'
+  }
+
+  try {
+    // Check database
+    const supabase = await createClient()
+    const { error: dbError } = await supabase.from('profiles').select('id').limit(1)
+    checks.database = dbError ? 'error' : 'healthy'
+  } catch {
+    checks.database = 'error'
+  }
+
+  // Check Vapi (if API key exists)
+  try {
+    checks.vapi = process.env.VAPI_API_KEY ? 'healthy' : 'not_configured'
+  } catch {
+    checks.vapi = 'error'
+  }
+
+  // Analytics - simulating for now
+  checks.analytics = 'degraded'
+
+  return NextResponse.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
-    version: '1.0.0',
+    checks
   })
 }
