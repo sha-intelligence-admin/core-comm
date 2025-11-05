@@ -3,14 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -58,33 +51,39 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-2xl backdrop-blur-md bg-background/95 border border-brand/20 shadow-2xl">
-        <DialogHeader>
-          <DialogTitle>Add New Integration</DialogTitle>
-          <DialogDescription>Connect a new MCP server or external service to your CoreComm platform.</DialogDescription>
+      <DialogContent className="flex w-[min(100vw-2rem,440px)] flex-col gap-6 rounded-lg border border-input bg-background p-6 shadow-2xl">
+        <DialogHeader className="space-y-2 text-left">
+          <DialogTitle className="google-headline-small">Add new integration</DialogTitle>
+          <DialogDescription className="google-body-medium text-muted-foreground">
+            Connect a new MCP server or external service to your CoreComm platform.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Integration Name</Label>
+            <Label htmlFor="name" className="google-label-medium text-muted-foreground">
+              Integration name
+            </Label>
             <Input
               id="name"
               placeholder="Knowledge Base API"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="rounded-xl"
+              className="h-11 rounded-sm border-input"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type">Integration Type</Label>
+            <Label htmlFor="type" className="google-label-medium text-muted-foreground">
+              Integration type
+            </Label>
             <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-              <SelectTrigger className="rounded-xl">
+              <SelectTrigger className="h-11 rounded-sm border-input">
                 <SelectValue placeholder="Select integration type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="knowledge-base">Knowledge Base</SelectItem>
-                <SelectItem value="crm">CRM System</SelectItem>
+                <SelectItem value="knowledge-base">Knowledge base</SelectItem>
+                <SelectItem value="crm">CRM system</SelectItem>
                 <SelectItem value="database">Database</SelectItem>
                 <SelectItem value="api">REST API</SelectItem>
                 <SelectItem value="webhook">Webhook</SelectItem>
@@ -93,38 +92,42 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="endpoint">Endpoint URL</Label>
+            <Label htmlFor="endpoint" className="google-label-medium text-muted-foreground">
+              Endpoint URL
+            </Label>
             <Input
               id="endpoint"
               type="url"
               placeholder="https://api.example.com/v1"
               value={formData.endpoint}
               onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
-              className="rounded-xl"
+              className="h-11 rounded-sm border-input"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="apiKey">API Key</Label>
+            <Label htmlFor="apiKey" className="google-label-medium text-muted-foreground">
+              API key
+            </Label>
             <Input
               id="apiKey"
               type="password"
               placeholder="sk-..."
               value={formData.apiKey}
               onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-              className="rounded-xl"
+              className="h-11 rounded-sm border-input"
               required
             />
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={handleTestConnection}
               disabled={isLoading || !formData.endpoint || !formData.apiKey}
-              className="rounded-xl flex-1 bg-transparent"
+              className="flex-1 rounded-sm border-input bg-transparent"
             >
               {isLoading ? (
                 <>
@@ -132,7 +135,7 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
                   Testing...
                 </>
               ) : (
-                "Test Connection"
+                "Test connection"
               )}
             </Button>
 
@@ -148,15 +151,15 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
           </div>
 
           {testResult === "error" && (
-            <p className="text-sm text-red-600">Connection failed. Please check your endpoint URL and API key.</p>
+            <p className="text-sm text-red-600">Connection failed. Check your endpoint URL and API key.</p>
           )}
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-xl">
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-sm">
               Cancel
             </Button>
-            <Button type="submit" disabled={testResult !== "success"} className="rounded-xl">
-              Add Integration
+            <Button type="submit" disabled={testResult !== "success"} className="rounded-sm">
+              Add integration
             </Button>
           </div>
         </form>

@@ -7,8 +7,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome to your CoreComm AI customer support platform</p>
+        <h1 className="google-headline-medium">Dashboard</h1>
+        <p className="text-muted-foreground google-body-medium">Welcome to your CoreComm AI customer support platform</p>
       </div>
 
       {/* Metrics Grid */}
@@ -22,10 +22,10 @@ export default function DashboardPage() {
       {/* Activity Feed */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Card className="rounded-2xl hover:shadow-lg transition-all duration-300 hover:border-brand/50 group">
-            <CardHeader className="group-hover:bg-brand/5 transition-colors duration-300 rounded-t-2xl">
-              <CardTitle className="group-hover:text-brand transition-colors duration-200">Recent Activity</CardTitle>
-              <CardDescription>Real-time feed of customer support interactions</CardDescription>
+          <Card className="rounded-sm transition-all duration-300 hover:border-primary/50 border-input group">
+            <CardHeader className=" transition-colors duration-300 rounded-t-sm">
+              <div className="transition-colors duration-200 google-headline-small">Recent Activity</div>
+              <div className="google-body-medium text-muted-foreground">Real-time feed of customer support interactions</div>
             </CardHeader>
             <CardContent>
               <ActivityFeed />
@@ -34,27 +34,27 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-6">
-          <Card className="rounded-2xl hover:shadow-lg transition-all duration-300 hover:border-brand/50 hover:scale-105 group cursor-pointer">
-            <CardHeader className="group-hover:bg-brand/5 transition-colors duration-300 rounded-t-2xl">
-              <CardTitle className="group-hover:text-brand transition-colors duration-200">Quick Stats</CardTitle>
+          <Card className="rounded-sm transition-all duration-300 border-input hover:border-primary/50 group cursor-pointer">
+            <CardHeader className=" transition-colors duration-300 rounded-t-sm">
+              <div className="google-headline-small transition-colors duration-200">Quick Stats</div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
-                <span className="text-sm text-muted-foreground">Active Calls</span>
+              <div className="flex items-center justify-between p-2 rounded-lg transition-colors duration-200">
+                <span className="google-title-small text-muted-foreground">Active Calls</span>
                 <span className="font-semibold text-primary group-hover:text-brand transition-colors duration-200">
                   12
                 </span>
               </div>
-              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
-                <span className="text-sm text-muted-foreground">Queue Length</span>
+              <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
+                <span className="google-title-small text-muted-foreground">Queue Length</span>
                 <span className="font-semibold group-hover:text-brand transition-colors duration-200">3</span>
               </div>
-              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
-                <span className="text-sm text-muted-foreground">Avg Wait Time</span>
+              <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
+                <span className="google-title-small text-muted-foreground">Avg Wait Time</span>
                 <span className="font-semibold group-hover:text-brand transition-colors duration-200">1m 23s</span>
               </div>
-              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
-                <span className="text-sm text-muted-foreground">Success Rate</span>
+              <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
+                <span className="google-title-small text-muted-foreground">Success Rate</span>
                 <span className="font-semibold text-green-600 group-hover:text-green-700 transition-colors duration-200">
                   94.2%
                 </span>
@@ -62,25 +62,25 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl hover:shadow-lg transition-all duration-300 hover:border-brand/50 hover:scale-105 group cursor-pointer">
-            <CardHeader className="group-hover:bg-brand/5 transition-colors duration-300 rounded-t-2xl">
-              <CardTitle className="group-hover:text-brand transition-colors duration-200">System Status</CardTitle>
+          <Card className="rounded-sm transition-all duration-300 border-input hover:border-primary/50 group cursor-pointer">
+            <CardHeader className=" transition-colors duration-300 rounded-t-sm">
+              <div className="google-headline-small transition-colors duration-200">System Status</div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
-                <span className="text-sm">Voice AI</span>
+              <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
+                <span className="google-title-small text-muted-foreground">Voice AI</span>
                 <div className="h-2 w-2 rounded-full bg-green-500 group-hover:scale-125 transition-transform duration-200"></div>
               </div>
-              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
-                <span className="text-sm">MCP Servers</span>
+              <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
+                <span className="google-title-small text-muted-foreground">MCP Servers</span>
                 <div className="h-2 w-2 rounded-full bg-green-500 group-hover:scale-125 transition-transform duration-200"></div>
               </div>
-              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
-                <span className="text-sm">Database</span>
+              <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
+                <span className="google-title-small text-muted-foreground">Database</span>
                 <div className="h-2 w-2 rounded-full bg-green-500 group-hover:scale-125 transition-transform duration-200"></div>
               </div>
-              <div className="flex items-center justify-between group-hover:bg-brand/5 p-2 rounded-lg transition-colors duration-200">
-                <span className="text-sm">Analytics</span>
+              <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
+                <span className="google-title-small text-muted-foreground">Analytics</span>
                 <div className="h-2 w-2 rounded-full bg-yellow-500 group-hover:scale-125 transition-transform duration-200"></div>
               </div>
             </CardContent>

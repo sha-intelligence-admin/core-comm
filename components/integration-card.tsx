@@ -21,13 +21,13 @@ interface IntegrationCardProps {
 const getStatusColor = (status: string) => {
   switch (status) {
     case "connected":
-      return "bg-green-100 text-green-800 hover:bg-green-200"
+      return "bg-green-500/20 text-green-500 "
     case "error":
-      return "bg-red-100 text-red-800 hover:bg-red-200"
+      return "bg-red-500/20 text-red-500"
     case "pending":
-      return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+      return "bg-yellow-500/20 text-yellow-500 "
     default:
-      return "bg-gray-100 text-gray-800 hover:bg-gray-200"
+      return "bg-gray-500/20 text-gray-500 "
   }
 }
 
@@ -35,67 +35,58 @@ export function IntegrationCard({ integration }: IntegrationCardProps) {
   const Icon = integration.icon
 
   return (
-    <Card className="rounded-2xl hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-brand/50 group cursor-pointer">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 group-hover:bg-brand/5 transition-colors duration-300 rounded-t-2xl">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-lg bg-brand/10 group-hover:bg-brand/20 group-hover:scale-110 transition-all duration-300">
-            <Icon className="h-5 w-5 text-brand group-hover:text-brand/80 transition-colors duration-200" />
+    <Card className="group rounded-sm border-input bg-metricCard transition-all duration-300 hover:border-primary/50">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 rounded-t-sm pb-0">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10 text-primary">
+            <Icon className="h-5 w-5" />
           </div>
-          <div>
-            <CardTitle className="text-base group-hover:text-brand transition-colors duration-200">
-              {integration.name}
-            </CardTitle>
-            <CardDescription className="group-hover:text-foreground/80 transition-colors duration-200">
+          <div className="space-y-1">
+            <div className="google-title-medium text-foreground">{integration.name}</div>
+            <div className="google-body-medium text-muted-foreground">
               {integration.type}
-            </CardDescription>
+            </div>
           </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 group-hover:bg-brand/10 transition-colors duration-200"
+              size="icon"
+              className="h-8 w-8 rounded-sm border border-transparent text-muted-foreground hover:border-input hover:bg-muted/40"
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
-              <Edit className="mr-2 h-4 w-4" />
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem className="gap-2 text-sm">
+              <Edit className="h-4 w-4" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Sync Now
+            <DropdownMenuItem className="gap-2 text-sm">
+              <RefreshCw className="h-4 w-4" />
+              Sync now
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-200">
-              <Trash2 className="mr-2 h-4 w-4" />
+            <DropdownMenuItem className="gap-2 text-sm text-red-600 focus:text-red-600">
+              <Trash2 className="h-4 w-4" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
-      <CardContent className="group-hover:bg-brand/5 transition-colors duration-300 rounded-b-2xl">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-2 rounded-lg group-hover:bg-white/50 transition-colors duration-200">
-            <span className="text-sm text-muted-foreground">Status</span>
-            <Badge
-              variant="secondary"
-              className={`${getStatusColor(integration.status)} transition-all duration-200 group-hover:scale-105`}
-            >
-              {integration.status}
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between p-2 rounded-lg group-hover:bg-white/50 transition-colors duration-200">
-            <span className="text-sm text-muted-foreground">Last Sync</span>
-            <span className="text-sm group-hover:text-brand transition-colors duration-200">
-              {integration.lastSync}
-            </span>
-          </div>
-          <div className="text-xs text-muted-foreground truncate p-2 rounded-lg group-hover:bg-white/50 group-hover:text-foreground/70 transition-colors duration-200">
-            {integration.endpoint}
-          </div>
+      <CardContent className="space-y-3 rounded-b-sm pt-4">
+        <div className="flex items-center justify-between rounded-sm border border-transparent bg-muted/40 px-3 py-2">
+          <span className="text-sm text-muted-foreground">Status</span>
+          <Badge variant="secondary" className={`${getStatusColor(integration.status)} capitalize`}>
+            {integration.status}
+          </Badge>
+        </div>
+        <div className="flex items-center justify-between rounded-sm border border-transparent bg-muted/40 px-3 py-2">
+          <span className="text-sm text-muted-foreground">Last sync</span>
+          <span className="google-label-medium text-foreground">{integration.lastSync}</span>
+        </div>
+        <div className="rounded-sm border border-dashed border-input/60 bg-card px-3 py-2 text-xs text-muted-foreground">
+          {integration.endpoint}
         </div>
       </CardContent>
     </Card>

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -12,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { HeadphonesIcon, Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -73,98 +72,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex justify-center">
-            <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-brand text-white">
-              <HeadphonesIcon className="size-6" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold">Welcome to CoreComm</h1>
-          <p className="text-muted-foreground">Sign in to your AI customer support platform</p>
-        </div>
-
-        <Card className="rounded-2xl border-brand/20">
-          <CardHeader className="bg-gradient-to-r from-brand/5 to-transparent rounded-t-2xl">
-            <CardTitle className="text-brand">Sign In</CardTitle>
-            <CardDescription>Enter your credentials to access your account</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-brand/80 font-medium">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="john@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="border-brand/20 focus:border-brand focus:ring-brand/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-brand/80 font-medium">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <Button type="submit" className="w-full bg-brand hover:bg-brand/90" disabled={loading}>
-                {loading && <LoadingSpinner className="mr-2" size="sm" />}
-                Sign In
-              </Button>
-            </form>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <br />
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-              </div>
+    <>
+      <div className="text-start space-y-2">
+              <h1 className="google-headline-small">Welcome back</h1>
+              <p className="text-muted-foreground google-body-small">Sign in to your account</p>
             </div>
 
             <Button
               type="button"
               variant="outline"
-              className="w-full border-brand/30 hover:bg-brand/10 hover:text-brand bg-transparent"
+              className="w-full border-input hover:bg-primary/10 hover:text-primary bg-transparent"
               onClick={handleGoogleLogin}
               disabled={loading}
             >
@@ -190,21 +107,79 @@ export default function LoginPage() {
               Continue with Google
             </Button>
 
-            <div className="text-center text-sm">
-              <span className="text-muted-foreground">Don't have an account? </span>
-              <Link href="/auth/signup" className="text-brand hover:underline">
-                Sign up
-              </Link>
+            <div className="w-full text-center">
+              <p className="text-xs">or</p>
             </div>
 
-            <div className="text-center">
-              <Link href="/auth/forgot-password" className="text-sm text-muted-foreground hover:underline">
-                Forgot your password?
-              </Link>
+            <div className="border-0 w-full">
+              <div className="space-y-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text- font-medium">
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={loading}
+                      className="border-input focus:border-none focus:ring-primary/50 placeholder:text-input"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="flex justify-between w-full font-medium">
+                      Password
+                      <Link href="/auth/forgot-password" className="text-xs text-muted-foreground hover:underline">
+                        Forgot your password?
+                      </Link>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="border-input focus:border-none focus:ring-primary/50 placeholder:text-input"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={loading}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4 text-input" /> : <Eye className="h-4 w-4 text-input" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="w-full text-white bg-primary hover:bg-primary/90" disabled={loading}>
+                    {loading && <LoadingSpinner className="mr-2" size="sm" />}
+                    Sign In
+                  </Button>
+                </form>
+                <div className="text-center text-sm py-4">
+                  <span className="text-muted-foreground">Don't have an account? </span>
+                  <Link href="/auth/signup" className="text-primary hover:underline">
+                    Sign up
+                  </Link>
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    </>
   )
 }

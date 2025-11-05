@@ -62,6 +62,9 @@ module.exports = {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        icons: "hsl(var(--icons))",
+        metricCard: "hsl(var(--metric-card))",
+        sidebarbg: "hsl(var(--sidebar-bg))",
         // Brand color utilities
         brand: {
           DEFAULT: "#3b82f6",

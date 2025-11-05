@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Download, Copy } from "lucide-react"
-import { useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 
 interface Call {
   id: string
@@ -14,6 +14,7 @@ interface Call {
   date: Date
   duration: string
   status: string
+  summary: string
   transcript: string
 }
 
@@ -26,20 +27,86 @@ interface CallTranscriptModalProps {
 const getStatusColor = (status: string) => {
   switch (status) {
     case "resolved":
-      return "bg-green-100 text-green-800"
-    case "pending":
-      return "bg-yellow-100 text-yellow-800"
+      return "bg-green-500/20 text-green-500"
+    case "in-progress":
+      return "bg-blue-500/20 text-blue-500"
     case "escalated":
-      return "bg-red-100 text-red-800"
+      return "bg-purple-500/20 text-purple-500"
     default:
-      return "bg-gray-100 text-gray-800"
+      return "bg-gray-500/20 text-gray-500"
   }
+}
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+const parseTranscript = (rawTranscript: string) => {
+  const speakerRegex = /^(Customer|AI Assistant):\s*/i
+
+  return rawTranscript
+    .split(/\n{2,}/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .map((chunk, index) => {
+      const [firstLine, ...rest] = chunk.split(/\n/)
+      const match = firstLine.match(speakerRegex)
+
+      if (!match) {
+        return {
+          speaker: index % 2 === 0 ? "Customer" : "AI Assistant",
+          message: chunk,
+        }
+      }
+
+      const speaker = match[1]
+      const message = [firstLine.replace(match[0], "").trim(), ...rest].join("\n").trim()
+
+      return {
+        speaker,
+        message,
+      }
+    })
 }
 
 export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscriptModalProps) {
   const [searchTerm, setSearchTerm] = useState("")
 
+  const callDate = useMemo(() => {
+    if (!call) return null
+
+    const parsed = call.date instanceof Date ? call.date : new Date(call.date)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }, [call])
+
+  const transcriptEntries = useMemo(() => {
+    if (!call?.transcript) return []
+
+    return parseTranscript(call.transcript)
+  }, [call?.transcript])
+
   if (!call) return null
+
+  const normalizedSearch = searchTerm.trim()
+
+  const renderHighlightedText = (text: string) => {
+    if (!normalizedSearch) return text
+
+    try {
+      const regex = new RegExp(`(${escapeRegExp(normalizedSearch)})`, "gi")
+      const parts = text.split(regex)
+
+      return parts.map((part, index) =>
+        index % 2 === 1 ? (
+          <mark key={`${part}-${index}`} className="rounded-sm bg-primary/10 px-1 py-px text-primary">
+            {part}
+          </mark>
+        ) : (
+          <Fragment key={`${part}-${index}`}>{part}</Fragment>
+        )
+      )
+    } catch (error) {
+      return text
+    }
+  }
 
   const handleCopyTranscript = () => {
     navigator.clipboard.writeText(call.transcript)
@@ -57,119 +124,111 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] rounded-2xl backdrop-blur-md bg-background/95 border border-brand/20 shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Call Transcript - {call.callerName}</span>
-            <Badge variant="secondary" className={getStatusColor(call.status)}>
+      <DialogContent className="flex h-[min(90vh,680px)] w-[min(100vw-2rem,960px)] flex-col overflow-hidden rounded-lg border border-input bg-background p-0 shadow-2xl">
+        <DialogHeader className="sticky top-0 z-20 space-y-2 border-b border-input bg-background/95 px-6 py-5 text-left backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <DialogTitle className="flex flex-row items-center justify-between">
+            <span className="google-headline-small text-foreground">Call transcript</span>
+            <Badge variant="secondary" className={`${getStatusColor(call.status)} text-xs uppercase tracking-wide`}>
               {call.status}
             </Badge>
           </DialogTitle>
-          <DialogDescription>
-            {call.callerNumber} • {call.date.toLocaleDateString()} • {call.duration}
+          <DialogDescription className="google-body-medium text-muted-foreground">
+            {call.callerName} • {call.callerNumber} • {callDate ? callDate.toLocaleString() : "Unknown time"} • {call.duration}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <div className="flex flex-col gap-3 border-b border-input px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-lg">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search transcript..."
+                placeholder="Search transcript"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 rounded-xl"
+                className="h-11 w-full rounded-sm border-input pl-10"
               />
             </div>
-            <Button variant="outline" onClick={handleCopyTranscript} className="rounded-xl bg-transparent">
-              <Copy className="h-4 w-4 mr-2" />
-              Copy
-            </Button>
-            <Button variant="outline" onClick={handleDownloadTranscript} className="rounded-xl bg-transparent">
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyTranscript}
+                className="rounded-sm border-input bg-transparent hover:bg-primary/10"
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadTranscript}
+                className="rounded-sm border-input bg-transparent hover:bg-primary/10"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+            </div>
           </div>
 
-          <div className="border rounded-xl p-4 max-h-96 overflow-y-auto">
+          <div className="flex flex-1 flex-col gap-4 px-6 py-5">
+            <div className="grid gap-4 rounded-sm border border-dashed border-input bg-muted/40 p-4 text-sm text-muted-foreground sm:grid-cols-2">
+              <div className="space-y-1">
+                <div className="google-label-medium text-muted-foreground/80">Caller</div>
+                <div className="text-foreground">{call.callerName}</div>
+                <div>{call.callerNumber}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="google-label-medium text-muted-foreground/80">Duration</div>
+                <div className="text-foreground">{call.duration}</div>
+                <div>{callDate ? callDate.toLocaleDateString() : "Unknown date"}</div>
+              </div>
+            </div>
+
             <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-blue-600 mb-1">Customer</div>
-                  <div className="text-sm">Hi, I need help with returning a product I purchased last week.</div>
-                </div>
-              </div>
+              <div className="google-title-small text-foreground">Transcript</div>
+              <div className="space-y-4">
+                {transcriptEntries.length > 0 ? (
+                  transcriptEntries.map((entry, index) => {
+                    const isCustomer = entry.speaker.toLowerCase().includes("customer")
 
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-primary mb-1">AI Assistant</div>
-                  <div className="text-sm">
-                    I'd be happy to help you with your return. Can you please provide me with your order number or the
-                    email address associated with your purchase?
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-blue-600 mb-1">Customer</div>
-                  <div className="text-sm">
-                    Sure, my order number is ORD-12345 and my email is sarah.johnson@email.com
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-primary mb-1">AI Assistant</div>
-                  <div className="text-sm">
-                    Thank you! I found your order. I can see you purchased a wireless headset. Our return policy allows
-                    returns within 30 days of purchase. Since your order was placed last week, you're well within the
-                    return window. I'll email you a prepaid return label right now. Is there anything specific wrong
-                    with the product?
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-blue-600 mb-1">Customer</div>
-                  <div className="text-sm">
-                    The sound quality isn't what I expected. It's not defective, just not what I was looking for.
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-primary mb-1">AI Assistant</div>
-                  <div className="text-sm">
-                    I understand completely. I've sent the return label to your email address. Once you ship the item
-                    back to us, your refund will be processed within 3-5 business days. Is there anything else I can
-                    help you with today?
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-blue-600 mb-1">Customer</div>
-                  <div className="text-sm">That's perfect, thank you so much for your help!</div>
-                </div>
+                    return (
+                      <div
+                        key={`${entry.speaker}-${index}-${entry.message.slice(0, 12)}`}
+                        className={`flex w-full ${isCustomer ? "justify-start" : "justify-end"}`}
+                      >
+                        <div
+                          className={`max-w-[85%] space-y-2 rounded-md border border-input px-3 py-2 text-sm leading-relaxed shadow-sm ${
+                            isCustomer
+                              ? "bg-muted/60 text-foreground"
+                              : "bg-primary/5 text-foreground border-primary/20"
+                          }`}
+                        >
+                          <div
+                            className={`google-label-medium uppercase tracking-wide ${
+                              isCustomer ? "text-muted-foreground" : "text-primary"
+                            }`}
+                          >
+                            {entry.speaker}
+                          </div>
+                          <div className="whitespace-pre-line text-muted-foreground">
+                            {renderHighlightedText(entry.message)}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="rounded-md border border-dashed border-input bg-card/60 p-4 text-sm text-muted-foreground">
+                    {renderHighlightedText(call.transcript || "No transcript available.")}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between items-center text-sm text-muted-foreground">
-            <span>Call Resolution: Automated return process completed successfully</span>
-            <span>MCP Actions: 2 (Order lookup, Return label generation)</span>
+          <div className="flex flex-col gap-2 border-t border-input px-6 py-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <span>Call Resolution: Automated notes generated for CRM</span>
+            <span>MCP Actions: 2 (Summary, transcript export)</span>
           </div>
         </div>
       </DialogContent>
