@@ -15,7 +15,7 @@
     "db:setup": "echo 'Please run the SQL files in supabase/ directory in your Supabase project'",
     "type-check": "tsc --noEmit",
     "prebuild": "npm run lint && npm run type-check",
-    "render-build": "npm install && npm run build"
+    "render-build": "npm install --include=dev && npm run build"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.0.4",
