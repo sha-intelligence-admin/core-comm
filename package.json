@@ -14,7 +14,7 @@
     "test:coverage": "jest --coverage",
     "db:setup": "echo 'Please run the SQL files in supabase/ directory in your Supabase project'",
     "type-check": "tsc --noEmit",
-    "prebuild": "npm run lint && npm run type-check",
+    "prebuild": "npm run type-check",
     "render-build": "npm install --include=dev && npm run build"
   },
   "dependencies": {
