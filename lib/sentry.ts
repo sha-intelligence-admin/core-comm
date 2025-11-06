@@ -10,38 +10,12 @@ export function initSentry() {
       // Performance monitoring
       tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
       
-      // Session replay for debugging (be careful with privacy)
-      replaysSessionSampleRate: process.env.NODE_ENV === 'production' ? 0.01 : 0.1,
-      replaysOnErrorSampleRate: 1.0,
-      
-      // Capture console logs - Updated for Sentry v8
-      integrations: [
-        Sentry.consoleIntegration(),
-        Sentry.replayIntegration()
-      ],
-      
-      // Filter out sensitive data
-      beforeSend(event) {
-        // Remove sensitive headers
-        if (event.request?.headers) {
-          delete event.request.headers['authorization']
-          delete event.request.headers['cookie']
-          delete event.request.headers['x-csrf-token']
-        }
-        
-        // Remove sensitive form data
-        if (event.request?.data) {
-          if (typeof event.request.data === 'object') {
-            const sanitized = { ...event.request.data }
-            delete sanitized.password
-            delete sanitized.token
-            delete sanitized.secret
-            event.request.data = sanitized
-          }
-        }
-        
-        return event
-      },
+      // Session replay (disabled by default until client runtime integration is added)
+      replaysSessionSampleRate: 0,
+      replaysOnErrorSampleRate: 0,
+
+      // Capture console logs
+      integrations: [],
       
       // Filter out noisy errors
       ignoreErrors: [
@@ -77,7 +51,7 @@ export function initSentry() {
 
 // Helper functions for manual error reporting
 export function captureError(error: Error, context?: Record<string, any>) {
-  Sentry.withScope((scope) => {
+  Sentry.withScope((scope: Sentry.Scope) => {
     if (context) {
       Object.keys(context).forEach(key => {
         scope.setContext(key, context[key])
@@ -88,7 +62,7 @@ export function captureError(error: Error, context?: Record<string, any>) {
 }
 
 export function captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info', context?: Record<string, any>) {
-  Sentry.withScope((scope) => {
+  Sentry.withScope((scope: Sentry.Scope) => {
     if (context) {
       Object.keys(context).forEach(key => {
         scope.setContext(key, context[key])
