@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { LayoutDashboard, Phone, Settings, Plug, User, Loader2, Bot, PhoneCall, MessageSquare, Mail, BarChart3, Users, Shield, HelpCircle } from "lucide-react"
 import Link from "next/link"
@@ -86,6 +87,13 @@ const menuItems = [
 export function AppSidebar() {
   const { profile, loading, getInitials, getDisplayName } = useUserProfile()
   const pathname = usePathname()
+  const { setOpenMobile, isMobile } = useSidebar()
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
 
   return (
     <Sidebar className="border-r border-input bg-sidebarbg">
@@ -113,6 +121,7 @@ export function AppSidebar() {
                     >
                     <Link
                       href={item.url}
+                      onClick={handleLinkClick}
                         className="flex items-center space-x-2 hover:bg-brand/10 transition-all duration-300 rounded-r-lg"
                     >
                       <item.icon className="h-5 w-5 transition-all duration-200" />

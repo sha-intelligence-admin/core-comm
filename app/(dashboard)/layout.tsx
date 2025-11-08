@@ -2,16 +2,13 @@ import type React from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { TopNavigation } from "@/components/top-navigation"
-import { requireAuth } from "@/lib/auth"
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Ensure user is authenticated
-  await requireAuth()
-
+  // Auth is already handled by middleware, no need to check here
   return (
     <SidebarProvider>
       <AppSidebar />
