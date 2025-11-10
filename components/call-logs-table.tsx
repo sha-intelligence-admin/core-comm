@@ -7,61 +7,13 @@ import { Badge } from "@/components/ui/badge"
 import { CallTranscriptModal } from "./call-transcript-modal"
 import { Eye, Download, ChevronDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import type { Call } from "@/hooks/use-call-logs"
+import { LoadingSpinner } from "./loading-spinner"
 
-const callLogs = [
-  {
-    id: "1",
-    callerName: "Sarah Johnson",
-    callerNumber: "+1 (555) 123-4567",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    duration: "3m 45s",
-    status: "resolved",
-    summary:
-      "Customer requested a return label for a headset purchase. AI verified the order and sent the label via email.",
-    transcript: `Customer: Hi, I need to return the headset I ordered last week.\n\nAI Assistant: I can help with that. Could you share the order number or email tied to the purchase?\n\nCustomer: The order number is ORD-12345 and the email is sarah.johnson@email.com.\n\nAI Assistant: Thanks! I located your order. Since it's within 30 days, you're eligible for a return. I'll email you a prepaid return label now. Is there anything else you noticed about the product?\n\nCustomer: The sound quality just wasn't what I expected, but it's not broken.\n\nAI Assistant: Understood. The label is on its way to your inbox. Once we receive the headset, expect a refund within 3-5 business days. Anything else I can help with today?\n\nCustomer: Nope, that covers it. Thank you!`,
-  },
-  {
-    id: "2",
-    callerName: "Mike Chen",
-    callerNumber: "+1 (555) 987-6543",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 4),
-    duration: "5m 12s",
-    status: "escalated",
-    summary:
-      "Technical installation failed after multiple retries; call escalated to human engineer for hands-on assistance.",
-    transcript: `Customer: I'm trying to install the CoreComm desktop agent, but it fails at 42%.\n\nAI Assistant: Thanks for letting me know. Do you see any specific error code when it stops?\n\nCustomer: Yeah, it shows ERR-509 about missing dependencies.\n\nAI Assistant: That usually means the Visual C++ runtime is missing. I can trigger an automated fix. Would you like me to start that?\n\nCustomer: Sure, go ahead.\n\nAI Assistant: Running the repair now. You should see a confirmation window in a few seconds.\n\nCustomer: Okay, I see it installing... wait, it failed again with the same error.\n\nAI Assistant: Since the automated repair didn't complete, I'll escalate this session to a human engineer who can remote in. They'll reach out within 10 minutes.\n\nCustomer: Sounds good, thanks.`,
-  },
-  {
-    id: "3",
-    callerName: "Emily Davis",
-    callerNumber: "+1 (555) 456-7890",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 6),
-    duration: "2m 15s",
-    status: "resolved",
-    summary: "Clarified a monthly subscription renewal charge and emailed a receipt summary to the customer.",
-    transcript: `Customer: Hi, can you explain the $49 charge on my statement?\n\nAI Assistant: Sure thing. Let me open your billing history. I see the $49 is for the CoreComm Pro monthly renewal on September 12.\n\nCustomer: Oh right, that makes sense. Could you send me the receipt?\n\nAI Assistant: Absolutely. I've just emailed the receipt to emily.davis@email.com. Anything else I can help with?\n\nCustomer: Nope, thanks!`,
-  },
-  {
-    id: "4",
-    callerName: "Robert Wilson",
-    callerNumber: "+1 (555) 321-0987",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 8),
-    duration: "4m 33s",
-    status: "pending",
-    summary: "Walked through IVR menu changes; customer still needs to confirm a routing rule before completion.",
-    transcript: `Customer: I'm updating our IVR so that after-hours calls go to voicemail.\n\nAI Assistant: I can help configure that. Are you using the Support or Sales flow?\n\nCustomer: Support flow.\n\nAI Assistant: Great. I've scheduled a rules update to route Support calls to voicemail between 6pm and 8am. Do you want a fallback to the on-call manager?\n\nCustomer: Let me check with the team first.\n\nAI Assistant: No problem. I've saved the draft changes. When you're ready, just confirm and I'll publish the update.`,
-  },
-  {
-    id: "5",
-    callerName: "Lisa Anderson",
-    callerNumber: "+1 (555) 654-3210",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 12),
-    duration: "1m 58s",
-    status: "resolved",
-    summary: "Shared live tracking link and confirmed delivery ETA for a replacement router shipment.",
-    transcript: `Customer: I'm checking on the status of my replacement router.\n\nAI Assistant: Let me pull that up. The replacement shipped yesterday via FedEx and is scheduled to arrive tomorrow by 5pm.\n\nCustomer: Great, can you send me the tracking link?\n\nAI Assistant: Done! The link is now in your email and via SMS. Anything else I can help with?\n\nCustomer: That's all, thanks!`,
-  },
-]
+interface CallLogsTableProps {
+  data?: Call[]
+  loading?: boolean
+}
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -78,9 +30,49 @@ const getStatusColor = (status: string) => {
 
 const formatStatus = (status: string) => status.charAt(0).toUpperCase() + status.slice(1)
 
-export function CallLogsTable() {
+const formatDuration = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}m ${remainingSeconds}s`
+}
+
+export function CallLogsTable({ data, loading = false }: CallLogsTableProps) {
+  // Transform real data from database
+  const callLogs = data ? data.map(call => ({
+    id: call.id,
+    callerName: call.caller_number, // Use caller_number as name since we don't have a name field
+    callerNumber: call.caller_number,
+    date: new Date(call.created_at),
+    duration: formatDuration(call.duration),
+    status: call.resolution_status,
+    summary: call.summary || 'No summary available',
+    transcript: call.transcript || 'No transcript available',
+  })) : []
+
   const [selectedCall, setSelectedCall] = useState<(typeof callLogs)[0] | null>(null)
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
+
+  if (callLogs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="rounded-full bg-muted p-3 mb-4">
+          <Eye className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h3 className="google-title-large text-foreground mb-2">No call logs found</h3>
+        <p className="google-body-medium text-muted-foreground max-w-sm">
+          There are no calls matching your current filters. Try adjusting your search criteria or date range.
+        </p>
+      </div>
+    )
+  }
 
   const toggleCardExpansion = (id: string) => {
     setExpandedCard((current) => (current === id ? null : id))

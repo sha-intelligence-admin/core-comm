@@ -9,29 +9,33 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { LoadingSpinner } from "./loading-spinner"
+import { useTeamMembers } from "@/hooks/use-team-members"
 
 interface AddTeamMemberModalProps {
   children: React.ReactNode
 }
 
 export function AddTeamMemberModal({ children }: AddTeamMemberModalProps) {
+  const { createMember } = useTeamMembers()
   const [open, setOpen] = useState(false)
-  const [regions, setRegions] = useState<string[]>([])
+  const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     role: "",
+    department: "",
     permissions: {
-      voice: false,
-      messaging: false,
-      analytics: true,
-      billing: false,
+      analytics: false,
+      integrations: false,
+      team: false,
+      agents: false,
+      calls: true,
+      messages: true,
+      emails: true,
     },
   })
-
-  const toggleRegion = (value: string) => {
-    setRegions((prev) => (prev.includes(value) ? prev.filter((region) => region !== value) : [...prev, value]))
-  }
 
   const togglePermission = (key: keyof typeof formData.permissions) => {
     setFormData((prev) => ({
@@ -40,16 +44,51 @@ export function AddTeamMemberModal({ children }: AddTeamMemberModalProps) {
     }))
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    console.log("Team member payload:", { ...formData, regions })
+    setIsCreating(true)
+    setError(null)
+
+    const result = await createMember({
+      full_name: formData.name,
+      email: formData.email,
+      role: formData.role as 'admin' | 'manager' | 'agent' | 'viewer' | 'developer',
+      department: formData.department || undefined,
+      status: 'invited',
+      can_access_analytics: formData.permissions.analytics,
+      can_manage_integrations: formData.permissions.integrations,
+      can_manage_team: formData.permissions.team,
+      can_manage_agents: formData.permissions.agents,
+      can_view_calls: formData.permissions.calls,
+      can_view_messages: formData.permissions.messages,
+      can_view_emails: formData.permissions.emails,
+      config: {},
+      permissions: {},
+    })
+
+    setIsCreating(false)
+
+    if (result.error) {
+      setError(result.error)
+      return
+    }
+
+    // Success - reset form and close modal
     setOpen(false)
-    setRegions([])
     setFormData({
       name: "",
       email: "",
       role: "",
-      permissions: { voice: false, messaging: false, analytics: true, billing: false },
+      department: "",
+      permissions: {
+        analytics: false,
+        integrations: false,
+        team: false,
+        agents: false,
+        calls: true,
+        messages: true,
+        emails: true,
+      },
     })
   }
 
@@ -103,41 +142,38 @@ export function AddTeamMemberModal({ children }: AddTeamMemberModalProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Administrator</SelectItem>
-                <SelectItem value="support">Support Agent</SelectItem>
-                <SelectItem value="sales">Sales Agent</SelectItem>
-                <SelectItem value="observer">Observer</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="agent">Agent</SelectItem>
+                <SelectItem value="developer">Developer</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-3">
-            <span className="google-label-medium text-muted-foreground">Access regions</span>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {[
-                { value: "na", label: "North America" },
-                { value: "emea", label: "EMEA" },
-                { value: "latam", label: "LATAM" },
-                { value: "apac", label: "APAC" },
-              ].map((region) => (
-                <label key={region.value} className="flex items-center gap-2 rounded-sm border border-input bg-muted/40 p-2 text-sm">
-                  <Checkbox
-                    checked={regions.includes(region.value)}
-                    onCheckedChange={() => toggleRegion(region.value)}
-                  />
-                  <span>{region.label}</span>
-                </label>
-              ))}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="team-department" className="google-label-medium text-muted-foreground">
+              Department (optional)
+            </Label>
+            <Input
+              id="team-department"
+              placeholder="Support, Sales, etc."
+              value={formData.department}
+              onChange={(event) => setFormData((prev) => ({ ...prev, department: event.target.value }))}
+              className="h-11 rounded-sm border-input"
+            />
           </div>
 
           <div className="space-y-3">
-            <span className="google-label-medium text-muted-foreground">Feature permissions</span>
+            <span className="google-label-medium text-muted-foreground">Permissions</span>
             <div className="grid gap-2">
               {[
-                { key: "voice", label: "Voice & Call Routing" },
-                { key: "messaging", label: "Messaging Inbox" },
-                { key: "analytics", label: "Analytics & Reporting" },
-                { key: "billing", label: "Billing & Usage" },
+                { key: "calls", label: "View Calls" },
+                { key: "messages", label: "View Messages" },
+                { key: "emails", label: "View Emails" },
+                { key: "analytics", label: "Access Analytics" },
+                { key: "integrations", label: "Manage Integrations" },
+                { key: "agents", label: "Manage AI Agents" },
+                { key: "team", label: "Manage Team" },
               ].map((permission) => (
                 <label key={permission.key} className="flex items-center justify-between rounded-sm border border-input bg-muted/40 px-3 py-2 text-sm">
                   <span>{permission.label}</span>
@@ -150,12 +186,23 @@ export function AddTeamMemberModal({ children }: AddTeamMemberModalProps) {
             </div>
           </div>
 
+          {error && (
+            <p className="text-sm text-red-600">{error}</p>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-sm">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-sm" disabled={isCreating}>
               Cancel
             </Button>
-            <Button type="submit" className="rounded-sm">
-              Send invite
+            <Button type="submit" className="rounded-sm" disabled={isCreating}>
+              {isCreating ? (
+                <>
+                  <LoadingSpinner className="mr-2 h-4 w-4" />
+                  Sending...
+                </>
+              ) : (
+                'Send invite'
+              )}
             </Button>
           </div>
         </form>

@@ -9,26 +9,73 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { LoadingSpinner } from "./loading-spinner"
+import { useVoiceAgents } from "@/hooks/use-voice-agents"
 
 interface AddAgentModalProps {
   children: React.ReactNode
 }
 
 export function AddAgentModal({ children }: AddAgentModalProps) {
+  const { createAgent } = useVoiceAgents()
   const [open, setOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
   const [formData, setFormData] = useState({
     name: "",
     channel: "",
     goal: "",
     knowledgeBase: "",
     handoff: "",
+    voiceModel: "en-US-neural",
+    language: "en-US",
   })
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    console.log("Agent payload:", formData)
-    setOpen(false)
-    setFormData({ name: "", channel: "", goal: "", knowledgeBase: "", handoff: "" })
+    setIsSaving(true)
+    setErrorMessage("")
+
+    // Only create voice agents for now (voice channel)
+    if (formData.channel === "voice") {
+      const result = await createAgent({
+        name: formData.name,
+        description: formData.goal,
+        voice_model: formData.voiceModel,
+        language: formData.language,
+        personality: formData.goal,
+        status: 'active',
+        greeting_message: `Hello! I'm ${formData.name}. How can I help you today?`,
+        knowledge_base_id: formData.knowledgeBase || undefined,
+        config: {
+          handoff: formData.handoff,
+          channel: formData.channel,
+        },
+      })
+
+      setIsSaving(false)
+
+      if (result.error) {
+        setErrorMessage(result.error)
+        return
+      }
+
+      // Success - close modal and reset form
+      setOpen(false)
+      setFormData({ 
+        name: "", 
+        channel: "", 
+        goal: "", 
+        knowledgeBase: "", 
+        handoff: "",
+        voiceModel: "en-US-neural",
+        language: "en-US",
+      })
+    } else {
+      // For non-voice channels, just show a message for now
+      setErrorMessage("Only voice agents are supported at this time")
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -121,12 +168,35 @@ export function AddAgentModal({ children }: AddAgentModalProps) {
             </div>
           </div>
 
+          {errorMessage && (
+            <div className="rounded-sm bg-red-500/10 border border-red-500/20 p-3">
+              <p className="text-sm text-red-600">{errorMessage}</p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-sm">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)} 
+              className="rounded-sm"
+              disabled={isSaving}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="rounded-sm">
-              Create agent
+            <Button 
+              type="submit" 
+              className="rounded-sm"
+              disabled={isSaving || !formData.name || !formData.channel}
+            >
+              {isSaving ? (
+                <>
+                  <LoadingSpinner className="mr-2 h-4 w-4" />
+                  Creating...
+                </>
+              ) : (
+                "Create agent"
+              )}
             </Button>
           </div>
         </form>

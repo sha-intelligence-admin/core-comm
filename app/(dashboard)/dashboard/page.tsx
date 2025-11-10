@@ -1,9 +1,44 @@
+"use client"
+
 import { MetricCard } from "@/components/metric-card"
 import { ActivityFeed } from "@/components/activity-feed"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Phone, CheckCircle, Clock, Zap } from "lucide-react"
+import { useEffect, useState } from "react"
+
+interface DashboardMetrics {
+  totalCalls: number
+  resolvedCalls: number
+  avgDuration: string
+  avgDurationSeconds: number
+  mcpActions: number
+  activeCalls: number
+  activeAgents: number
+  successRate: number
+}
 
 export default function DashboardPage() {
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchMetrics() {
+      try {
+        const response = await fetch("/api/dashboard/metrics")
+        if (response.ok) {
+          const data = await response.json()
+          setMetrics(data.metrics)
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard metrics:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMetrics()
+  }, [])
+
   return (
     <div className="space-y-6">
       <div>
@@ -13,10 +48,34 @@ export default function DashboardPage() {
 
       {/* Metrics Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Total Calls" value="2,847" change="+12.5%" trend="up" icon={Phone} />
-        <MetricCard title="Resolved Calls" value="2,634" change="+8.2%" trend="up" icon={CheckCircle} />
-        <MetricCard title="Avg Call Duration" value="4m 32s" change="-2.1%" trend="down" icon={Clock} />
-        <MetricCard title="MCP Actions" value="1,429" change="+18.7%" trend="up" icon={Zap} />
+        <MetricCard 
+          title="Total Calls" 
+          value={loading ? "..." : metrics?.totalCalls.toLocaleString() || "0"} 
+          change="" 
+          trend="up" 
+          icon={Phone} 
+        />
+        <MetricCard 
+          title="Resolved Calls" 
+          value={loading ? "..." : metrics?.resolvedCalls.toLocaleString() || "0"} 
+          change="" 
+          trend="up" 
+          icon={CheckCircle} 
+        />
+        <MetricCard 
+          title="Avg Call Duration" 
+          value={loading ? "..." : metrics?.avgDuration || "0m 0s"} 
+          change="" 
+          trend="up" 
+          icon={Clock} 
+        />
+        <MetricCard 
+          title="Active Agents" 
+          value={loading ? "..." : metrics?.activeAgents.toString() || "0"} 
+          change="" 
+          trend="up" 
+          icon={Zap} 
+        />
       </div>
 
       {/* Activity Feed */}
@@ -42,21 +101,25 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between p-2 rounded-lg transition-colors duration-200">
                 <span className="google-title-small text-muted-foreground">Active Calls</span>
                 <span className="font-semibold text-primary group-hover:text-brand transition-colors duration-200">
-                  12
+                  {loading ? "..." : metrics?.activeCalls || 0}
                 </span>
               </div>
               <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
-                <span className="google-title-small text-muted-foreground">Queue Length</span>
-                <span className="font-semibold group-hover:text-brand transition-colors duration-200">3</span>
+                <span className="google-title-small text-muted-foreground">Active Agents</span>
+                <span className="font-semibold group-hover:text-brand transition-colors duration-200">
+                  {loading ? "..." : metrics?.activeAgents || 0}
+                </span>
               </div>
               <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
-                <span className="google-title-small text-muted-foreground">Avg Wait Time</span>
-                <span className="font-semibold group-hover:text-brand transition-colors duration-200">1m 23s</span>
+                <span className="google-title-small text-muted-foreground">Avg Duration</span>
+                <span className="font-semibold group-hover:text-brand transition-colors duration-200">
+                  {loading ? "..." : metrics?.avgDuration || "0m 0s"}
+                </span>
               </div>
               <div className="flex items-center justify-between  p-2 rounded-lg transition-colors duration-200">
                 <span className="google-title-small text-muted-foreground">Success Rate</span>
                 <span className="font-semibold text-green-600 group-hover:text-green-700 transition-colors duration-200">
-                  94.2%
+                  {loading ? "..." : `${metrics?.successRate || 0}%`}
                 </span>
               </div>
             </CardContent>

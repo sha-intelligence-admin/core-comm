@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useEmailAccounts } from "@/hooks/use-email-accounts"
+import { LoadingSpinner } from "@/components/loading-spinner"
 import {
     Mail,
     Plus,
@@ -89,87 +91,122 @@ const emailCapabilities = [
     },
 ]
 
-const analyticsMetrics = [
-    {
-        label: "Total Emails Processed",
-        value: "8,247",
-        description: "AI + human handled",
-        icon: Mail,
-        trend: "+22.4%",
-    },
-    {
-        label: "Avg Response Time",
-        value: "4.2 min",
-        description: "Speed of first AI reply",
-        icon: Clock,
-        trend: "-18.7%",
-    },
-    {
-        label: "Auto-Resolved",
-        value: "6,851",
-        description: "Closed without human input",
-        icon: CheckCircle,
-        trend: "+15.3%",
-    },
-    {
-        label: "Human Escalations",
-        value: "1,396",
-        description: "Forwarded to team inbox",
-        icon: Users,
-        trend: "+8.1%",
-    },
-    {
-        label: "Customer Satisfaction",
-        value: "4.7/5",
-        description: "Based on sentiment detection",
-        icon: ThumbsUp,
-        trend: "+6.2%",
-    },
-    {
-        label: "Active Accounts",
-        value: "5",
-        description: "Connected email accounts",
-        icon: Activity,
-        trend: "+1 new",
-    },
-]
-
-const mockAccounts = [
-    {
-        id: "1",
-        email: "support@corecomm.io",
-        provider: "Gmail",
-        agent: "Customer Support Bot",
-        purpose: "Customer Inquiries",
-        status: "active",
-        emailsToday: 143,
-    },
-    {
-        id: "2",
-        email: "billing@corecomm.io",
-        provider: "Outlook",
-        agent: "Billing Assistant Bot",
-        purpose: "Payment & Invoices",
-        status: "active",
-        emailsToday: 67,
-    },
-    {
-        id: "3",
-        email: "sales@corecomm.io",
-        provider: "Gmail",
-        agent: "Sales Lead Bot",
-        purpose: "Lead Qualification",
-        status: "active",
-        emailsToday: 89,
-    },
-]
-
 export default function EmailPage() {
+    const { accounts, loading, error, deleteAccount } = useEmailAccounts()
+
+    // Calculate real metrics from accounts data
+    const totalEmailsProcessed = accounts.reduce((sum, account) => 
+        sum + account.total_emails_sent + account.total_emails_received, 0
+    )
+    const totalEmailsReplied = accounts.reduce((sum, account) => sum + account.total_emails_replied, 0)
+    const avgResponseTime = accounts.length > 0
+        ? (accounts.reduce((sum, account) => sum + account.avg_response_time, 0) / accounts.length / 60).toFixed(1)
+        : "0.0"
+    const activeAccountsCount = accounts.filter(a => a.status === 'active').length
+    const totalEmailsSent = accounts.reduce((sum, account) => sum + account.total_emails_sent, 0)
+    const totalEmailsReceived = accounts.reduce((sum, account) => sum + account.total_emails_received, 0)
+
+    // Real analytics metrics calculated from database
+    const calculatedMetrics = [
+        {
+            label: "Total Emails Processed",
+            value: loading ? "..." : totalEmailsProcessed.toLocaleString(),
+            description: "Sent + received",
+            icon: Mail,
+        },
+        {
+            label: "Avg Response Time",
+            value: loading ? "..." : `${avgResponseTime} min`,
+            description: "Speed of first AI reply",
+            icon: Clock,
+        },
+        {
+            label: "Emails Replied",
+            value: loading ? "..." : totalEmailsReplied.toLocaleString(),
+            description: "Total responses sent",
+            icon: CheckCircle,
+        },
+        {
+            label: "Emails Sent",
+            value: loading ? "..." : totalEmailsSent.toLocaleString(),
+            description: "Outgoing emails",
+            icon: ArrowRight,
+        },
+        {
+            label: "Emails Received",
+            value: loading ? "..." : totalEmailsReceived.toLocaleString(),
+            description: "Incoming emails",
+            icon: ArrowDown,
+        },
+        {
+            label: "Active Accounts",
+            value: loading ? "..." : activeAccountsCount.toString(),
+            description: "Connected email accounts",
+            icon: Activity,
+        },
+    ]
+
+    const handleDeleteAccount = async (id: string) => {
+        if (confirm('Are you sure you want to disconnect this email account?')) {
+            await deleteAccount(id)
+        }
+    }
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'active':
+                return 'bg-green-500/20 text-green-500'
+            case 'inactive':
+                return 'bg-gray-500/20 text-gray-500'
+            case 'suspended':
+                return 'bg-yellow-500/20 text-yellow-500'
+            case 'pending':
+                return 'bg-blue-500/20 text-blue-500'
+            case 'error':
+                return 'bg-red-500/20 text-red-500'
+            default:
+                return 'bg-gray-500/20 text-gray-500'
+        }
+    }
+
+    const getProviderDisplay = (provider: string) => {
+        const providers: Record<string, string> = {
+            gmail: 'Gmail',
+            outlook: 'Outlook',
+            exchange: 'Exchange',
+            imap: 'IMAP',
+            smtp: 'SMTP',
+            other: 'Other',
+        }
+        return providers[provider] || provider
+    }
+
+    if (loading) {
+        return (
+            <div className="flex min-h-[60vh] items-center justify-center">
+                <LoadingSpinner />
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+                <p className="text-destructive">Error loading email accounts: {error}</p>
+                <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+        )
+    }
     return (
         <div className="space-y-6 overflow-x-hidden">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
-                    <h1 className="google-headline-medium">Email</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="google-headline-medium">Email</h1>
+                        <Badge variant="outline" className="rounded-full border-0 bg-yellow-500/20 text-yellow-600">
+                            Coming Soon
+                        </Badge>
+                    </div>
                     <p className="google-body-medium text-muted-foreground">
                         Let AI handle customer emails with professional automated responses
                     </p>
@@ -206,24 +243,13 @@ export default function EmailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {analyticsMetrics.map((metric) => (
+                        {calculatedMetrics.map((metric) => (
                             <div
                                 key={metric.label}
                                 className="rounded-sm border border-input bg-metricCard p-4 transition-colors duration-200 hover:border-primary/60"
                             >
                                 <div className="flex items-center justify-between">
                                     <metric.icon className="h-5 w-5 text-primary" />
-                                    <Badge
-                                        variant="outline"
-                                        className={`rounded-full border-0 ${metric.trend.startsWith("+")
-                                                ? "bg-green-500/20 text-green-600"
-                                                : metric.trend.startsWith("-")
-                                                    ? "bg-red-500/20 text-red-600"
-                                                    : "bg-blue-500/20 text-blue-600"
-                                            }`}
-                                    >
-                                        {metric.trend}
-                                    </Badge>
                                 </div>
                                 <div className="mt-3">
                                     <div className="google-headline-small text-foreground">{metric.value}</div>
@@ -246,75 +272,93 @@ export default function EmailPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid gap-4">
-                        {mockAccounts.map((account) => (
-                            <div
-                                key={account.id}
-                                className="flex gap-4 rounded-sm border border-input bg-muted/40 p-4 transition-colors duration-200 hover:border-primary/60 hover:bg-muted items-center justify-between"
-                            >
-                                <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
-                                    <div className="flex items-center gap-3">
-                                        <Mail className="h-4 w-4 text-primary" />
-                                        <div>
-                                            <div className="google-title-small text-foreground">{account.email}</div>
-                                            <div className="google-body-small text-muted-foreground mt-1">
-                                                {account.provider} • {account.purpose}
+                    {accounts.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <Mail className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                            <h3 className="google-title-medium text-foreground mb-2">No email accounts connected</h3>
+                            <p className="google-body-medium text-muted-foreground mb-4">
+                                Connect your first email account to start automating responses
+                            </p>
+                            <Button className="rounded-sm text-white">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Connect Account
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4">
+                            {accounts.map((account) => (
+                                <div
+                                    key={account.id}
+                                    className="flex gap-4 rounded-sm border border-input bg-muted/40 p-4 transition-colors duration-200 hover:border-primary/60 hover:bg-muted items-center justify-between"
+                                >
+                                    <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+                                        <div className="flex items-center gap-3">
+                                            <Mail className="h-4 w-4 text-primary" />
+                                            <div>
+                                                <div className="google-title-small text-foreground">{account.email_address}</div>
+                                                <div className="google-body-small text-muted-foreground mt-1">
+                                                    {getProviderDisplay(account.provider)} • {account.account_name}
+                                                </div>
                                             </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            <Badge variant="outline" className={`rounded-full border-0 ${getStatusColor(account.status)}`}>
+                                                {account.status}
+                                            </Badge>
+                                            <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
+                                                {account.total_emails_sent + account.total_emails_received} emails
+                                            </Badge>
+                                            {account.auto_reply_enabled && (
+                                                <Badge variant="outline" className="rounded-full border-input bg-blue-500/20 text-blue-500">
+                                                    Auto-reply ON
+                                                </Badge>
+                                            )}
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2">
-                                        <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
-                                            {account.agent}
-                                        </Badge>
-                                        <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-500">
-                                            {/* <CheckCircle className="mr-1 h-3 w-3" /> */}
-                                            {account.status}
-                                        </Badge>
-                                        <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
-                                            {account.emailsToday} emails today
-                                        </Badge>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
+                                        >
+                                            <Settings className="mr-2 h-3 w-3" />
+                                            <span className="hidden sm:inline">Configure</span>
+                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
+                                                >
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
+                                                    View Analytics
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
+                                                    View Inbox
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
+                                                    Edit Settings
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem 
+                                                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                    onClick={() => handleDeleteAccount(account.id)}
+                                                >
+                                                    Disconnect Account
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
-                                    >
-                                        <Settings className="mr-2 h-3 w-3" />
-                                        <span className="hidden sm:inline">Configure</span>
-                                    </Button>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
-                                            >
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                Reassign Agent
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                View Inbox
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                Edit Routing
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-600 hover:bg-red-50 hover:text-red-700">
-                                                Disconnect Account
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

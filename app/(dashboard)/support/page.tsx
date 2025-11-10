@@ -116,43 +116,31 @@ const systemStatus = [
     {
         service: "API Gateway",
         status: "operational",
-        uptime: "99.98%",
-        latency: "45ms",
         icon: Activity,
     },
     {
         service: "Voice Engine",
         status: "operational",
-        uptime: "99.95%",
-        latency: "120ms",
         icon: Phone,
     },
     {
         service: "Email Processing",
         status: "operational",
-        uptime: "99.97%",
-        latency: "85ms",
         icon: Mail,
     },
     {
         service: "Messaging Gateway",
         status: "operational",
-        uptime: "99.99%",
-        latency: "32ms",
         icon: MessageCircle,
     },
     {
         service: "Integrations Hub",
         status: "operational",
-        uptime: "99.96%",
-        latency: "67ms",
         icon: Wrench,
     },
     {
         service: "Analytics Platform",
         status: "operational",
-        uptime: "99.94%",
-        latency: "58ms",
         icon: Activity,
     },
 ]
@@ -383,16 +371,6 @@ export default function SupportPage() {
                                     </div>
                                 </div>
                                 <div className="google-title-small text-foreground mb-3">{service.service}</div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <div className="google-body-small text-muted-foreground text-xs">Uptime</div>
-                                        <div className="google-body-small text-foreground font-medium">{service.uptime}</div>
-                                    </div>
-                                    <div>
-                                        <div className="google-body-small text-muted-foreground text-xs">Latency</div>
-                                        <div className="google-body-small text-foreground font-medium">{service.latency}</div>
-                                    </div>
-                                </div>
                             </div>
                         ))}
                     </div>

@@ -7,23 +7,29 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "./loading-spinner"
 import { CheckCircle, XCircle } from "lucide-react"
+import { useIntegrations } from "@/hooks/use-integrations"
 
 interface AddIntegrationModalProps {
   children: React.ReactNode
 }
 
 export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
+  const { createIntegration } = useIntegrations()
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null)
+  const [errorMessage, setErrorMessage] = useState("")
   const [formData, setFormData] = useState({
     name: "",
-    type: "",
+    type: "" as "mcp" | "webhook" | "api" | "crm" | "helpdesk" | "",
     endpoint: "",
     apiKey: "",
+    description: "",
   })
 
   const handleTestConnection = async () => {
@@ -39,12 +45,32 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
     setIsLoading(false)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log("Integration data:", formData)
+    setIsSaving(true)
+    setErrorMessage("")
+
+    const result = await createIntegration({
+      name: formData.name,
+      type: formData.type as "mcp" | "webhook" | "api" | "crm" | "helpdesk",
+      endpoint_url: formData.endpoint,
+      description: formData.description,
+      config: {
+        apiKey: formData.apiKey,
+      },
+      status: "active",
+    })
+
+    setIsSaving(false)
+
+    if (result.error) {
+      setErrorMessage(result.error)
+      return
+    }
+
+    // Success - close modal and reset form
     setOpen(false)
-    setFormData({ name: "", type: "", endpoint: "", apiKey: "" })
+    setFormData({ name: "", type: "", endpoint: "", apiKey: "", description: "" })
     setTestResult(null)
   }
 
@@ -77,18 +103,31 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
             <Label htmlFor="type" className="google-label-medium text-muted-foreground">
               Integration type
             </Label>
-            <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+            <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as any })}>
               <SelectTrigger className="h-11 rounded-sm border-input">
                 <SelectValue placeholder="Select integration type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="knowledge-base">Knowledge base</SelectItem>
-                <SelectItem value="crm">CRM system</SelectItem>
-                <SelectItem value="database">Database</SelectItem>
+                <SelectItem value="mcp">MCP Server</SelectItem>
+                <SelectItem value="crm">CRM System</SelectItem>
+                <SelectItem value="helpdesk">Helpdesk</SelectItem>
                 <SelectItem value="api">REST API</SelectItem>
                 <SelectItem value="webhook">Webhook</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description" className="google-label-medium text-muted-foreground">
+              Description (optional)
+            </Label>
+            <Textarea
+              id="description"
+              placeholder="Brief description of this integration..."
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="min-h-[80px] rounded-sm border-input resize-none"
+            />
           </div>
 
           <div className="space-y-2">
@@ -154,12 +193,33 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
             <p className="text-sm text-red-600">Connection failed. Check your endpoint URL and API key.</p>
           )}
 
+          {errorMessage && (
+            <p className="text-sm text-red-600">{errorMessage}</p>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-sm">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)} 
+              className="rounded-sm"
+              disabled={isSaving}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={testResult !== "success"} className="rounded-sm">
-              Add integration
+            <Button 
+              type="submit" 
+              disabled={isSaving || !formData.name || !formData.type || !formData.endpoint} 
+              className="rounded-sm"
+            >
+              {isSaving ? (
+                <>
+                  <LoadingSpinner className="mr-2 h-4 w-4" />
+                  Adding...
+                </>
+              ) : (
+                "Add integration"
+              )}
             </Button>
           </div>
         </form>

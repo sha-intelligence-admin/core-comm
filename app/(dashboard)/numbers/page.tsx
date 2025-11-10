@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AddNumberModal } from "@/components/add-number-modal"
 import { Badge } from "@/components/ui/badge"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { usePhoneNumbers } from "@/hooks/use-phone-numbers"
 import {
     Phone,
     Plus,
@@ -33,120 +35,82 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const keyCapabilities = [
-    "Buy new phone numbers directly from integrated providers",
-    "Import existing numbers from your telephony system",
-    "Assign or reassign numbers to any Voice Agent",
-    "Configure call routing, fallback handlers, and voicemail logic",
-]
-
-const voiceAnalyticsMetrics = [
-    {
-        label: "Total Calls",
-        value: "2,847",
-        description: "Inbound + outbound",
-        icon: Phone,
-        trend: "+12.5%",
-    },
-    {
-        label: "Average Call Duration",
-        value: "4m 32s",
-        description: "Mean conversation length",
-        icon: Clock,
-        trend: "-2.1%",
-    },
-    {
-        label: "Missed Calls",
-        value: "213",
-        description: "Unanswered or dropped",
-        icon: PhoneMissed,
-        trend: "-8.3%",
-    },
-    {
-        label: "Call Quality",
-        value: "98.2%",
-        description: "Audio clarity score",
-        icon: Activity,
-        trend: "+1.2%",
-    },
-    {
-        label: "Escalations",
-        value: "142",
-        description: "Transferred to humans",
-        icon: ArrowUpRight,
-        trend: "-5.7%",
-    },
-    {
-        label: "Global Routing",
-        value: "24 regions",
-        description: "Active call distribution",
-        icon: Globe,
-        trend: "+3 new",
-    },
-]
-
-const addNumberSteps = [
-    {
-        step: "Click Add Number",
-        detail: "Navigate to Dashboard → Numbers → Add Number",
-    },
-    {
-        step: "Choose a provider",
-        detail: "Select Twilio, Nexmo (Vonage), or Custom SIP (SIP URI or PBX system)",
-    },
-    {
-        step: "Select Country and Number Type",
-        detail: "Choose Local, Toll-Free, or Mobile / Virtual numbers",
-    },
-    {
-        step: "Purchase or Import",
-        detail: "Either purchase a new number or import an existing one from your system",
-    },
-    {
-        step: "Assign to Voice Agent",
-        detail: "Connect the number to one of your configured Voice Agents",
-    },
-]
-
-const exampleConfiguration = [
-    { field: "Number", value: "+44 203 998 4452" },
-    { field: "Provider", value: "Twilio" },
-    { field: "Assigned To", value: "UK Support Bot (Voice Agent)" },
-    { field: "Routing Mode", value: "Auto-Answer → Conversation AI" },
-    { field: "Failover Route", value: "Forward to Human Agent (Optional)" },
-]
-
-const mockNumbers = [
-    {
-        id: "1",
-        number: "+44 203 998 4452",
-        provider: "Twilio",
-        type: "Local",
-        agent: "UK Support Bot",
-        status: "active",
-        callsToday: 23,
-    },
-    {
-        id: "2",
-        number: "+1 (555) 123-4567",
-        provider: "Twilio",
-        type: "Toll-Free",
-        agent: "US Customer Support",
-        status: "active",
-        callsToday: 47,
-    },
-    {
-        id: "3",
-        number: "+61 2 8765 4321",
-        provider: "Nexmo",
-        type: "Local",
-        agent: "Australia Sales Bot",
-        status: "active",
-        callsToday: 12,
-    },
-]
-
 export default function NumbersPage() {
+    const { phoneNumbers, loading } = usePhoneNumbers()
+
+    // Calculate real metrics from backend data
+    const totalCalls = phoneNumbers.reduce((sum, n) => sum + n.total_inbound_calls + n.total_outbound_calls, 0)
+    const totalInbound = phoneNumbers.reduce((sum, n) => sum + n.total_inbound_calls, 0)
+    const totalOutbound = phoneNumbers.reduce((sum, n) => sum + n.total_outbound_calls, 0)
+    const activeNumbers = phoneNumbers.filter(n => n.status === 'active').length
+
+    // Real analytics metrics from database
+    const voiceAnalyticsMetrics = [
+        {
+            label: "Total Numbers",
+            value: loading ? "..." : phoneNumbers.length.toString(),
+            description: "Configured phone numbers",
+            icon: Phone,
+        },
+        {
+            label: "Active Numbers",
+            value: loading ? "..." : activeNumbers.toString(),
+            description: "Currently in service",
+            icon: CheckCircle,
+        },
+        {
+            label: "Total Calls",
+            value: loading ? "..." : totalCalls.toLocaleString(),
+            description: "Inbound + outbound",
+            icon: Phone,
+        },
+        {
+            label: "Inbound Calls",
+            value: loading ? "..." : totalInbound.toLocaleString(),
+            description: "Received calls",
+            icon: Phone,
+        },
+        {
+            label: "Outbound Calls",
+            value: loading ? "..." : totalOutbound.toLocaleString(),
+            description: "Placed calls",
+            icon: PhoneOutgoing,
+        },
+    ]
+
+    // Informational guide for adding numbers
+    const addNumberSteps = [
+        {
+            step: "Click Add Number",
+            detail: "Navigate to Dashboard → Numbers → Add Number",
+        },
+        {
+            step: "Choose a provider",
+            detail: "Select Twilio, Nexmo (Vonage), or Custom SIP (SIP URI or PBX system)",
+        },
+        {
+            step: "Select Country and Number Type",
+            detail: "Choose Local, Toll-Free, or Mobile / Virtual numbers",
+        },
+        {
+            step: "Purchase or Import",
+            detail: "Either purchase a new number or import an existing one from your system",
+        },
+        {
+            step: "Assign to Voice Agent",
+            detail: "Connect the number to one of your configured Voice Agents",
+        },
+    ]
+
+    // Example configuration for reference
+    const exampleConfiguration = [
+        { field: "Number", value: "+44 203 998 4452" },
+        { field: "Provider", value: "Twilio" },
+        { field: "Assigned To", value: "UK Support Bot (Voice Agent)" },
+        { field: "Routing Mode", value: "Auto-Answer → Conversation AI" },
+        { field: "Failover Route", value: "Forward to Human Agent (Optional)" },
+    ]
+
     return (
         <div className="space-y-6 overflow-x-hidden">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -183,17 +147,6 @@ export default function NumbersPage() {
                             >
                                 <div className="flex items-center justify-between">
                                     <metric.icon className="h-5 w-5 text-primary" />
-                                    <Badge
-                                        variant="outline"
-                                        className={`rounded-full border-0 ${metric.trend.startsWith("+")
-                                            ? "bg-green-500/20 text-green-600"
-                                            : metric.trend.startsWith("-")
-                                                ? "bg-red-500/20 text-red-600"
-                                                : "bg-blue-500/20 text-blue-600"
-                                            }`}
-                                    >
-                                        {metric.trend}
-                                    </Badge>
                                 </div>
                                 <div className="mt-3">
                                     <div className="google-headline-small text-foreground">{metric.value}</div>
@@ -214,74 +167,103 @@ export default function NumbersPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid gap-4">
-                        {mockNumbers.map((number) => (
-                            <div
-                                key={number.id}
-                                className="flex flex-col gap-4 rounded-sm border border-input bg-muted/40 p-4 transition-colors duration-200 hover:border-primary/60 hover:bg-muted lg:flex-row lg:items-center lg:justify-between"
-                            >
-                                <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
-                                    <div className="flex items-center gap-3">
-                                        <Phone className="h-4 w-4 text-primary" />
-                                        <div>
-                                            <div className="google-title-small text-foreground">{number.number}</div>
-                                            <div className="google-body-small text-muted-foreground mt-1">
-                                                {number.provider} • {number.type}
+                    {loading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <LoadingSpinner />
+                        </div>
+                    ) : phoneNumbers.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center rounded-sm border border-dashed border-input bg-muted/40 py-12 text-center">
+                            <Phone className="mb-4 h-12 w-12 text-muted-foreground" />
+                            <h3 className="google-title-large text-foreground mb-2">No phone numbers configured</h3>
+                            <p className="google-body-medium text-muted-foreground mb-6 max-w-sm">
+                                Get started by adding your first phone number. You can purchase new numbers or import existing ones.
+                            </p>
+                            <AddNumberModal>
+                                <Button className="rounded-sm bg-primary text-primary-foreground hover:bg-primary/90">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Phone Number
+                                </Button>
+                            </AddNumberModal>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4">
+                            {phoneNumbers.map((number) => (
+                                <div
+                                    key={number.id}
+                                    className="flex flex-col gap-4 rounded-sm border border-input bg-muted/40 p-4 transition-colors duration-200 hover:border-primary/60 hover:bg-muted lg:flex-row lg:items-center lg:justify-between"
+                                >
+                                    <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+                                        <div className="flex items-center gap-3">
+                                            <Phone className="h-4 w-4 text-primary" />
+                                            <div>
+                                                <div className="google-title-small text-foreground">{number.phone_number}</div>
+                                                <div className="google-body-small text-muted-foreground mt-1">
+                                                    {number.provider} • {number.number_type}
+                                                </div>
                                             </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            {number.assigned_to && (
+                                                <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
+                                                    Agent: {number.assigned_to}
+                                                </Badge>
+                                            )}
+                                            <Badge 
+                                                variant="outline" 
+                                                className={`rounded-full border-0 ${
+                                                    number.status === 'active' 
+                                                        ? 'bg-green-500/20 text-green-500'
+                                                        : 'bg-gray-500/20 text-gray-500'
+                                                }`}
+                                            >
+                                                {number.status}
+                                            </Badge>
+                                            <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
+                                                {(number.total_inbound_calls || 0) + (number.total_outbound_calls || 0)} total calls
+                                            </Badge>
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2">
-                                        <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
-                                            {number.agent}
-                                        </Badge>
-                                        <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-500">
-                                            {number.status}
-                                        </Badge>
-                                        <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
-                                            {number.callsToday} calls today
-                                        </Badge>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
+                                        >
+                                            <Settings className="mr-2 h-3 w-3" />
+                                            Configure
+                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
+                                                >
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
+                                                    Reassign Agent
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
+                                                    View Call Logs
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
+                                                    Edit Routing
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-red-600 hover:bg-red-50 hover:text-red-700">
+                                                    Release Number
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
-                                    >
-                                        <Settings className="mr-2 h-3 w-3" />
-                                        Configure
-                                    </Button>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
-                                            >
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                Reassign Agent
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                View Call Logs
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                Edit Routing
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-600 hover:bg-red-50 hover:text-red-700">
-                                                Release Number
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

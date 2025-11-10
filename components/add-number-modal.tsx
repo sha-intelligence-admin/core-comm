@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "./loading-spinner"
 import { CheckCircle, XCircle } from "lucide-react"
+import { usePhoneNumbers } from "@/hooks/use-phone-numbers"
 
 interface AddNumberModalProps {
   children: React.ReactNode
@@ -18,9 +19,12 @@ interface AddNumberModalProps {
 type ReserveStatus = "success" | "error" | null
 
 export function AddNumberModal({ children }: AddNumberModalProps) {
+  const { createPhoneNumber } = usePhoneNumbers()
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [reserveResult, setReserveResult] = useState<ReserveStatus>(null)
+  const [errorMessage, setErrorMessage] = useState("")
   const [formData, setFormData] = useState({
     provider: "",
     numberType: "",
@@ -40,9 +44,35 @@ export function AddNumberModal({ children }: AddNumberModalProps) {
     setIsLoading(false)
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    console.log("Number payload:", formData)
+    setIsSaving(true)
+    setErrorMessage("")
+
+    const result = await createPhoneNumber({
+      phone_number: formData.number.replace(/\D/g, ''), // Remove non-digits
+      country_code: formData.region === 'us' ? '+1' : formData.region === 'uk' ? '+44' : '+1',
+      provider: formData.provider,
+      number_type: formData.numberType === 'toll-free' ? 'voice' : formData.numberType === 'local' ? 'both' : 'voice',
+      status: 'active',
+      friendly_name: `${formData.region.toUpperCase()} ${formData.numberType}`,
+      assigned_to: formData.agent,
+      capabilities: {
+        voice: true,
+        sms: formData.numberType !== 'toll-free',
+        mms: false,
+      },
+      monthly_cost: formData.numberType === 'toll-free' ? 2.00 : 1.00,
+    })
+
+    setIsSaving(false)
+
+    if (result.error) {
+      setErrorMessage(result.error)
+      return
+    }
+
+    // Success - close modal and reset
     setOpen(false)
     setReserveResult(null)
     setFormData({ provider: "", numberType: "", region: "", number: "", agent: "" })
@@ -175,12 +205,35 @@ export function AddNumberModal({ children }: AddNumberModalProps) {
             <p className="text-sm text-red-600">Number unavailable. Try another pattern or provider.</p>
           )}
 
+          {errorMessage && (
+            <div className="rounded-sm bg-red-500/10 border border-red-500/20 p-3">
+              <p className="text-sm text-red-600">{errorMessage}</p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-sm">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)} 
+              className="rounded-sm"
+              disabled={isSaving}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={reserveResult !== "success"} className="rounded-sm">
-              Add number
+            <Button 
+              type="submit" 
+              disabled={isSaving || !formData.provider || !formData.number} 
+              className="rounded-sm"
+            >
+              {isSaving ? (
+                <>
+                  <LoadingSpinner className="mr-2 h-4 w-4" />
+                  Adding...
+                </>
+              ) : (
+                "Add number"
+              )}
             </Button>
           </div>
         </form>

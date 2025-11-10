@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { Eye, EyeOff, CheckCircle } from "lucide-react"
+import { Eye, EyeOff, CheckCircle, Mail } from "lucide-react"
 import { SignupSchema } from "@/lib/validations"
 import { ZodError } from "zod"
 import axios from "axios";
@@ -38,6 +38,7 @@ export default function SignUpPage() {
   /** @type {[string | null, React.Dispatch<React.SetStateAction<string | null>>]} */
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -93,9 +94,17 @@ export default function SignUpPage() {
       const validated = SignupSchema.parse(profileData); 
 
       // 🔑 Step 1: Use Supabase's auth.signUp() for authentication only.
+      // Pass user metadata so it's available after email confirmation
       const { data, error: authError } = await supabase.auth.signUp({
         email: validated.email,
         password: validated.password,
+        options: {
+          data: {
+            full_name: validated.full_name,
+            phone: validated.phone,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+        }
       });
 
       if (authError) {
@@ -103,29 +112,40 @@ export default function SignUpPage() {
         return // Exits before hitting setLoading(false) in finally
       }
 
-      console.log("Supabase sign up data:", data.user)
-
       if (data.user) {
-        // ✅ Step 2: After successful Supabase signup,
-        // call your API to save the profile info.
-        await axios.post("/api/auth/signup", {
-          userId: data.user.id,
-          fullName: validated.full_name, // Use validated data
-          phone: validated.phone,         // Use validated data
-          email: validated.email,
-        });
+        // Check if email confirmation is required
+        if (!data.session) {
+          // Email confirmation is enabled - show email sent message
+          setEmailSent(true);
+          return;
+        }
 
-        setSuccess(true);
-
-        if (data.session) {
+        // Session exists - email confirmation not required
+        // ✅ Step 2: Create user profile immediately
+        try {
+          await axios.post("/api/auth/signup", {
+            userId: data.user.id,
+            fullName: validated.full_name,
+            phone: validated.phone,
+            email: validated.email,
+          });
+          
+          setSuccess(true);
+          
           setTimeout(() => {
             router.push("/onboarding");
           }, 2000);
+        } catch (apiError) {
+          if (axios.isAxiosError(apiError)) {
+            setError(apiError.response?.data?.error || "Failed to create user profile");
+          } else {
+            setError("Failed to create user profile");
+          }
+          return;
         }
       }
 
     } catch (err) {
-      console.error("Signup error:", err);
       // Check if the error is from Zod validation (if it failed silently before) or API.
       if (err instanceof ZodError) {
         setError(err.issues[0]?.message || "Validation failed.")
@@ -139,13 +159,71 @@ export default function SignUpPage() {
     }
   }
 
+  // Email verification sent view
+  if (emailSent) {
+    return (
+      <>
+        <div className="text-center space-y-2">
+          <div className="flex justify-center">
+            <div className="flex aspect-square size-16 items-center justify-center rounded-full  text-blue-600">
+              <Mail className="size-8" />
+            </div>
+          </div>
+          <h1 className="google-headline-small">Check Your Email</h1>
+          <p className="text-muted-foreground google-body-small">
+            We&apos;ve sent a confirmation link to <strong>{formData.email}</strong>
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <Alert className="border-input">
+            {/* <Mail className="h-4 w-4 text-blue-600" /> */}
+            <AlertDescription className="text-muted-foreground">
+              Click the confirmation link in your email to verify your account and complete your profile setup.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p className="font-medium">What&apos;s next?</p>
+            <ol className="space-y-2 list-decimal list-inside">
+              <li>Check your inbox for an email from CoreComm</li>
+              <li>Click the &quot;Confirm your email&quot; button</li>
+              <li>You&apos;ll be redirected to complete your profile</li>
+            </ol>
+          </div>
+
+          <div className="pt-2 border-t">
+            <p className="text-sm text-muted-foreground text-center">
+              Didn&apos;t receive the email?{" "}
+              <button
+                onClick={() => {
+                  setEmailSent(false);
+                  setFormData({ ...formData, password: "" });
+                }}
+                className="text-primary hover:underline font-medium"
+              >
+                Try again
+              </button>
+            </p>
+          </div>
+
+          <div className="text-center">
+            <Link href="/auth/login" className="text-sm text-primary hover:underline">
+              Already confirmed? Sign in
+            </Link>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (success) {
     // Success view: Content only; outer layout provided by app/auth/layout.tsx
     return (
       <>
         <div className="text-start space-y-2">
           <h1 className="google-headline-small">Account Created</h1>
-          <p className="text-muted-foreground google-body-small">Welcome to CoreComm! Let's set up your platform</p>
+          <p className="text-muted-foreground google-body-small">Welcome to CoreComm! Let&apos;s set up your platform</p>
         </div>
         <div className="rounded-2xl">
           <div className="pt-6">
@@ -158,7 +236,7 @@ export default function SignUpPage() {
               <div>
                 <h2 className="text-2xl font-bold">Account Created!</h2>
                 <p className="text-muted-foreground mt-2">
-                  Welcome to CoreComm! Let's set up your AI customer support platform.
+                  Welcome to CoreComm! Let&apos;s set up your AI customer support platform.
                 </p>
               </div>
               <div className="space-y-2">

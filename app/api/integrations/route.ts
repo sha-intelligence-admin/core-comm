@@ -19,11 +19,22 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Unauthorized', 401)
     }
 
+    // Get user's company_id
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (userError || !userData?.company_id) {
+      return createErrorResponse('User company not found', 403)
+    }
+
     // Build query
     let query = supabase
       .from('integrations')
       .select('*', { count: 'exact' })
-      .eq('user_id', user.id)
+      .eq('company_id', userData.company_id)
       .order('created_at', { ascending: false })
 
     // Apply filters
@@ -80,15 +91,26 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Unauthorized', 401)
     }
 
-    // Add user_id to integration data
-    const integrationWithUser = {
+    // Get user's company_id
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (userError || !userData?.company_id) {
+      return createErrorResponse('User company not found', 403)
+    }
+
+    // Add company_id to integration data
+    const integrationWithCompany = {
       ...integrationData,
-      user_id: user.id,
+      company_id: userData.company_id,
     }
 
     const { data: integration, error } = await supabase
       .from('integrations')
-      .insert(integrationWithUser)
+      .insert(integrationWithCompany)
       .select()
       .single()
 

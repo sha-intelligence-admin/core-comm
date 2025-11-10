@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
 import { useState } from "react"
@@ -18,26 +17,31 @@ interface LogoutButtonProps {
 
 export function LogoutButton({ children, variant = "ghost", size = "default", className }: LogoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
   const supabase = createClient()
 
   const handleLogout = async () => {
     setIsLoading(true)
 
     try {
+      // Sign out from Supabase
       const { error } = await supabase.auth.signOut()
 
       if (error) {
         console.error("Error signing out:", error.message)
+        setIsLoading(false)
         return
       }
 
-      // Redirect to login page
-      router.push("/auth/login")
-      router.refresh()
+      // Clear any local storage items
+      if (typeof window !== 'undefined') {
+        localStorage.clear()
+        sessionStorage.clear()
+      }
+
+      // Force a hard redirect to clear all state
+      window.location.href = "/auth/login"
     } catch (err) {
       console.error("Unexpected error during logout:", err)
-    } finally {
       setIsLoading(false)
     }
   }

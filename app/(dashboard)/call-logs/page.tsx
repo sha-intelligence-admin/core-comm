@@ -1,11 +1,37 @@
+"use client"
+
 import { CallLogsTable } from "@/components/call-logs-table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, Download } from "lucide-react"
+import { useCallLogs } from "@/hooks/use-call-logs"
+import { useState } from "react"
 
 export default function CallLogsPage() {
+  const { calls, loading, fetchCalls, pagination } = useCallLogs()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  
+  const handleSearch = (value: string) => {
+    setSearchTerm(value)
+    fetchCalls({ 
+      search: value || undefined,
+      resolution_status: statusFilter !== "all" ? statusFilter as any : undefined,
+      page: 1 
+    })
+  }
+  
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value)
+    fetchCalls({ 
+      search: searchTerm || undefined,
+      resolution_status: value !== "all" ? value as any : undefined,
+      page: 1 
+    })
+  }
+  
   return (
     <div className="space-y-6 overflow-x-hidden">
       <div>
@@ -29,10 +55,12 @@ export default function CallLogsPage() {
               <Input
                 placeholder="Search by caller name, number, or transcript..."
                 className="pl-10 h-11 rounded-sm border-input focus:border-primary focus:ring-primary/20 hover:border-primary/60 transition-all duration-200"
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap lg:ml-auto lg:justify-end">
-              <Select>
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-full sm:w-44 rounded-sm border-input hover:border-primary/60 focus:border-primary transition-all duration-200">
                   <SelectValue placeholder="Resolution Status" />
                 </SelectTrigger>
@@ -120,9 +148,35 @@ export default function CallLogsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <CallLogsTable />
+          <CallLogsTable data={calls} loading={loading} />
         </CardContent>
       </Card>
+      
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} calls
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchCalls({ page: pagination.page - 1 })}
+              disabled={pagination.page === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchCalls({ page: pagination.page + 1 })}
+              disabled={pagination.page === pagination.totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
