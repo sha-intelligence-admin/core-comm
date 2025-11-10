@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createErrorResponse, createSuccessResponse, AuthenticationError } from '@/lib/error-handling';
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();

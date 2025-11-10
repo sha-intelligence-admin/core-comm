@@ -1,12 +1,13 @@
 "use client"
 
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 import Link from "next/link"
 
-export default function ProfileErrorPage() {
+function ProfileErrorContent() {
   const searchParams = useSearchParams()
   const error = searchParams.get("error") || "Failed to create user profile"
   const next = searchParams.get("next") || "/dashboard"
@@ -71,5 +72,17 @@ export default function ProfileErrorPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function ProfileErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">Loading...</div>
+      </div>
+    }>
+      <ProfileErrorContent />
+    </Suspense>
   )
 }
