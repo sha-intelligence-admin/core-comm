@@ -7,9 +7,18 @@ export async function GET(request: Request) {
   // if "next" is in param, use it as the redirect URL
   const next = searchParams.get("next") ?? "/dashboard"
 
+  console.log('🔍 Auth Callback Debug:', { code: code ? 'EXISTS' : 'MISSING', origin, next })
+
   if (code) {
     const supabase = await createClient()
     const { error, data } = await supabase.auth.exchangeCodeForSession(code)
+    
+    console.log('🔐 Exchange Code Result:', { 
+      hasError: !!error, 
+      errorMessage: error?.message,
+      hasUser: !!data?.user,
+      userId: data?.user?.id 
+    })
     
     if (!error && data?.user) {
       // ✅ CRITICAL: Create user profile after email confirmation
@@ -84,7 +93,12 @@ export async function GET(request: Request) {
       } else {
         return NextResponse.redirect(`${origin}${next}`)
       }
+    } else {
+      // Log why we're failing
+      console.log('❌ Auth failed:', { hasError: !!error, errorMsg: error?.message, hasData: !!data })
     }
+  } else {
+    console.log('❌ No code parameter in callback URL')
   }
 
   // return the user to an error page with instructions
