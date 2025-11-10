@@ -12,10 +12,10 @@ const teamMemberSchema = z.object({
   
   phone_number: z.string().optional(),
   avatar_url: z.string().url().optional().nullable(),
-  timezone: z.string().optional().default('UTC'),
+  timezone: z.string().optional(),
   
   // Permissions
-  permissions: z.record(z.unknown()).optional().default({}),
+  permissions: z.record(z.string(), z.unknown()).optional().default({}),
   can_access_analytics: z.boolean().optional().default(false),
   can_manage_integrations: z.boolean().optional().default(false),
   can_manage_team: z.boolean().optional().default(false),
@@ -25,7 +25,7 @@ const teamMemberSchema = z.object({
   can_view_emails: z.boolean().optional().default(true),
   
   notes: z.string().optional(),
-  config: z.record(z.unknown()).optional().default({}),
+  config: z.record(z.string(), z.unknown()).optional().default({}),
 })
 
 // GET /api/team-members - List team members with pagination and filtering
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
     return NextResponse.json(member, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

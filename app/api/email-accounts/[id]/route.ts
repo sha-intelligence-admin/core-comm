@@ -33,7 +33,7 @@ const updateEmailAccountSchema = z.object({
   auto_reply_enabled: z.boolean().optional(),
   auto_reply_message: z.string().optional(),
   forward_to_email: z.string().email().optional().nullable(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 })
 
 // PUT /api/email-accounts/[id] - Update an email account
@@ -87,7 +87,7 @@ export async function PUT(
     return NextResponse.json(account)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

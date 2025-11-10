@@ -12,7 +12,7 @@ const voiceAgentSchema = z.object({
   status: z.enum(['active', 'inactive', 'training', 'error']).default('active'),
   greeting_message: z.string().optional(),
   knowledge_base_id: z.string().uuid().optional(),
-  config: z.record(z.any()).default({}),
+  config: z.record(z.string(), z.any()).default({}),
 })
 
 // GET /api/voice-agents - List voice agents with pagination and filters
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ agent }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid input', details: error.issues }, { status: 400 })
     }
     console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

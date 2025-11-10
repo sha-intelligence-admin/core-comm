@@ -12,7 +12,7 @@ const voiceAgentUpdateSchema = z.object({
   status: z.enum(['active', 'inactive', 'training', 'error']).optional(),
   greeting_message: z.string().optional(),
   knowledge_base_id: z.string().uuid().optional(),
-  config: z.record(z.any()).optional(),
+  config: z.record(z.string(), z.any()).optional(),
   total_calls: z.number().optional(),
   total_minutes: z.number().optional(),
   success_rate: z.number().optional(),
@@ -72,7 +72,7 @@ export async function PUT(
     return NextResponse.json({ agent })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid input', details: error.issues }, { status: 400 })
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

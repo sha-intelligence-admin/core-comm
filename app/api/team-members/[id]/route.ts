@@ -15,7 +15,7 @@ const updateTeamMemberSchema = z.object({
   timezone: z.string().optional(),
   
   // Permissions
-  permissions: z.record(z.unknown()).optional(),
+  permissions: z.record(z.string(), z.unknown()).optional(),
   can_access_analytics: z.boolean().optional(),
   can_manage_integrations: z.boolean().optional(),
   can_manage_team: z.boolean().optional(),
@@ -25,7 +25,7 @@ const updateTeamMemberSchema = z.object({
   can_view_emails: z.boolean().optional(),
   
   notes: z.string().optional(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 })
 
 // PUT /api/team-members/[id] - Update a team member
@@ -83,7 +83,7 @@ export async function PUT(
     return NextResponse.json(member)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
