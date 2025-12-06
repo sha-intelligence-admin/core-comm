@@ -15,7 +15,7 @@ export interface PhoneNumber {
     sms: boolean
     mms: boolean
   }
-  assigned_to?: string
+  assigned_to?: string | null
   monthly_cost: number
   total_inbound_calls: number
   total_outbound_calls: number

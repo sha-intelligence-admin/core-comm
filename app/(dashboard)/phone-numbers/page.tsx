@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { usePhoneNumbers } from "@/hooks/use-phone-numbers"
+import { usePhoneNumbers, type PhoneNumber } from "@/hooks/use-phone-numbers"
 import { useAssistants } from "@/hooks/use-assistants"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -36,26 +36,31 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export default function PhoneNumbersPage() {
-  const { phoneNumbers, isLoading, error, updatePhoneNumber, deletePhoneNumber } = usePhoneNumbers()
+  const { phoneNumbers, loading, error, updatePhoneNumber, deletePhoneNumber } = usePhoneNumbers()
   const { assistants } = useAssistants()
   const [editId, setEditId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [updating, setUpdating] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [selectedAssistant, setSelectedAssistant] = useState<string | null>(null)
+  const [selectedAssistant, setSelectedAssistant] = useState<string | undefined>(undefined)
 
-  const editNumber = phoneNumbers.find((p: any) => p.id === editId)
+  const editNumber = phoneNumbers.find((p) => p.id === editId)
 
   const handleUpdate = async () => {
     if (!editId) return
 
     setUpdating(true)
     try {
-      await updatePhoneNumber(editId, {
-        assistant_id: selectedAssistant || null,
+      const result = await updatePhoneNumber(editId, {
+        assigned_to: selectedAssistant ?? undefined,
       })
+
+      if (result && "error" in result) {
+        throw new Error(result.error)
+      }
+
       setEditId(null)
-      setSelectedAssistant(null)
+      setSelectedAssistant(undefined)
     } catch (err) {
       console.error('Failed to update phone number:', err)
     } finally {
@@ -63,9 +68,14 @@ export default function PhoneNumbersPage() {
     }
   }
 
-  const handleToggleActive = async (id: string, currentStatus: boolean) => {
+  const handleToggleActive = async (id: string, currentStatus: PhoneNumber['status']) => {
     try {
-      await updatePhoneNumber(id, { is_active: !currentStatus })
+      const nextStatus = currentStatus === 'active' ? 'inactive' : 'active'
+      const result = await updatePhoneNumber(id, { status: nextStatus })
+
+      if (result && "error" in result) {
+        throw new Error(result.error)
+      }
     } catch (err) {
       console.error('Failed to toggle status:', err)
     }
@@ -76,7 +86,10 @@ export default function PhoneNumbersPage() {
 
     setDeleting(true)
     try {
-      await deletePhoneNumber(deleteId)
+      const result = await deletePhoneNumber(deleteId)
+      if (result && "error" in result) {
+        throw new Error(result.error)
+      }
       setDeleteId(null)
     } catch (err) {
       console.error('Failed to delete phone number:', err)
@@ -94,7 +107,7 @@ export default function PhoneNumbersPage() {
         </div>
         <Alert variant="destructive">
           <AlertDescription>
-            Failed to load phone numbers: {error.message}
+            Failed to load phone numbers: {error}
           </AlertDescription>
         </Alert>
       </div>
@@ -119,7 +132,7 @@ export default function PhoneNumbersPage() {
         </div>
       </div>
 
-      {isLoading ? (
+      {loading ? (
         <div className="flex items-center justify-center py-12">
           <LoadingSpinner size="lg" />
         </div>
@@ -142,8 +155,9 @@ export default function PhoneNumbersPage() {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {phoneNumbers.map((phoneNumber: any) => {
-            const assignedAssistant = assistants.find((a: any) => a.id === phoneNumber.assistant_id)
+          {phoneNumbers.map((phoneNumber: PhoneNumber) => {
+            const assignedAssistant = assistants.find((a: any) => a.id === phoneNumber.assigned_to)
+            const isActive = phoneNumber.status === 'active'
 
             return (
               <Card
@@ -166,10 +180,10 @@ export default function PhoneNumbersPage() {
                       </div>
                     </div>
                     <Badge
-                      variant={phoneNumber.is_active ? "default" : "secondary"}
-                      className={phoneNumber.is_active ? "bg-green-500" : ""}
+                      variant={isActive ? "default" : "secondary"}
+                      className={isActive ? "bg-green-500" : ""}
                     >
-                      {phoneNumber.is_active ? "Active" : "Inactive"}
+                      {isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -197,7 +211,7 @@ export default function PhoneNumbersPage() {
                       className="flex-1 rounded-xl hover:bg-brand/10 hover:text-brand hover:border-brand transition-all duration-200"
                       onClick={() => {
                         setEditId(phoneNumber.id)
-                        setSelectedAssistant(phoneNumber.assistant_id)
+                        setSelectedAssistant(phoneNumber.assigned_to || undefined)
                       }}
                     >
                       <Edit className="h-4 w-4 mr-1" />
@@ -207,11 +221,11 @@ export default function PhoneNumbersPage() {
                       variant="outline"
                       size="sm"
                       className={`rounded-xl transition-all duration-200 ${
-                        phoneNumber.is_active
+                        isActive
                           ? "hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-600"
                           : "hover:bg-green-50 hover:text-green-600 hover:border-green-600"
                       }`}
-                      onClick={() => handleToggleActive(phoneNumber.id, phoneNumber.is_active)}
+                      onClick={() => handleToggleActive(phoneNumber.id, phoneNumber.status)}
                     >
                       <Power className="h-4 w-4" />
                     </Button>
@@ -232,7 +246,15 @@ export default function PhoneNumbersPage() {
       )}
 
       {/* Edit Assistant Dialog */}
-      <Dialog open={!!editId} onOpenChange={() => setEditId(null)}>
+      <Dialog
+        open={!!editId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditId(null)
+            setSelectedAssistant(undefined)
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Assign Voice Assistant</DialogTitle>
@@ -242,7 +264,12 @@ export default function PhoneNumbersPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Select value={selectedAssistant || undefined} onValueChange={setSelectedAssistant}>
+              <Select
+                value={selectedAssistant ?? "none"}
+                onValueChange={(value) =>
+                  setSelectedAssistant(value === "none" ? undefined : value)
+                }
+              >
                 <SelectTrigger className="rounded-xl">
                   <SelectValue placeholder="Select an assistant" />
                 </SelectTrigger>

@@ -119,6 +119,30 @@ export const CallsQuerySchema = PaginationSchema.extend({
 });
 
 // ==============================================
+// Integration Validation Schemas
+// ==============================================
+
+const IntegrationTypeSchema = z.enum(['mcp', 'webhook', 'api', 'crm', 'helpdesk']);
+const IntegrationStatusSchema = z.enum(['active', 'inactive', 'error', 'pending']);
+
+export const CreateIntegrationSchema = z.object({
+  name: z.string().min(1, 'Integration name is required'),
+  type: IntegrationTypeSchema,
+  endpoint_url: z.string().url('Endpoint must be a valid URL'),
+  description: z.string().max(500).optional(),
+  status: IntegrationStatusSchema.default('active'),
+  config: z.record(z.string(), z.unknown()).default({}),
+});
+
+export const UpdateIntegrationSchema = CreateIntegrationSchema.partial();
+
+export const IntegrationsQuerySchema = PaginationSchema.extend({
+  type: IntegrationTypeSchema.optional(),
+  status: IntegrationStatusSchema.optional(),
+  search: z.string().optional(),
+});
+
+// ==============================================
 // Vapi Assistant Validation Schemas
 // ==============================================
 
@@ -206,6 +230,9 @@ export type CreateCallInput = z.infer<typeof CreateCallSchema>;
 export type UpdateCallInput = z.infer<typeof UpdateCallSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 export type CallsQueryInput = z.infer<typeof CallsQuerySchema>;
+export type CreateIntegrationInput = z.infer<typeof CreateIntegrationSchema>;
+export type UpdateIntegrationInput = z.infer<typeof UpdateIntegrationSchema>;
+export type IntegrationsQueryInput = z.infer<typeof IntegrationsQuerySchema>;
 
 export type CreateAssistantInput = z.infer<typeof CreateAssistantSchema>;
 export type UpdateAssistantInput = z.infer<typeof UpdateAssistantSchema>;

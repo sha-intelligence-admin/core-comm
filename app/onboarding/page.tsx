@@ -13,10 +13,12 @@ import { Phone, CheckCircle, Building, Target, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     // Step 1: Company Info
     companyName: "",
@@ -78,6 +80,7 @@ export default function OnboardingPage() {
   }
 
   const handleNext = async () => {
+    setError(null)
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1)
     } else {
@@ -105,8 +108,9 @@ export default function OnboardingPage() {
 
         // Redirect to dashboard
         router.push("/dashboard")
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Failed to complete onboarding. Please try again."
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to complete onboarding. Please try again."
+        setError(errorMessage)
         toast({
           title: "Error",
           description: errorMessage,
