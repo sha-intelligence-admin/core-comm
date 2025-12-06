@@ -1,121 +1,161 @@
 "use client"
 
-import useSWR from 'swr'
-import { useUserProfile } from './use-user-profile'
+import { useState, useEffect } from 'react'
 
 export interface PhoneNumber {
   id: string
-  company_id: string
-  vapi_phone_id: string
   phone_number: string
-  assistant_id: string | null
-  provider: string
   country_code: string
-  is_active: boolean
+  provider: string
+  number_type: 'voice' | 'sms' | 'both'
+  status: 'active' | 'inactive' | 'suspended' | 'pending'
+  friendly_name?: string
+  capabilities: {
+    voice: boolean
+    sms: boolean
+    mms: boolean
+  }
+  assigned_to?: string
+  monthly_cost: number
+  total_inbound_calls: number
+  total_outbound_calls: number
+  total_sms_sent: number
+  total_sms_received: number
+  config: Record<string, unknown>
   created_at: string
   updated_at: string
+  user_id: string
 }
 
-const fetcher = async (url: string) => {
-  const res = await fetch(url)
-  if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.message || 'Request failed')
-  }
-  const data = await res.json()
-  return data.data
+export interface PhoneNumbersFilters {
+  page?: number
+  limit?: number
+  status?: 'active' | 'inactive' | 'suspended' | 'pending'
+  provider?: string
+  search?: string
+}
+
+export interface PhoneNumbersPagination {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
 }
 
 export function usePhoneNumbers() {
-  const { profile, loading: profileLoading } = useUserProfile()
+  const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [pagination, setPagination] = useState<PhoneNumbersPagination>({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  })
 
-  const url = profile && !profileLoading ? '/api/vapi/phone-numbers' : null
+  const fetchPhoneNumbers = async (filters: PhoneNumbersFilters = {}) => {
+    try {
+      setLoading(true)
+      setError(null)
 
-  const { data, error, isLoading, mutate } = useSWR(
-    url,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
+      const params = new URLSearchParams()
+      if (filters.page) params.append('page', filters.page.toString())
+      if (filters.limit) params.append('limit', filters.limit.toString())
+      if (filters.status) params.append('status', filters.status)
+      if (filters.provider) params.append('provider', filters.provider)
+      if (filters.search) params.append('search', filters.search)
+
+      const response = await fetch(`/api/phone-numbers?${params.toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch phone numbers')
+      }
+
+      const data = await response.json()
+      setPhoneNumbers(data.phoneNumbers || [])
+      setPagination(data.pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+      setPhoneNumbers([])
+    } finally {
+      setLoading(false)
     }
-  )
+  }
 
-  const createPhoneNumber = async (phoneData: any) => {
-    const res = await fetch('/api/vapi/phone-numbers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(phoneData),
-    })
+  const createPhoneNumber = async (phoneNumberData: Partial<PhoneNumber>) => {
+    try {
+      const response = await fetch('/api/phone-numbers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(phoneNumberData),
+      })
 
-    if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.message || 'Failed to create phone number')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create phone number')
+      }
+
+      const data = await response.json()
+      await fetchPhoneNumbers() // Refresh list
+      return { success: true, data }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error' }
     }
-
-    const result = await res.json()
-    await mutate()
-    return result.data
   }
 
   const updatePhoneNumber = async (id: string, updates: Partial<PhoneNumber>) => {
-    const res = await fetch(`/api/vapi/phone-numbers/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    })
+    try {
+      const response = await fetch(`/api/phone-numbers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
 
-    if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.message || 'Failed to update phone number')
+      if (!response.ok) {
+        throw new Error('Failed to update phone number')
+      }
+
+      await fetchPhoneNumbers()
+      return { success: true }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error' }
     }
-
-    const result = await res.json()
-    await mutate()
-    return result.data
   }
 
   const deletePhoneNumber = async (id: string) => {
-    const res = await fetch(`/api/vapi/phone-numbers/${id}`, {
-      method: 'DELETE',
-    })
+    try {
+      const response = await fetch(`/api/phone-numbers/${id}`, {
+        method: 'DELETE',
+      })
 
-    if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.message || 'Failed to delete phone number')
+      if (!response.ok) {
+        throw new Error('Failed to delete phone number')
+      }
+
+      await fetchPhoneNumbers()
+      return { success: true }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error' }
     }
-
-    await mutate()
   }
 
+  useEffect(() => {
+    fetchPhoneNumbers()
+  }, [])
+
   return {
-    phoneNumbers: data?.phoneNumbers || [],
-    isLoading: profileLoading || isLoading,
+    phoneNumbers,
+    loading,
     error,
+    pagination,
+    fetchPhoneNumbers,
     createPhoneNumber,
     updatePhoneNumber,
     deletePhoneNumber,
-    refetch: () => mutate(),
-  }
-}
-
-export function usePhoneNumber(id: string | null) {
-  const { profile, loading: profileLoading } = useUserProfile()
-
-  const url = profile && !profileLoading && id ? `/api/vapi/phone-numbers/${id}` : null
-
-  const { data, error, isLoading, mutate } = useSWR(
-    url,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-    }
-  )
-
-  return {
-    phoneNumber: data?.phoneNumber as PhoneNumber | null,
-    stats: data?.stats || null,
-    isLoading: profileLoading || isLoading,
-    error,
-    refetch: () => mutate(),
   }
 }

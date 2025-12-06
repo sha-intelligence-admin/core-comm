@@ -1,7 +1,5 @@
 "use client"
 
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,79 +16,170 @@ import { ThemeToggle } from "./theme-toggle"
 import { LogoutButton } from "./auth-actions"
 import { Search, Bell, User, Settings, Loader2 } from "lucide-react"
 import { useUserProfile } from "@/hooks/use-user-profile"
+import { SidebarTrigger } from "./ui/sidebar"
+import { usePathname } from "next/navigation"
+import { Fragment } from "react"
 
 export function TopNavigation() {
   const { profile, loading, getInitials } = useUserProfile()
+  const pathname = usePathname()
+
+  const rawSegments = pathname.split("?")[0].split("/").filter(Boolean)
+  const hasDashboardSegment = rawSegments[0] === "dashboard"
+  const additionalSegments = hasDashboardSegment ? rawSegments.slice(1) : rawSegments
+
+  const segmentLabelMap: Record<string, string> = {
+    dashboard: "Dashboard",
+    analytics: "Analytics",
+    "ai-agents": "AI Agents",
+    "call-logs": "Call Logs",
+    integrations: "Integrations",
+    messaging: "Messaging",
+    email: "Email",
+    numbers: "Numbers",
+    security: "Security",
+    settings: "Settings",
+    support: "Support",
+    team: "Team",
+    onboarding: "Onboarding",
+    join: "Join",
+  }
+
+  const formatSegment = (segment: string) => {
+    const clean = segment.replace(/[\[\]]/g, "")
+    return segmentLabelMap[clean] ?? clean.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ")
+  }
+
+  const breadcrumbItems = [
+    {
+      label: "Dashboard",
+      href: "/dashboard",
+      isCurrent: hasDashboardSegment ? additionalSegments.length === 0 : rawSegments.length === 0,
+    },
+    ...additionalSegments.map((segment, index) => {
+      const cleanSegment = segment.replace(/[\[\]]/g, "")
+      const hrefSegments = hasDashboardSegment
+        ? ["dashboard", ...additionalSegments.slice(0, index + 1)]
+        : additionalSegments.slice(0, index + 1)
+
+      return {
+        label: formatSegment(cleanSegment),
+        href: `/${hrefSegments.join("/")}`,
+        isCurrent: index === additionalSegments.length - 1,
+      }
+    }),
+  ]
+
+  const renderBreadcrumbs = () => (
+    <Breadcrumb>
+      <BreadcrumbList>
+        {breadcrumbItems.map((item, index) => (
+          <Fragment key={`${item.href}-${item.label}-${index}`}>
+            <BreadcrumbItem>
+              {item.isCurrent ? (
+                <BreadcrumbPage className="google-body-small text-primary">{item.label}</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink
+                  href={item.href}
+                  className="google-body-small text-muted-foreground transition-colors hover:text-primary"
+                >
+                  {item.label}
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
+            {index < breadcrumbItems.length - 1 && <BreadcrumbSeparator />}
+          </Fragment>
+        ))}
+      </BreadcrumbList>
+    </Breadcrumb>
+  )
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b border-brand/20 px-4 bg-gradient-to-r from-brand/5 to-transparent">
-      <SidebarTrigger className="-ml-1 hover:bg-brand/10 hover:text-brand transition-all duration-200 hover:scale-110" />
-      <Separator orientation="vertical" className="mr-2 h-4 bg-brand/30" />
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem className="hidden md:block">
-            <BreadcrumbLink href="/dashboard" className="hover:text-brand transition-colors duration-200 font-medium">
-              CoreComm
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator className="hidden md:block text-brand/50" />
-          <BreadcrumbItem>
-            <BreadcrumbPage className="text-brand font-medium">Dashboard</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <header className="flex flex-col sticky top-0 z-10 border-b border-input bg-sidebarbg px-4">
+      {/* Top bar */}
+      <div className="flex h-16 border-b border-input lg:border-0 items-center justify-between">
+        <div className="flex items-center justify-center space-x-2">
+          <img src="/logo.webp" alt="Logo" className="w-10 lg:hidden" />
+          <div className="hidden lg:block">
+            {renderBreadcrumbs()}
+          </div>
 
-      <div className="ml-auto flex items-center space-x-4">
-        <div className="relative hidden md:block group">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-hover:text-brand transition-colors duration-200" />
-          <Input
-            placeholder="Search calls, customers..."
-            className="pl-10 w-64 rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20 hover:border-brand/40 transition-all duration-200"
-          />
         </div>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="rounded-xl bg-transparent hover:bg-brand hover:text-white hover:border-brand hover:scale-110 transition-all duration-200"
-        >
-          <Bell className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-xl bg-transparent hover:bg-primary hover:text-white hover:border-primary hover:scale-110 transition-all duration-200"
+          >
+            <Bell className="h-4 w-4" />
+          </Button>
 
-        <ThemeToggle />
+          <ThemeToggle />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="relative h-8 w-8 rounded-full hover:ring-2 hover:ring-brand/30 transition-all duration-200 hover:scale-110"
-            >
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={profile?.avatar_url || "/placeholder-40x40.png"} alt="User" />
-                <AvatarFallback className="bg-brand/10 text-brand">
-                  {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : getInitials()}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
-            <DropdownMenuItem className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="hover:bg-red-50 hover:text-red-600 transition-colors duration-200 p-0">
-              <LogoutButton
+          {/* <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
                 variant="ghost"
-                className="w-full justify-start h-auto p-2 hover:bg-red-50 hover:text-red-600"
-              />
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                className="relative h-8 w-8 rounded-full hover:ring-2 hover:ring-brand/30 transition-all duration-200 hover:scale-110"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile?.avatar_url || "/placeholder-40x40.png"} alt="User" />
+                  <AvatarFallback className="bg-brand/10 text-brand">
+                    {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : getInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuItem className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="hover:bg-red-50 hover:text-red-600 transition-colors duration-200 p-0">
+                <LogoutButton
+                  variant="ghost"
+                  className="w-full justify-start h-auto p-2 hover:bg-red-50 hover:text-red-600"
+                />
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu> */}
+
+          {/* Search for top bar on small screens */}
+          <div className="ml-auto relative hidden lg:block">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search calls, customers..."
+              className="pl-10 w-64 rounded-xl border-input focus:border-primary hover:ring-0 transition-all duration-200"
+            />
+          </div>
+          <div className="flex lg:hidden">
+            <SidebarTrigger />
+          </div>
+
+        </div>
       </div>
+
+      {/* Bottom bar for small screens */}
+      <div className="flex items-center justify-between py-2 lg:hidden">
+        {renderBreadcrumbs()}
+
+        {/* Search bar at bottom right */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search calls, customers..."
+            className="pl-10 w-48 rounded-xl border-input focus:border-primary focus:ring-brand/20 hover:border-brand/40 transition-all duration-200"
+          />
+        </div>
+      </div>
+
+      {/* Breadcrumbs and search for md and above */}
+  <div className="hidden" />
     </header>
   )
 }

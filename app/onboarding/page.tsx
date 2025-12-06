@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,14 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Phone, Server, CheckCircle, Building, Target, Loader2 } from "lucide-react"
+import { Phone, CheckCircle, Building, Target, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     // Step 1: Company Info
     companyName: "",
@@ -45,6 +44,7 @@ export default function OnboardingPage() {
     successMetrics: "",
   })
   const router = useRouter()
+  const { toast } = useToast()
 
   const steps = [
     {
@@ -81,30 +81,39 @@ export default function OnboardingPage() {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1)
     } else {
-      // Complete onboarding - save to database
-      setIsSubmitting(true)
-      setError(null)
-
+      // Complete onboarding - create company
+      setLoading(true)
       try {
-        const response = await fetch('/api/onboarding', {
-          method: 'POST',
+        const response = await fetch("/api/onboarding", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(formData),
         })
 
+        const data = await response.json()
+
         if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.error || 'Failed to save onboarding data')
+          throw new Error(data.error || "Failed to complete onboarding")
         }
 
-        // Success - redirect to dashboard
+        toast({
+          title: "Success!",
+          description: `Welcome to CoreComm! Your company "${data.company.name}" has been created.`,
+        })
+
+        // Redirect to dashboard
         router.push("/dashboard")
-      } catch (err) {
-        console.error('Onboarding error:', err)
-        setError(err instanceof Error ? err.message : 'Failed to complete onboarding')
-        setIsSubmitting(false)
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to complete onboarding. Please try again."
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
       }
     }
   }
@@ -135,14 +144,16 @@ export default function OnboardingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-3xl space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-brand">Welcome to CoreComm</h1>
-          <p className="text-muted-foreground">Let's set up your AI customer support platform in just a few steps</p>
+      <div className="max-w-4xl mx-auto space-y-6 pt-8">
+        <div className="text-center">
+          <h1 className="google-headline-medium">Welcome to CoreComm</h1>
+          <p className="text-muted-foreground google-body-medium">
+            Let&apos;s set up your AI customer support platform in just a few steps
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -153,15 +164,19 @@ export default function OnboardingPage() {
           <Progress value={progress} className="h-2" />
         </div>
 
-        <Card className="rounded-2xl border-brand/20">
-          <CardHeader className="text-center bg-gradient-to-r from-brand/5 to-transparent rounded-t-2xl">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand/10">
-              {React.createElement(steps[currentStep - 1].icon, {
-                className: "h-8 w-8 text-brand",
-              })}
+        <Card className="rounded-sm transition-all duration-300 hover:border-primary/50 border-input">
+          <CardHeader className="transition-colors duration-300 rounded-t-sm">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                {React.createElement(steps[currentStep - 1].icon, {
+                  className: "h-6 w-6 text-primary",
+                })}
+              </div>
+              <div>
+                <CardTitle className="google-headline-small">{steps[currentStep - 1].title}</CardTitle>
+                <CardDescription className="google-body-medium">{steps[currentStep - 1].description}</CardDescription>
+              </div>
             </div>
-            <CardTitle className="text-2xl text-brand">{steps[currentStep - 1].title}</CardTitle>
-            <CardDescription className="text-base">{steps[currentStep - 1].description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {error && (
@@ -172,7 +187,7 @@ export default function OnboardingPage() {
             {currentStep === 1 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="companyName" className="text-brand/80 font-medium">
+                  <Label htmlFor="companyName" className="text-foreground font-medium">
                     Company Name
                   </Label>
                   <Input
@@ -183,11 +198,11 @@ export default function OnboardingPage() {
                     onChange={(e) => handleInputChange("companyName", e.target.value)}
                     required
                     // disabled={loading}
-                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-brand/80 font-medium">
+                  <Label htmlFor="description" className="text-foreground font-medium">
                     Company Description
                   </Label>
                   <Textarea
@@ -198,11 +213,11 @@ export default function OnboardingPage() {
                     onChange={(e) => handleInputChange("description", e.target.value)}
                     required
                     // disabled={loading}
-                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div>
                 {/* <div className="space-y-2">
-                  <Label htmlFor="currentVolume" className="text-brand/80 font-medium">
+                  <Label htmlFor="currentVolume" className="text-foreground font-medium">
                     Current Support Volume
                   </Label>
                   <Input
@@ -213,35 +228,34 @@ export default function OnboardingPage() {
                     onChange={(e) => handleInputChange("supportVolume", e.target.value)}
                     required
                     // disabled={loading}
-                    className="border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div> */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="companySize" className="text-brand/80 font-medium">
+                    <Label htmlFor="companySize" className="text-foreground font-medium">
                       Company Size
                     </Label>
                     <Select
                       value={formData.companySize}
                       onValueChange={(value) => handleInputChange("companySize", value)}
                     >
-                      <SelectTrigger className="rounded-xl border-brand/20 focus:border-brand">
+                      <SelectTrigger className="rounded-lg border-input focus:border-primary">
                         <SelectValue placeholder="Select company size" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1-10">Small</SelectItem>
-                        <SelectItem value="11-50">Medium</SelectItem>
-                        <SelectItem value="51-200">Large</SelectItem>
-
+                        <SelectItem value="small">1-10 employees (Small)</SelectItem>
+                        <SelectItem value="medium">11-50 employees (Medium)</SelectItem>
+                        <SelectItem value="large">51+ employees (Large)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="industry" className="text-brand/80 font-medium">
+                    <Label htmlFor="industry" className="text-foreground font-medium">
                       Industry
                     </Label>
                     <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
-                      <SelectTrigger className="rounded-xl border-brand/20 focus:border-brand">
+                      <SelectTrigger className="rounded-lg border-input focus:border-primary">
                         <SelectValue placeholder="Select industry" />
                       </SelectTrigger>
                       <SelectContent>
@@ -256,14 +270,14 @@ export default function OnboardingPage() {
                   </div>
                 </div>
                 {/* <div className="space-y-2">
-                  <Label htmlFor="supportVolume" className="text-brand/80 font-medium">
+                  <Label htmlFor="supportVolume" className="text-foreground font-medium">
                     Current Support Volume
                   </Label>
                   <Select
                     value={formData.supportVolume}
                     onValueChange={(value) => handleInputChange("supportVolume", value)}
                   >
-                    <SelectTrigger className="rounded-xl border-brand/20 focus:border-brand">
+                    <SelectTrigger className="rounded-lg border-input focus:border-primary">
                       <SelectValue placeholder="How many support requests per month?" />
                     </SelectTrigger>
                     <SelectContent>
@@ -275,7 +289,7 @@ export default function OnboardingPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="currentSolution" className="text-brand/80 font-medium">
+                  <Label htmlFor="currentSolution" className="text-foreground font-medium">
                     Current Solution
                   </Label>
                   <Textarea
@@ -283,7 +297,7 @@ export default function OnboardingPage() {
                     placeholder="Tell us about your current customer support setup..."
                     value={formData.currentSolution}
                     onChange={(e) => handleInputChange("currentSolution", e.target.value)}
-                    className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div> */}
               </div>
@@ -292,14 +306,14 @@ export default function OnboardingPage() {
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="supportVolume" className="text-brand/80 font-medium">
+                  <Label htmlFor="supportVolume" className="text-foreground font-medium">
                     Current Support Volume
                   </Label>
                   <Select
                     value={formData.supportVolume}
                     onValueChange={(value) => handleInputChange("supportVolume", value)}
                   >
-                    <SelectTrigger className="rounded-xl border-brand/20 focus:border-brand">
+                    <SelectTrigger className="rounded-lg border-input focus:border-primary">
                       <SelectValue placeholder="How many support requests per month?" />
                     </SelectTrigger>
                     <SelectContent>
@@ -311,7 +325,7 @@ export default function OnboardingPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="currentSolution" className="text-brand/80 font-medium">
+                  <Label htmlFor="currentSolution" className="text-foreground font-medium">
                     Current Solution
                   </Label>
                   <Textarea
@@ -319,11 +333,11 @@ export default function OnboardingPage() {
                     placeholder="Tell us about your current customer support setup..."
                     value={formData.currentSolution}
                     onChange={(e) => handleInputChange("currentSolution", e.target.value)}
-                    className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber" className="text-brand/80 font-medium">
+                  <Label htmlFor="phoneNumber" className="text-foreground font-medium">
                     Phone Number
                   </Label>
                   <Input
@@ -332,19 +346,19 @@ export default function OnboardingPage() {
                     placeholder="+1 (555) 123-4567"
                     value={formData.phoneNumber}
                     onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                    className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="businessHours" className="text-brand/80 font-medium">
+                    <Label htmlFor="businessHours" className="text-foreground font-medium">
                       Business Hours
                     </Label>
                     <Select
                       value={formData.businessHours}
                       onValueChange={(value) => handleInputChange("businessHours", value)}
                     >
-                      <SelectTrigger className="rounded-xl border-brand/20 focus:border-brand">
+                      <SelectTrigger className="rounded-lg border-input focus:border-primary">
                         <SelectValue placeholder="Select hours" />
                       </SelectTrigger>
                       <SelectContent>
@@ -357,7 +371,7 @@ export default function OnboardingPage() {
                   </div>
                   {/* {formData.businessHours === 'custom' && (
                     <div className="space-y-2">
-                      <Label htmlFor="customHours" className="text-brand/80 font-medium">
+                      <Label htmlFor="customHours" className="text-foreground font-medium">
                         Specify Custom Hours
                       </Label>
                       <Input
@@ -366,16 +380,16 @@ export default function OnboardingPage() {
                         value={formData.customHours}
                         onChange={(e) => handleInputChange("customHours", e.target.value)}
                         placeholder="e.g., Mon-Fri, 10am-6pm"
-                        className="rounded-xl border-brand/20 focus:border-brand"
+                        className="rounded-lg border-input focus:border-primary"
                       />
                     </div>
                   )} */}
                   <div className="space-y-2">
-                    <Label htmlFor="timezone" className="text-brand/80 font-medium">
+                    <Label htmlFor="timezone" className="text-foreground font-medium">
                       Timezone
                     </Label>
                     <Select value={formData.timezone} onValueChange={(value) => handleInputChange("timezone", value)}>
-                      <SelectTrigger className="rounded-xl border-brand/20 focus:border-brand">
+                      <SelectTrigger className="rounded-lg border-input focus:border-primary">
                         <SelectValue placeholder="Select timezone" />
                       </SelectTrigger>
                       <SelectContent>
@@ -387,8 +401,8 @@ export default function OnboardingPage() {
                     </Select>
                   </div>
                 </div>
-                <div className="rounded-xl bg-brand/5 p-4 border border-brand/20">
-                  <h4 className="font-medium mb-2 text-brand">Phone Setup Benefits</h4>
+                <div className="rounded-lg bg-primary/5 p-4 border border-input">
+                  <h4 className="font-medium mb-2 text-primary">Phone Setup Benefits</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
                     <li>• Instant AI-powered call handling</li>
                     <li>• Automatic call routing and escalation</li>
@@ -402,7 +416,7 @@ export default function OnboardingPage() {
             {/* {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="integrationName" className="text-brand/80 font-medium">
+                  <Label htmlFor="integrationName" className="text-foreground font-medium">
                     Integration Name
                   </Label>
                   <Input
@@ -410,11 +424,11 @@ export default function OnboardingPage() {
                     placeholder="Knowledge Base API"
                     value={formData.integrationName}
                     onChange={(e) => handleInputChange("integrationName", e.target.value)}
-                    className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="mcpEndpoint" className="text-brand/80 font-medium">
+                  <Label htmlFor="mcpEndpoint" className="text-foreground font-medium">
                     Endpoint URL
                   </Label>
                   <Input
@@ -423,11 +437,11 @@ export default function OnboardingPage() {
                     placeholder="https://api.yourcompany.com/knowledge"
                     value={formData.mcpEndpoint}
                     onChange={(e) => handleInputChange("mcpEndpoint", e.target.value)}
-                    className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="apiKey" className="text-brand/80 font-medium">
+                  <Label htmlFor="apiKey" className="text-foreground font-medium">
                     API Key
                   </Label>
                   <Input
@@ -436,11 +450,11 @@ export default function OnboardingPage() {
                     placeholder="sk-..."
                     value={formData.apiKey}
                     onChange={(e) => handleInputChange("apiKey", e.target.value)}
-                    className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="knowledgeBase" className="text-brand/80 font-medium">
+                  <Label htmlFor="knowledgeBase" className="text-foreground font-medium">
                     Knowledge Base Description
                   </Label>
                   <Textarea
@@ -448,12 +462,12 @@ export default function OnboardingPage() {
                     placeholder="Describe your knowledge base content and structure..."
                     value={formData.knowledgeBase}
                     onChange={(e) => handleInputChange("knowledgeBase", e.target.value)}
-                    className="rounded-xl border-brand/20 focus:border-brand focus:ring-brand/20"
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div>
                 <Button
                   variant="outline"
-                  className="w-full rounded-xl border-brand/30 hover:bg-brand/10 hover:text-brand bg-transparent"
+                  className="w-full rounded-lg border-brand/30 hover:bg-primary/10 hover:text-primary bg-transparent"
                 >
                   Test Connection
                 </Button>
@@ -463,16 +477,16 @@ export default function OnboardingPage() {
             {currentStep === 3 && (
               <div className="space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-brand/80 font-medium">Primary Goals (Select all that apply)</Label>
+                  <Label className="text-foreground font-medium">Primary Goals (Select all that apply)</Label>
                   <div className="grid grid-cols-2 gap-3">
                     {goalOptions.map((goal) => (
                       <Button
                         key={goal}
                         type="button"
                         variant={formData.primaryGoals.includes(goal) ? "default" : "outline"}
-                        className={`rounded-xl text-left justify-start h-auto p-3 ${formData.primaryGoals.includes(goal)
-                          ? "bg-brand text-white"
-                          : "border-brand/30 hover:bg-brand/10 hover:text-brand bg-transparent"
+                        className={`rounded-lg text-left justify-start h-auto p-3 ${formData.primaryGoals.includes(goal)
+                          ? "bg-primary text-white"
+                          : "border-brand/30 hover:bg-primary/10 hover:text-primary bg-transparent"
                           }`}
                         onClick={() => toggleGoal(goal)}
                       >
@@ -483,14 +497,14 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="expectedVolume" className="text-brand/80 font-medium">
+                  <Label htmlFor="expectedVolume" className="text-foreground font-medium">
                     Expected Call Volume
                   </Label>
                   <Select
                     value={formData.expectedVolume}
                     onValueChange={(value) => handleInputChange("expectedVolume", value)}
                   >
-                    <SelectTrigger className="rounded-xl border-brand/20 focus:border-brand">
+                    <SelectTrigger className="rounded-lg border-input focus:border-primary">
                       <SelectValue placeholder="Expected calls per month" />
                     </SelectTrigger>
                     <SelectContent>
@@ -507,7 +521,7 @@ export default function OnboardingPage() {
                     <CheckCircle className="h-10 w-10 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-brand">Ready to Launch!</h3>
+                    <h3 className="text-lg font-semibold text-primary">Ready to Launch!</h3>
                     <p className="text-muted-foreground">
                       Your CoreComm platform is configured and ready to handle customer calls
                     </p>
@@ -521,19 +535,25 @@ export default function OnboardingPage() {
                 <Button
                   variant="ghost"
                   onClick={handleBack}
-                  disabled={isSubmitting}
-                  className="rounded-xl hover:bg-brand/10 hover:text-brand"
+                  disabled={loading}
+                  className="hover:bg-primary/10 hover:text-primary"
                 >
                   Back
                 </Button>
               )}
-              <Button
-                onClick={handleNext}
-                disabled={isSubmitting}
-                className="rounded-xl bg-brand hover:bg-brand/90"
+              <Button 
+                onClick={handleNext} 
+                disabled={loading}
+                className="bg-primary hover:bg-primary/90 text-white ml-auto"
               >
-                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {isSubmitting ? "Saving..." : currentStep === 3 ? "Complete Setup" : "Continue"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Company...
+                  </>
+                ) : (
+                  currentStep === 3 ? "Complete Setup" : "Continue"
+                )}
               </Button>
             </div>
           </CardContent>

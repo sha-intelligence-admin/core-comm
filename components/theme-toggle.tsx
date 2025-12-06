@@ -14,7 +14,7 @@ export function ThemeToggle() {
         <Button
           variant="outline"
           size="icon"
-          className="rounded-xl bg-transparent hover:bg-brand hover:text-white hover:border-brand hover:scale-110 transition-all duration-200"
+          className="rounded-xl bg-transparent hover:bg-primary hover:text-white hover:border-primary hover:scale-110 transition-all duration-200"
         >
           <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -24,7 +24,7 @@ export function ThemeToggle() {
       <DropdownMenuContent align="end">
         <DropdownMenuItem
           onClick={() => setTheme("light")}
-          className="hover:bg-brand/10 hover:text-brand transition-colors duration-200"
+          className="hover:bg-primary/10 hover:text-primary transition-colors duration-200"
         >
           Light
         </DropdownMenuItem>

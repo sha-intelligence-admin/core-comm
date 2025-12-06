@@ -11,13 +11,15 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Phone, Settings, User, Loader2, Bot, BookOpen, Hash } from "lucide-react"
+import { LayoutDashboard, Phone, Settings, Plug, User, Loader2, Bot, PhoneCall, MessageSquare, Mail, BarChart3, Users, Shield, HelpCircle } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { LogoutButton } from "./auth-actions"
 import { useUserProfile } from "@/hooks/use-user-profile"
+import { usePathname } from "next/navigation"
 
 const menuItems = [
   {
@@ -26,24 +28,54 @@ const menuItems = [
     icon: LayoutDashboard,
   },
   {
+    title: "AI Agents",
+    url: "/ai-agents",
+    icon: Bot,
+  },
+  {
+    title: "Numbers",
+    url: "/numbers",
+    icon: PhoneCall,
+  },
+  {
+    title: "Messaging",
+    url: "/messaging",
+    icon: MessageSquare,
+  },
+  {
+    title: "Email",
+    url: "/email",
+    icon: Mail,
+  },
+  {
     title: "Call Logs",
     url: "/call-logs",
     icon: Phone,
   },
   {
-    title: "Voice Agents",
-    url: "/voice-agents",
-    icon: Bot,
+    title: "Analytics",
+    url: "/analytics",
+    icon: BarChart3,
   },
   {
-    title: "Knowledge Base",
-    url: "/knowledge-base",
-    icon: BookOpen,
+    title: "Integrations",
+    url: "/integrations",
+    icon: Plug,
   },
   {
-    title: "Phone Numbers",
-    url: "/phone-numbers",
-    icon: Hash,
+    title: "Team",
+    url: "/team",
+    icon: Users,
+  },
+  {
+    title: "Security",
+    url: "/security",
+    icon: Shield,
+  },
+  {
+    title: "Support",
+    url: "/support",
+    icon: HelpCircle,
   },
   {
     title: "Settings",
@@ -54,38 +86,51 @@ const menuItems = [
 
 export function AppSidebar() {
   const { profile, loading, getInitials, getDisplayName } = useUserProfile()
+  const pathname = usePathname()
+  const { setOpenMobile, isMobile } = useSidebar()
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
 
   return (
-    <Sidebar className="border-r border-brand/20">
-      <SidebarHeader className="p-4 hover:bg-brand/5 transition-colors duration-300 group">
-        <div className="flex items-center space-x-2">
-          <div className="h-8 w-8 rounded-lg bg-brand flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg transition-all duration-300">
-            <span className="text-white font-bold text-sm">CC</span>
-          </div>
-          <span className="font-bold text-lg group-hover:text-brand transition-colors duration-200">CoreComm</span>
-        </div>
-      </SidebarHeader>
+    <Sidebar className="border-r border-input bg-sidebarbg">
+      <div className="flex justify-start items-center space-x-2 p-4 transition-colors duration-300 group">
+        <img src="/logo.webp" alt="Logo" className="w-10" />
+        <span className="google-headline-small">CoreComm</span>
+      </div>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-brand/70 font-semibold hover:text-brand transition-colors duration-200">
+          {/* <SidebarGroupLabel className="text-brand/70 font-semibold hover:text-brand transition-colors duration-200">
             Platform
-          </SidebarGroupLabel>
+          </SidebarGroupLabel> */}
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="group">
+              {menuItems.map((item) => {
+                const isActive = pathname.startsWith(item.url)
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      className="group text-icons data-[active=true]:text-primary"
+                      isActive={isActive}
+                    >
                     <Link
                       href={item.url}
-                      className="flex items-center space-x-2 hover:bg-brand/10 hover:text-brand hover:border-l-4 hover:border-brand hover:scale-105 hover:shadow-md transition-all duration-300 rounded-r-lg"
+                      onClick={handleLinkClick}
+                        className="flex items-center space-x-2 hover:bg-brand/10 transition-all duration-300 rounded-r-lg"
                     >
-                      <item.icon className="h-4 w-4 group-hover:scale-110 group-hover:text-brand transition-all duration-200" />
+                      <item.icon className="h-5 w-5 transition-all duration-200" />
                       <span className="group-hover:font-medium transition-all duration-200">{item.title}</span>
                     </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

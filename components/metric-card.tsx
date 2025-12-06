@@ -12,24 +12,24 @@ interface MetricCardProps {
 
 export function MetricCard({ title, value, change, trend, icon: Icon }: MetricCardProps) {
   return (
-    <Card className="rounded-2xl bg-brand text-white border-brand hover:bg-brand/90 transition-all duration-300 hover:scale-105 hover:shadow-lg group cursor-pointer">
+    <div className="rounded-sm bg-metricCard border border-input transition-all duration-300 group cursor-pointer">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-white/90">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-white/80 group-hover:text-white transition-colors duration-200" />
+        <div className="text-sm font-medium text-muted-foreground">{title}</div>
+        <Icon className="h-4 w-4 text-primary transition-colors duration-200" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-white group-hover:scale-110 transition-transform duration-200">
+        <div className="text-2xl font-bold text-foreground transition-transform duration-200">
           {value}
         </div>
         <p
           className={cn(
-            "text-xs transition-colors duration-200",
-            trend === "up" ? "text-green-200 group-hover:text-green-100" : "text-red-200 group-hover:text-red-100",
+            "text-xs mt-2 transition-colors duration-200",
+            trend === "up" ? "text-green-500" : "text-red-500",
           )}
         >
           {change} from last month
         </p>
       </CardContent>
-    </Card>
+    </div>
   )
 }

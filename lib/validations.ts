@@ -35,9 +35,34 @@ export const SignupSchema = z.object({
   full_name: z.string().min(1, 'Full name is required.').max(100, 'Name too long'),
   phone: z.string().regex(/^\+?[\d\s\-\(\)]{10,}$/, 'Invalid phone number format').optional().or(z.literal('')),
   password: z.string()
-    .min(8, 'Password must be at least 8 characters long')
+    .min(12, 'Password must be at least 12 characters long')
+    .max(128, 'Password must be less than 128 characters')
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 
-           'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+           'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character')
+    .refine((password) => {
+      // Check for common weak patterns
+      const weakPatterns = [
+        /^(.)\1{2,}/, // Repeating characters (aaa, 111, etc.)
+        /123456|654321|qwerty|password|admin/i, // Common weak passwords
+        /^[a-zA-Z]+$/, // Only letters
+        /^[0-9]+$/, // Only numbers
+        /(.{2,})\1/, // Repeated substrings (abcabc)
+      ]
+      return !weakPatterns.some(pattern => pattern.test(password))
+    }, 'Password contains weak patterns or common words')
+    .refine((password) => {
+      // Ensure good character diversity
+      const uniqueChars = new Set(password.toLowerCase()).size
+      return uniqueChars >= Math.min(8, password.length * 0.6)
+    }, 'Password must have sufficient character diversity'),
+});
+
+/**
+ * Zod schema for login form validation.
+ */
+export const LoginSchema = z.object({
+  email: z.string().email('Invalid email address.'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 /**

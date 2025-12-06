@@ -1,17 +1,24 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
-
-// Simple security headers function
-function setSecurityHeaders(response: NextResponse): NextResponse {
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('X-XSS-Protection', '1; mode=block')
-  return response
-}
+import { setSecurityHeaders } from "@/lib/security-headers"
+import { validateCSRF } from "@/lib/csrf-protection"
+import { CSRFError } from "@/lib/error-handling"
 
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // Validate CSRF for state-changing operations
+  try {
+    await validateCSRF(request)
+  } catch (error) {
+    if (error instanceof CSRFError) {
+      return NextResponse.json(
+        { error: 'Invalid request. Please refresh and try again.' },
+        { status: 403 }
+      )
+    }
+  }
 
   // If Supabase is not configured, allow access to all routes
   if (!supabaseUrl || !supabaseAnonKey) {
