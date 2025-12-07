@@ -14,6 +14,7 @@ import { Eye, EyeOff, CheckCircle, Mail } from "lucide-react"
 import { SignupSchema } from "@/lib/validations"
 import { ZodError } from "zod"
 import axios from "axios";
+import { withCsrfHeaders } from "@/lib/csrf-client";
 
 // Using type alias for better readability
 /** @typedef {object} FormData
@@ -113,6 +114,13 @@ export default function SignUpPage() {
       }
 
       if (data.user) {
+        if (data.user.email_confirmed_at) {
+          setError("Email already registered. Please sign in instead.")
+          setEmailSent(false)
+          setSuccess(false)
+          return
+        }
+
         // Check if email confirmation is required
         if (!data.session) {
           // Email confirmation is enabled - show email sent message
@@ -123,12 +131,21 @@ export default function SignUpPage() {
         // Session exists - email confirmation not required
         // ✅ Step 2: Create user profile immediately
         try {
-          await axios.post("/api/auth/signup", {
-            userId: data.user.id,
-            fullName: validated.full_name,
-            phone: validated.phone,
-            email: validated.email,
-          });
+          const csrfHeaders = await withCsrfHeaders();
+
+          await axios.post(
+            "/api/auth/signup",
+            {
+              userId: data.user.id,
+              fullName: validated.full_name,
+              phone: validated.phone,
+              email: validated.email,
+            },
+            {
+              headers: csrfHeaders,
+              withCredentials: true,
+            }
+          );
           
           setSuccess(true);
           

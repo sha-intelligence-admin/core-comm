@@ -13,6 +13,7 @@ import { Phone, CheckCircle, Building, Target, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useToast } from "@/hooks/use-toast"
+import { withCsrfHeaders } from "@/lib/csrf-client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function OnboardingPage() {
@@ -87,11 +88,15 @@ export default function OnboardingPage() {
       // Complete onboarding - create company
       setLoading(true)
       try {
+        const csrfHeaders = await withCsrfHeaders()
+
         const response = await fetch("/api/onboarding", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...csrfHeaders,
           },
+          credentials: "include",
           body: JSON.stringify(formData),
         })
 
