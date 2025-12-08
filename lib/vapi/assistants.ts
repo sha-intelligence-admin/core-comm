@@ -77,7 +77,8 @@ export async function createAssistant(
     } catch (cleanupError) {
       console.error('Error cleaning up Vapi assistant:', cleanupError);
     }
-    throw new Error('Failed to store assistant in database');
+    const reason = error.message || error.details || 'unknown storage error';
+    throw new Error(`Failed to store assistant in database: ${reason}`);
   }
 
   return {

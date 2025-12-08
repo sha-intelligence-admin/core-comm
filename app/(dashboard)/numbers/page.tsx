@@ -1,115 +1,169 @@
 "use client"
 
+import { useMemo, useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AddNumberModal } from "@/components/add-number-modal"
 import { Badge } from "@/components/ui/badge"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { usePhoneNumbers } from "@/hooks/use-phone-numbers"
-import {
-    Phone,
-    Plus,
-    Settings,
-    MoreVertical,
-    CheckCircle,
-    PhoneOutgoing,
-    BarChart3,
-    Calendar,
-    Users,
-    Target,
-    Repeat,
-    Clock,
-    PhoneMissed,
-    Activity,
-    ArrowUpRight,
-    Globe,
-    MonitorPlay,
-    FileText,
-    Download,
-    TrendingUp,
-} from "lucide-react"
+import { useAssistants } from "@/hooks/use-assistants"
+import { usePhoneNumbers, type PhoneNumber } from "@/hooks/use-phone-numbers"
+import { Phone, Plus, Settings, MoreVertical, CheckCircle, BarChart3 } from "lucide-react"
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+
+const addNumberSteps = [
+    {
+        step: "Click Add Number",
+        detail: "Navigate to Dashboard → Numbers → Add Number",
+    },
+    {
+        step: "Choose a provider",
+        detail: "Select Twilio, Telnyx, Vonage, or bring your own",
+    },
+    {
+        step: "Pick area code / number",
+        detail: "We ask Vapi/Twilio for the closest available match",
+    },
+    {
+        step: "Provision",
+        detail: "CoreComm registers the number with Vapi + Twilio automatically",
+    },
+    {
+        step: "Assign to Voice Agent",
+        detail: "Route calls to your AI concierge or fail over to a human",
+    },
+]
+
+const exampleConfiguration = [
+    { field: "Number", value: "+1 415 555 0199" },
+    { field: "Provider", value: "Twilio via Vapi" },
+    { field: "Assigned To", value: "US Support Concierge" },
+    { field: "Routing Mode", value: "Auto-answer → AI Assistant" },
+    { field: "Failover Route", value: "Forward to Dispatch Desk" },
+]
 
 export default function NumbersPage() {
-    const { phoneNumbers, loading } = usePhoneNumbers()
+    const { phoneNumbers, loading, updatePhoneNumber, deletePhoneNumber } = usePhoneNumbers()
+    const { assistants } = useAssistants()
+    const [configureId, setConfigureId] = useState<string | null>(null)
+    const [selectedAssistant, setSelectedAssistant] = useState<string | undefined>(undefined)
+    const [busy, setBusy] = useState(false)
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-    // Calculate real metrics from backend data
-    const totalCalls = phoneNumbers.reduce((sum, n) => sum + n.total_inbound_calls + n.total_outbound_calls, 0)
-    const totalInbound = phoneNumbers.reduce((sum, n) => sum + n.total_inbound_calls, 0)
-    const totalOutbound = phoneNumbers.reduce((sum, n) => sum + n.total_outbound_calls, 0)
-    const activeNumbers = phoneNumbers.filter(n => n.status === 'active').length
+    const configureTarget = phoneNumbers.find((number) => number.id === configureId)
 
-    // Real analytics metrics from database
-    const voiceAnalyticsMetrics = [
-        {
-            label: "Total Numbers",
-            value: loading ? "..." : phoneNumbers.length.toString(),
-            description: "Configured phone numbers",
-            icon: Phone,
-        },
-        {
-            label: "Active Numbers",
-            value: loading ? "..." : activeNumbers.toString(),
-            description: "Currently in service",
-            icon: CheckCircle,
-        },
-        {
-            label: "Total Calls",
-            value: loading ? "..." : totalCalls.toLocaleString(),
-            description: "Inbound + outbound",
-            icon: Phone,
-        },
-        {
-            label: "Inbound Calls",
-            value: loading ? "..." : totalInbound.toLocaleString(),
-            description: "Received calls",
-            icon: Phone,
-        },
-        {
-            label: "Outbound Calls",
-            value: loading ? "..." : totalOutbound.toLocaleString(),
-            description: "Placed calls",
-            icon: PhoneOutgoing,
-        },
-    ]
+    const metrics = useMemo(() => {
+        const total = phoneNumbers.length
+        const active = phoneNumbers.filter((n) => n.is_active).length
+        const twilio = phoneNumbers.filter((n) => n.provider === "twilio").length
+        const byo = phoneNumbers.filter((n) => n.provider === "byo").length
+        const unassigned = phoneNumbers.filter((n) => !n.assistant_id).length
 
-    // Informational guide for adding numbers
-    const addNumberSteps = [
-        {
-            step: "Click Add Number",
-            detail: "Navigate to Dashboard → Numbers → Add Number",
-        },
-        {
-            step: "Choose a provider",
-            detail: "Select Twilio, Nexmo (Vonage), or Custom SIP (SIP URI or PBX system)",
-        },
-        {
-            step: "Select Country and Number Type",
-            detail: "Choose Local, Toll-Free, or Mobile / Virtual numbers",
-        },
-        {
-            step: "Purchase or Import",
-            detail: "Either purchase a new number or import an existing one from your system",
-        },
-        {
-            step: "Assign to Voice Agent",
-            detail: "Connect the number to one of your configured Voice Agents",
-        },
-    ]
+        return [
+            {
+                label: "Total Numbers",
+                value: loading ? "..." : total.toString(),
+                description: "Provisioned via Vapi",
+                icon: Phone,
+            },
+            {
+                label: "Active",
+                value: loading ? "..." : active.toString(),
+                description: "Currently routable",
+                icon: CheckCircle,
+            },
+            {
+                label: "Twilio Lines",
+                value: loading ? "..." : twilio.toString(),
+                description: "Purchased through Twilio",
+                icon: BarChart3,
+            },
+            {
+                label: "BYO",
+                value: loading ? "..." : byo.toString(),
+                description: "Bring-your-own numbers",
+                icon: BarChart3,
+            },
+            {
+                label: "Unassigned",
+                value: loading ? "..." : unassigned.toString(),
+                description: "Needs assistant routing",
+                icon: Settings,
+            },
+        ]
+    }, [loading, phoneNumbers])
 
-    // Example configuration for reference
-    const exampleConfiguration = [
-        { field: "Number", value: "+44 203 998 4452" },
-        { field: "Provider", value: "Twilio" },
-        { field: "Assigned To", value: "UK Support Bot (Voice Agent)" },
-        { field: "Routing Mode", value: "Auto-Answer → Conversation AI" },
-        { field: "Failover Route", value: "Forward to Human Agent (Optional)" },
-    ]
+    const openConfigure = (number: PhoneNumber) => {
+        setConfigureId(number.id)
+        setSelectedAssistant(number.assistant_id || undefined)
+        setErrorMessage(null)
+    }
+
+    const handleToggleActive = async (number: PhoneNumber) => {
+        setBusy(true)
+        setErrorMessage(null)
+        try {
+            const result = await updatePhoneNumber(number.id, { isActive: !number.is_active })
+            if (result && "error" in result) {
+                throw new Error(result.error)
+            }
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : "Failed to update phone number")
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const handleDelete = async (number: PhoneNumber) => {
+        setBusy(true)
+        setErrorMessage(null)
+        try {
+            const result = await deletePhoneNumber(number.id)
+            if (result && "error" in result) {
+                throw new Error(result.error)
+            }
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : "Failed to release number")
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const handleConfigure = async () => {
+        if (!configureId) return
+        setBusy(true)
+        setErrorMessage(null)
+        try {
+            const result = await updatePhoneNumber(configureId, {
+                assistantId: selectedAssistant ?? null,
+            })
+            if (result && "error" in result) {
+                throw new Error(result.error)
+            }
+            setConfigureId(null)
+            setSelectedAssistant(undefined)
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : "Failed to configure number")
+        } finally {
+            setBusy(false)
+        }
+    }
 
     return (
         <div className="space-y-6 overflow-x-hidden">
@@ -120,7 +174,7 @@ export default function NumbersPage() {
                         Purchase, manage, and route phone numbers for your AI Voice Agents
                     </p>
                 </div>
-                <AddNumberModal>
+                <AddNumberModal assistants={assistants}>
                     <Button className="h-11 rounded-sm px-6 text-white whitespace-nowrap flex-shrink-0">
                         <Plus className="mr-2 h-4 w-4" />
                         Add Number
@@ -135,12 +189,12 @@ export default function NumbersPage() {
                         Voice analytics
                     </div>
                     <div className="google-body-medium text-muted-foreground">
-                        Real-time performance analytics for all inbound and outbound calls
+                        Provisioning + routing stats pulled directly from Vapi/Twilio
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {voiceAnalyticsMetrics.map((metric) => (
+                        {metrics.map((metric) => (
                             <div
                                 key={metric.label}
                                 className="rounded-sm border border-input bg-metricCard p-4 transition-colors duration-200 hover:border-primary/60"
@@ -163,7 +217,7 @@ export default function NumbersPage() {
                 <CardHeader className="rounded-t-sm">
                     <div className="google-headline-small">Active numbers</div>
                     <div className="google-body-medium text-muted-foreground">
-                        Manage your configured phone numbers and assignments
+                        Manage the Twilio + Vapi resources tied to your workspace
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -176,9 +230,9 @@ export default function NumbersPage() {
                             <Phone className="mb-4 h-12 w-12 text-muted-foreground" />
                             <h3 className="google-title-large text-foreground mb-2">No phone numbers configured</h3>
                             <p className="google-body-medium text-muted-foreground mb-6 max-w-sm">
-                                Get started by adding your first phone number. You can purchase new numbers or import existing ones.
+                                Get started by adding your first phone number. We handle Twilio + Vapi provisioning.
                             </p>
-                            <AddNumberModal>
+                            <AddNumberModal assistants={assistants}>
                                 <Button className="rounded-sm bg-primary text-primary-foreground hover:bg-primary/90">
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add Phone Number
@@ -198,29 +252,24 @@ export default function NumbersPage() {
                                             <div>
                                                 <div className="google-title-small text-foreground">{number.phone_number}</div>
                                                 <div className="google-body-small text-muted-foreground mt-1">
-                                                    {number.provider} • {number.number_type}
+                                                    {number.provider.toUpperCase()} • {number.country_code || "US"}
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="flex flex-wrap gap-2">
-                                            {number.assigned_to && (
-                                                <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
-                                                    Agent: {number.assigned_to}
-                                                </Badge>
-                                            )}
+                                            <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
+                                                {number.assigned_to ? `Assistant: ${number.assigned_to}` : "Unassigned"}
+                                            </Badge>
                                             <Badge 
                                                 variant="outline" 
                                                 className={`rounded-full border-0 ${
-                                                    number.status === 'active' 
+                                                    number.is_active 
                                                         ? 'bg-green-500/20 text-green-500'
                                                         : 'bg-gray-500/20 text-gray-500'
                                                 }`}
                                             >
-                                                {number.status}
-                                            </Badge>
-                                            <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
-                                                {(number.total_inbound_calls || 0) + (number.total_outbound_calls || 0)} total calls
+                                                {number.is_active ? 'active' : 'inactive'}
                                             </Badge>
                                         </div>
                                     </div>
@@ -230,6 +279,7 @@ export default function NumbersPage() {
                                             variant="outline"
                                             size="sm"
                                             className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
+                                            onClick={() => openConfigure(number)}
                                         >
                                             <Settings className="mr-2 h-3 w-3" />
                                             Configure
@@ -245,16 +295,22 @@ export default function NumbersPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                    Reassign Agent
+                                                <DropdownMenuItem
+                                                    className="hover:bg-primary/10 hover:text-primary"
+                                                    onClick={() => openConfigure(number)}
+                                                >
+                                                    Assign Assistant
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                    View Call Logs
+                                                <DropdownMenuItem
+                                                    className="hover:bg-primary/10 hover:text-primary"
+                                                    onClick={() => handleToggleActive(number)}
+                                                >
+                                                    {number.is_active ? 'Disable' : 'Enable'} routing
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                    Edit Routing
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-red-600 hover:bg-red-50 hover:text-red-700">
+                                                <DropdownMenuItem
+                                                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                    onClick={() => handleDelete(number)}
+                                                >
                                                     Release Number
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -299,7 +355,7 @@ export default function NumbersPage() {
                     <CardHeader className="rounded-t-sm">
                         <div className="google-headline-small text-foreground">Example configuration</div>
                         <div className="google-body-medium text-muted-foreground">
-                            Typical setup for a UK-based Voice Agent number
+                            Typical setup for a Bay Area support line
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -323,102 +379,73 @@ export default function NumbersPage() {
                 </Card>
             </div>
 
-            {/* <Card className="rounded-sm border-input transition-all duration-300 hover:border-primary/50">
-                <CardHeader className="rounded-t-sm">
-                    <div className="google-headline-small text-foreground flex items-center gap-2">
-                        <PhoneOutgoing className="h-4 w-4 text-primary" />
-                        Outbound calls
-                    </div>
-                    <div className="google-body-medium text-muted-foreground">
-                        Initiate AI-driven phone calls automatically or on schedule
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                        <Button
-                            variant="outline"
-                            className="h-auto flex-col items-start gap-2 rounded-sm border-input bg-muted/40 p-4 text-left hover:border-primary hover:bg-muted"
-                        >
-                            <Settings className="h-5 w-5 text-primary" />
-                            <div>
-                                <div className="google-title-small text-foreground">Set Caller ID</div>
-                                <p className="google-body-small text-muted-foreground mt-1">
-                                    Configure per country, department, or campaign
-                                </p>
-                            </div>
-                        </Button>
+            {errorMessage && (
+                <div className="rounded-sm border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-600">
+                    {errorMessage}
+                </div>
+            )}
 
-                        <Button
-                            variant="outline"
-                            className="h-auto flex-col items-start gap-2 rounded-sm border-input bg-muted/40 p-4 text-left hover:border-primary hover:bg-muted"
-                        >
-                            <Target className="h-5 w-5 text-primary" />
+            <Dialog
+                open={Boolean(configureId)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setConfigureId(null)
+                        setSelectedAssistant(undefined)
+                        setErrorMessage(null)
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md rounded-sm">
+                    <DialogHeader>
+                        <DialogTitle>Configure number</DialogTitle>
+                        <DialogDescription>
+                            Route incoming calls and toggle availability for {configureTarget?.phone_number}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="assistant-select" className="text-sm text-muted-foreground">
+                                Assign voice assistant
+                            </Label>
+                            <Select
+                                value={selectedAssistant ?? "none"}
+                                onValueChange={(value) => setSelectedAssistant(value === "none" ? undefined : value)}
+                            >
+                                <SelectTrigger id="assistant-select" className="rounded-sm">
+                                    <SelectValue placeholder="Select assistant" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No assistant</SelectItem>
+                                    {assistants.map((assistant) => (
+                                        <SelectItem key={assistant.id} value={assistant.id}>
+                                            {assistant.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center justify-between rounded-sm border border-input bg-muted/40 px-3 py-2">
                             <div>
-                                <div className="google-title-small text-foreground">Launch Campaigns</div>
-                                <p className="google-body-small text-muted-foreground mt-1">
-                                    Follow-ups, feedback, sales outreach, and notifications
-                                </p>
+                                <p className="text-sm font-medium text-foreground">Enable routing</p>
+                                <p className="text-xs text-muted-foreground">We keep Twilio + Vapi webhooks in sync.</p>
                             </div>
-                        </Button>
-
-                        <Button
-                            variant="outline"
-                            className="h-auto flex-col items-start gap-2 rounded-sm border-input bg-muted/40 p-4 text-left hover:border-primary hover:bg-muted"
-                        >
-                            <Repeat className="h-5 w-5 text-primary" />
-                            <div>
-                                <div className="google-title-small text-foreground">Automate Callbacks</div>
-                                <p className="google-body-small text-muted-foreground mt-1">
-                                    After missed calls or failed conversations
-                                </p>
-                            </div>
-                        </Button>
-
-                        <Button
-                            variant="outline"
-                            className="h-auto flex-col items-start gap-2 rounded-sm border-input bg-muted/40 p-4 text-left hover:border-primary hover:bg-muted"
-                        >
-                            <Calendar className="h-5 w-5 text-primary" />
-                            <div>
-                                <div className="google-title-small text-foreground">Dialing Modes</div>
-                                <p className="google-body-small text-muted-foreground mt-1">
-                                    Progressive, preview, and predictive dialing
-                                </p>
-                            </div>
-                        </Button>
-                    </div>
-
-                    <div>
-                        <div className="google-title-small text-foreground mb-2">API endpoint</div>
-                        <div className="rounded-sm border border-input bg-muted/40 p-3 overflow-x-auto">
-                            <code className="google-body-small text-foreground whitespace-nowrap block">POST /api/v1/voice/outbound</code>
+                            <Switch
+                                checked={configureTarget?.is_active ?? true}
+                                onCheckedChange={() => configureTarget && handleToggleActive(configureTarget)}
+                                disabled={!configureTarget || busy}
+                            />
                         </div>
                     </div>
-
-                    <div>
-                        <div className="google-title-small text-foreground mb-2">Payload example</div>
-                        <div className="rounded-sm border border-input bg-muted/40 p-3 overflow-x-auto">
-                            <pre className="m-0">
-                                <code className="google-body-small text-muted-foreground whitespace-pre block">
-                                    {`{
-  "number": "+14155550123",
-  "agent_id": "agt_2938jh92",
-  "script": "Hello, this is CoreComm checking on your recent order."
-}`}
-                                </code>
-                            </pre>
-                        </div>
-                    </div>
-
-                    <div className="rounded-sm border border-input bg-muted/40 p-3">
-                        <div className="google-body-small text-muted-foreground space-y-1">
-                            <div><span className="font-medium text-foreground">number</span> → the phone number being dialed</div>
-                            <div><span className="font-medium text-foreground">agent_id</span> → Voice Agent initiating the call</div>
-                            <div><span className="font-medium text-foreground">script</span> → Optional call script or system prompt</div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card> */}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfigureId(null)} disabled={busy}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleConfigure} disabled={busy}>
+                            {busy ? "Saving..." : "Save"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

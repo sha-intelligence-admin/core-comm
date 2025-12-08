@@ -9,73 +9,81 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "./loading-spinner"
-import { CheckCircle, XCircle } from "lucide-react"
-import { usePhoneNumbers } from "@/hooks/use-phone-numbers"
+import { PhoneNumberProvider, ProvisionPhoneNumberPayload, usePhoneNumbers } from "@/hooks/use-phone-numbers"
 
 interface AddNumberModalProps {
   children: React.ReactNode
+  assistants?: Array<{ id: string; name: string }>
 }
 
-type ReserveStatus = "success" | "error" | null
+const normalizeToE164 = (value: string) => {
+  if (!value) return ""
+  const digits = value.replace(/[^\d+]/g, "")
+  if (!digits) return ""
+  return digits.startsWith("+") ? digits : `+${digits}`
+}
 
-export function AddNumberModal({ children }: AddNumberModalProps) {
+const INITIAL_FORM = {
+  provider: "twilio" as PhoneNumberProvider,
+  areaCode: "",
+  number: "",
+  assistantId: "",
+  fallbackNumber: "",
+}
+
+export function AddNumberModal({ children, assistants = [] }: AddNumberModalProps) {
   const { createPhoneNumber } = usePhoneNumbers()
   const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [reserveResult, setReserveResult] = useState<ReserveStatus>(null)
   const [errorMessage, setErrorMessage] = useState("")
-  const [formData, setFormData] = useState({
-    provider: "",
-    numberType: "",
-    region: "",
-    number: "",
-    agent: "",
-  })
+  const [formData, setFormData] = useState(INITIAL_FORM)
 
-  const handleReserve = async () => {
-    setIsLoading(true)
-    setReserveResult(null)
-
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    const success = Math.random() > 0.2
-    setReserveResult(success ? "success" : "error")
-    setIsLoading(false)
-  }
+  const isByo = formData.provider === "byo"
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setIsSaving(true)
     setErrorMessage("")
 
-    const result = await createPhoneNumber({
-      phone_number: formData.number.replace(/\D/g, ''), // Remove non-digits
-      country_code: formData.region === 'us' ? '+1' : formData.region === 'uk' ? '+44' : '+1',
-      provider: formData.provider,
-      number_type: formData.numberType === 'toll-free' ? 'voice' : formData.numberType === 'local' ? 'both' : 'voice',
-      status: 'active',
-      friendly_name: `${formData.region.toUpperCase()} ${formData.numberType}`,
-      assigned_to: formData.agent,
-      capabilities: {
-        voice: true,
-        sms: formData.numberType !== 'toll-free',
-        mms: false,
-      },
-      monthly_cost: formData.numberType === 'toll-free' ? 2.00 : 1.00,
-    })
+    try {
+      const payload: ProvisionPhoneNumberPayload = {
+        provider: formData.provider,
+      }
 
-    setIsSaving(false)
+      if (formData.assistantId) {
+        payload.assistantId = formData.assistantId
+      }
 
-    if (result.error) {
-      setErrorMessage(result.error)
-      return
+      if (isByo) {
+        const normalized = normalizeToE164(formData.number)
+        if (!normalized) {
+          throw new Error("Please provide a valid E.164 formatted number.")
+        }
+        payload.number = normalized
+      } else {
+        if (!/^\d{3}$/.test(formData.areaCode)) {
+          throw new Error("Area code must be exactly 3 digits")
+        }
+        payload.areaCode = formData.areaCode
+      }
+
+      if (formData.fallbackNumber) {
+        payload.fallbackNumber = normalizeToE164(formData.fallbackNumber)
+      }
+
+      const result = await createPhoneNumber(payload)
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      setOpen(false)
+      setFormData(INITIAL_FORM)
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Failed to provision phone number")
+    } finally {
+      setIsSaving(false)
     }
-
-    // Success - close modal and reset
-    setOpen(false)
-    setReserveResult(null)
-    setFormData({ provider: "", numberType: "", region: "", number: "", agent: "" })
   }
 
   return (
@@ -93,117 +101,90 @@ export function AddNumberModal({ children }: AddNumberModalProps) {
             <Label htmlFor="provider" className="google-label-medium text-muted-foreground">
               Provider
             </Label>
-            <Select value={formData.provider} onValueChange={(value) => setFormData((prev) => ({ ...prev, provider: value }))}>
+            <Select
+              value={formData.provider}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, provider: value as PhoneNumberProvider }))}
+            >
               <SelectTrigger id="provider" className="h-11 rounded-sm border-input">
                 <SelectValue placeholder="Select provider" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="twilio">Twilio</SelectItem>
                 <SelectItem value="telnyx">Telnyx</SelectItem>
-                <SelectItem value="plivo">Plivo</SelectItem>
-                <SelectItem value="nexmo">Vonage / Nexmo</SelectItem>
+                <SelectItem value="vonage">Vonage</SelectItem>
+                <SelectItem value="byo">Bring your own</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          {isByo ? (
             <div className="space-y-2">
-              <Label htmlFor="numberType" className="google-label-medium text-muted-foreground">
-                Number type
+              <Label htmlFor="number" className="google-label-medium text-muted-foreground">
+                Existing E.164 number
               </Label>
-              <Select value={formData.numberType} onValueChange={(value) => setFormData((prev) => ({ ...prev, numberType: value }))}>
-                <SelectTrigger id="numberType" className="h-11 rounded-sm border-input">
-                  <SelectValue placeholder="Choose type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="local">Local</SelectItem>
-                  <SelectItem value="mobile">Mobile</SelectItem>
-                  <SelectItem value="toll-free">Toll-free</SelectItem>
-                  <SelectItem value="short-code">Short code</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="number"
+                placeholder="e.g. +14155551212"
+                value={formData.number}
+                onChange={(event) => setFormData((prev) => ({ ...prev, number: event.target.value }))}
+                className="h-11 rounded-sm border-input"
+                required
+              />
+              <p className="text-xs text-muted-foreground">We will register this number with Vapi and keep the existing carrier (Twilio, PSTN, etc.).</p>
             </div>
+          ) : (
             <div className="space-y-2">
-              <Label htmlFor="region" className="google-label-medium text-muted-foreground">
-                Region
+              <Label htmlFor="areaCode" className="google-label-medium text-muted-foreground">
+                Preferred area code
               </Label>
-              <Select value={formData.region} onValueChange={(value) => setFormData((prev) => ({ ...prev, region: value }))}>
-                <SelectTrigger id="region" className="h-11 rounded-sm border-input">
-                  <SelectValue placeholder="Select region" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="us">United States</SelectItem>
-                  <SelectItem value="uk">United Kingdom</SelectItem>
-                  <SelectItem value="eu">European Union</SelectItem>
-                  <SelectItem value="ng">Nigeria</SelectItem>
-                  <SelectItem value="au">Australia</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="areaCode"
+                placeholder="415"
+                value={formData.areaCode}
+                onChange={(event) => setFormData((prev) => ({ ...prev, areaCode: event.target.value }))}
+                className="h-11 rounded-sm border-input"
+                maxLength={3}
+                required
+              />
+              <p className="text-xs text-muted-foreground">We ask Vapi/Twilio to purchase the closest available number.</p>
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
-            <Label htmlFor="number" className="google-label-medium text-muted-foreground">
-              Desired number or pattern
+            <Label htmlFor="assistant" className="google-label-medium text-muted-foreground">
+              Default assistant
             </Label>
-            <Input
-              id="number"
-              placeholder="e.g. +1 (415) ***-4452"
-              value={formData.number}
-              onChange={(event) => setFormData((prev) => ({ ...prev, number: event.target.value }))}
-              className="h-11 rounded-sm border-input"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="agent" className="google-label-medium text-muted-foreground">
-              Assign to agent
-            </Label>
-            <Select value={formData.agent} onValueChange={(value) => setFormData((prev) => ({ ...prev, agent: value }))}>
-              <SelectTrigger id="agent" className="h-11 rounded-sm border-input">
-                <SelectValue placeholder="Select routing destination" />
+            <Select
+              value={formData.assistantId}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, assistantId: value === "none" ? "" : value }))}
+            >
+              <SelectTrigger id="assistant" className="h-11 rounded-sm border-input">
+                <SelectValue placeholder="Route to a voice agent" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="voice-support">Voice Support Bot</SelectItem>
-                <SelectItem value="sales-line">Sales Line Agent</SelectItem>
-                <SelectItem value="after-hours">After-hours Escalation</SelectItem>
-                <SelectItem value="pilot">Pilot Workspace</SelectItem>
+                <SelectItem value="none">No assistant</SelectItem>
+                {assistants.map((assistant) => (
+                  <SelectItem key={assistant.id} value={assistant.id}>
+                    {assistant.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReserve}
-              disabled={isLoading || !formData.provider || !formData.numberType || !formData.region || !formData.number}
-              className="flex-1 rounded-sm border-input bg-transparent"
-            >
-              {isLoading ? (
-                <>
-                  <LoadingSpinner className="mr-2 h-4 w-4" />
-                  Checking availability...
-                </>
-              ) : (
-                "Check availability"
-              )}
-            </Button>
-            {reserveResult && (
-              <div className="flex items-center">
-                {reserveResult === "success" ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <XCircle className="h-5 w-5 text-red-600" />
-                )}
-              </div>
-            )}
+          <div className="space-y-2">
+            <Label htmlFor="fallback" className="google-label-medium text-muted-foreground">
+              Fallback / failover number (optional)
+            </Label>
+            <Input
+              id="fallback"
+              placeholder="e.g. +14155559876"
+              value={formData.fallbackNumber}
+              onChange={(event) => setFormData((prev) => ({ ...prev, fallbackNumber: event.target.value }))}
+              className="h-11 rounded-sm border-input"
+            />
+            <p className="text-xs text-muted-foreground">We will forward calls here if the assistant or Vapi is unavailable.</p>
           </div>
-
-          {reserveResult === "error" && (
-            <p className="text-sm text-red-600">Number unavailable. Try another pattern or provider.</p>
-          )}
 
           {errorMessage && (
             <div className="rounded-sm bg-red-500/10 border border-red-500/20 p-3">
@@ -212,27 +193,27 @@ export function AddNumberModal({ children }: AddNumberModalProps) {
           )}
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => setOpen(false)} 
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
               className="rounded-sm"
               disabled={isSaving}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSaving || !formData.provider || !formData.number} 
+            <Button
+              type="submit"
+              disabled={isSaving}
               className="rounded-sm"
             >
               {isSaving ? (
                 <>
                   <LoadingSpinner className="mr-2 h-4 w-4" />
-                  Adding...
+                  Provisioning...
                 </>
               ) : (
-                "Add number"
+                "Provision number"
               )}
             </Button>
           </div>

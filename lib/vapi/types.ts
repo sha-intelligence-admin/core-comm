@@ -25,7 +25,27 @@ export interface ModelConfig {
 // Voice Configuration
 // ==============================================
 
-export type VoiceProvider = 'elevenlabs' | 'playht' | 'azure' | 'deepgram';
+export type VoiceProvider =
+  | 'vapi'
+  | '11labs'
+  | 'elevenlabs'
+  | 'azure'
+  | 'cartesia'
+  | 'custom-voice'
+  | 'deepgram'
+  | 'hume'
+  | 'lmnt'
+  | 'neuphonic'
+  | 'openai'
+  | 'playht'
+  | 'rime-ai'
+  | 'smallest-ai'
+  | 'tavus'
+  | 'sesame'
+  | 'inworld'
+  | 'minimax'
+  | 'wellsaid'
+  | 'orpheus';
 
 export interface VoiceConfig {
   provider: VoiceProvider;

@@ -58,18 +58,19 @@ export async function updateSession(request: NextRequest) {
   const publicRoutes = [
     '/',
     '/auth/login',
-    '/auth/signup', 
+    '/auth/signup',
     '/auth/forgot-password',
     '/auth/reset-password',
     '/auth/callback',
     '/auth/auth-code-error',
     '/setup',
-    '/api/health'
+    '/api/health',
+
   ]
-  
-  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname) || 
-                       request.nextUrl.pathname.startsWith('/_next') ||
-                       request.nextUrl.pathname.startsWith('/favicon')
+
+  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname) ||
+    request.nextUrl.pathname.startsWith('/_next') ||
+    request.nextUrl.pathname.startsWith('/favicon')
 
   // Redirect unauthenticated users from protected routes
   if (!user && !isPublicRoute) {
@@ -81,8 +82,8 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth pages
-  if (user && request.nextUrl.pathname.startsWith('/auth/') && 
-      request.nextUrl.pathname !== '/auth/callback') {
+  if (user && request.nextUrl.pathname.startsWith('/auth/') &&
+    request.nextUrl.pathname !== '/auth/callback') {
     const url = request.nextUrl.clone()
     url.pathname = "/dashboard"
     const redirectResponse = NextResponse.redirect(url)

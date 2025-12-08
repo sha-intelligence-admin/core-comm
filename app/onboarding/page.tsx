@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Phone, CheckCircle, Building, Target, Loader2 } from "lucide-react"
+import { Phone, CheckCircle, Building, Target, Loader2, Server } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useToast } from "@/hooks/use-toast"
@@ -34,12 +34,14 @@ export default function OnboardingPage() {
     businessHours: "",
     customHours: "",
     timezone: "",
+    phoneNumberSource: "",
+    regionPreference: "",
 
     // Step 3: Integration Setup
-    // integrationName: "",
-    // mcpEndpoint: "",
-    // apiKey: "",
-    // knowledgeBase: "",
+    integrationName: "",
+    mcpEndpoint: "",
+    apiKey: "",
+    knowledgeBase: "",
 
     // Step 4: Goals
     primaryGoals: [] as string[],
@@ -62,19 +64,20 @@ export default function OnboardingPage() {
       description: "Set up your customer support line",
       icon: Phone,
     },
-    // {
-    //   id: 3,
-    //   title: "Knowledge Integration",
-    //   description: "Connect your knowledge sources",
-    //   icon: Server,
-    // },
     {
       id: 3,
+      title: "Knowledge Integration",
+      description: "Connect your knowledge sources",
+      icon: Server,
+    },
+    {
+      id: 4,
       title: "Goals & Preferences",
       description: "Define your success metrics",
       icon: Target,
     },
   ]
+  const totalSteps = steps.length
 
   const handleInputChange = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -82,7 +85,7 @@ export default function OnboardingPage() {
 
   const handleNext = async () => {
     setError(null)
-    if (currentStep < 3) {
+    if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1)
     } else {
       // Complete onboarding - create company
@@ -135,7 +138,7 @@ export default function OnboardingPage() {
     }
   }
 
-  const progress = (currentStep / 3) * 100
+  const progress = (currentStep / totalSteps) * 100
 
   const toggleGoal = (goal: string) => {
     const currentGoals = formData.primaryGoals
@@ -152,6 +155,10 @@ export default function OnboardingPage() {
     "24/7 availability",
   ]
 
+  const requiresPhoneNumber =
+    formData.phoneNumberSource === "forward-existing" || formData.phoneNumberSource === "twilio-user-managed"
+  const requiresRegionPreference = formData.phoneNumberSource === "twilio-new"
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
       <div className="absolute top-4 right-4">
@@ -167,7 +174,7 @@ export default function OnboardingPage() {
 
         <div className="space-y-4">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Step {currentStep} of 3</span>
+            <span>Step {currentStep} of {totalSteps}</span>
             <span>{Math.round(progress)}% complete</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -225,21 +232,7 @@ export default function OnboardingPage() {
                     className="border-input focus:border-primary focus:ring-primary/50"
                   />
                 </div>
-                {/* <div className="space-y-2">
-                  <Label htmlFor="currentVolume" className="text-foreground font-medium">
-                    Current Support Volume
-                  </Label>
-                  <Input
-                    id="currentVolume"
-                    name="currentVolume"
-                    placeholder="Current Support Volume"
-                    value={formData.supportVolume}
-                    onChange={(e) => handleInputChange("supportVolume", e.target.value)}
-                    required
-                    // disabled={loading}
-                    className="border-input focus:border-primary focus:ring-primary/50"
-                  />
-                </div> */}
+                {/* Additional company questions can be re-added here */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="companySize" className="text-foreground font-medium">
@@ -346,18 +339,81 @@ export default function OnboardingPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber" className="text-foreground font-medium">
-                    Phone Number
+                  <Label htmlFor="phoneNumberSource" className="text-foreground font-medium">
+                    Phone Number Source
                   </Label>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    value={formData.phoneNumber}
-                    onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
-                  />
+                  <Select
+                    value={formData.phoneNumberSource}
+                    onValueChange={(value) => handleInputChange("phoneNumberSource", value)}
+                  >
+                    <SelectTrigger className="rounded-lg border-input focus:border-primary">
+                      <SelectValue placeholder="How should we provision it?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="twilio-new">Purchase new via Twilio</SelectItem>
+                      <SelectItem value="forward-existing">Forward from another line</SelectItem>
+                      <SelectItem value="twilio-user-managed">I'll configure Twilio myself</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {requiresRegionPreference && (
+                  <div className="space-y-2">
+                    <Label htmlFor="regionPreference" className="text-foreground font-medium">
+                      Region Preference
+                    </Label>
+                    <Select
+                      value={formData.regionPreference}
+                      onValueChange={(value) => handleInputChange("regionPreference", value)}
+                    >
+                      <SelectTrigger className="rounded-lg border-input focus:border-primary">
+                        <SelectValue placeholder="Where should the number originate?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="us">United States</SelectItem>
+                        <SelectItem value="canada">Canada</SelectItem>
+                        <SelectItem value="uk">United Kingdom</SelectItem>
+                        <SelectItem value="eu">European Union</SelectItem>
+                        <SelectItem value="apac">Asia Pacific</SelectItem>
+                        <SelectItem value="latam">Latin America</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">We&apos;ll search Twilio&apos;s inventory for numbers closest to this region.</p>
+                  </div>
+                )}
+
+                {requiresPhoneNumber && (
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber" className="text-foreground font-medium">
+                      {formData.phoneNumberSource === "twilio-user-managed"
+                        ? "Twilio Number You'll Configure"
+                        : "Existing Number to Forward"}
+                    </Label>
+                    <Input
+                      id="phoneNumber"
+                      type="tel"
+                      placeholder="e.g., +1 (555) 123-4567"
+                      value={formData.phoneNumber}
+                      onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
+                      className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {formData.phoneNumberSource === "twilio-user-managed"
+                        ? "We’ll store this number and send you webhook instructions to configure inside your own Twilio account."
+                        : "We&apos;ll configure Twilio to forward calls from this number into CoreComm."}
+                    </p>
+                  </div>
+                )}
+
+                {formData.phoneNumberSource === "twilio-user-managed" && (
+                  <div className="rounded-lg border border-dashed border-primary/40 p-4 text-sm text-muted-foreground">
+                    <p className="font-medium text-primary mb-2">Manual Twilio setup</p>
+                    <p>
+                      After onboarding you&apos;ll receive a checklist to point your Twilio number&apos;s Voice &amp; SMS webhooks to CoreComm.
+                      This option is ideal if the number lives in a customer-owned Twilio project.
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="businessHours" className="text-foreground font-medium">
@@ -422,7 +478,7 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* {currentStep === 3 && (
+            {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="integrationName" className="text-foreground font-medium">
@@ -481,9 +537,9 @@ export default function OnboardingPage() {
                   Test Connection
                 </Button>
               </div>
-            )} */}
+            )}
 
-            {currentStep === 3 && (
+            {currentStep === 4 && (
               <div className="space-y-6">
                 <div className="space-y-4">
                   <Label className="text-foreground font-medium">Primary Goals (Select all that apply)</Label>
@@ -561,7 +617,7 @@ export default function OnboardingPage() {
                     Creating Company...
                   </>
                 ) : (
-                  currentStep === 3 ? "Complete Setup" : "Continue"
+                  currentStep === totalSteps ? "Complete Setup" : "Continue"
                 )}
               </Button>
             </div>

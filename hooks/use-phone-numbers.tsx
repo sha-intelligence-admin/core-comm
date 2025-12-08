@@ -2,83 +2,99 @@
 
 import { useState, useEffect } from 'react'
 
+export type PhoneNumberProvider = 'vapi' | 'twilio' | 'vonage' | 'telnyx' | 'byo'
+
+export interface PhoneNumberAssistant {
+  id: string
+  name: string
+  vapi_assistant_id: string
+}
+
 export interface PhoneNumber {
   id: string
   phone_number: string
-  country_code: string
-  provider: string
-  number_type: 'voice' | 'sms' | 'both'
-  status: 'active' | 'inactive' | 'suspended' | 'pending'
-  friendly_name?: string
-  capabilities: {
-    voice: boolean
-    sms: boolean
-    mms: boolean
-  }
+  provider: PhoneNumberProvider
+  country_code: string | null
+  status: 'active' | 'inactive'
+  is_active: boolean
+  assistant_id: string | null
   assigned_to?: string | null
-  monthly_cost: number
-  total_inbound_calls: number
-  total_outbound_calls: number
-  total_sms_sent: number
-  total_sms_received: number
-  config: Record<string, unknown>
+  vapi_phone_id: string
   created_at: string
   updated_at: string
-  user_id: string
+  total_inbound_calls: number
+  total_outbound_calls: number
+  assistant?: PhoneNumberAssistant | null
 }
 
-export interface PhoneNumbersFilters {
-  page?: number
-  limit?: number
-  status?: 'active' | 'inactive' | 'suspended' | 'pending'
-  provider?: string
-  search?: string
+export type ProvisionPhoneNumberPayload = {
+  provider: PhoneNumberProvider
+  assistantId?: string
+  areaCode?: string
+  number?: string
+  fallbackNumber?: string
 }
 
-export interface PhoneNumbersPagination {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
+export type UpdatePhoneNumberPayload = {
+  assistantId?: string | null
+  isActive?: boolean
+}
+
+const normalizePhoneNumber = (record: any): PhoneNumber => {
+  const assistant = record?.vapi_assistants
+    ? {
+        id: record.vapi_assistants.id,
+        name: record.vapi_assistants.name,
+        vapi_assistant_id: record.vapi_assistants.vapi_assistant_id,
+      }
+    : null
+
+  return {
+    id: record.id,
+    phone_number: record.phone_number,
+    provider: (record.provider || 'twilio') as PhoneNumberProvider,
+    country_code: record.country_code || null,
+    status: record.is_active ? 'active' : 'inactive',
+    is_active: Boolean(record.is_active),
+    assistant_id: record.assistant_id || null,
+    assigned_to: assistant?.name || null,
+    vapi_phone_id: record.vapi_phone_id,
+    created_at: record.created_at,
+    updated_at: record.updated_at,
+    total_inbound_calls: record.total_inbound_calls ?? 0,
+    total_outbound_calls: record.total_outbound_calls ?? 0,
+    assistant,
+  }
+}
+
+const extractPhoneNumbers = (payload: any) => {
+  if (!payload) return []
+  if (Array.isArray(payload)) return payload
+  if (payload.data?.phoneNumbers) return payload.data.phoneNumbers
+  if (payload.phoneNumbers) return payload.phoneNumbers
+  return []
 }
 
 export function usePhoneNumbers() {
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [pagination, setPagination] = useState<PhoneNumbersPagination>({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0,
-  })
 
-  const fetchPhoneNumbers = async (filters: PhoneNumbersFilters = {}) => {
+  const fetchPhoneNumbers = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const params = new URLSearchParams()
-      if (filters.page) params.append('page', filters.page.toString())
-      if (filters.limit) params.append('limit', filters.limit.toString())
-      if (filters.status) params.append('status', filters.status)
-      if (filters.provider) params.append('provider', filters.provider)
-      if (filters.search) params.append('search', filters.search)
-
-      const response = await fetch(`/api/phone-numbers?${params.toString()}`)
+      const response = await fetch('/api/vapi/phone-numbers')
 
       if (!response.ok) {
-        throw new Error('Failed to fetch phone numbers')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to fetch phone numbers')
       }
 
-      const data = await response.json()
-      setPhoneNumbers(data.phoneNumbers || [])
-      setPagination(data.pagination || {
-        page: 1,
-        limit: 20,
-        total: 0,
-        totalPages: 0,
-      })
+      const payload = await response.json()
+      const raw = extractPhoneNumbers(payload)
+      setPhoneNumbers(raw.map(normalizePhoneNumber))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
       setPhoneNumbers([])
@@ -87,37 +103,39 @@ export function usePhoneNumbers() {
     }
   }
 
-  const createPhoneNumber = async (phoneNumberData: Partial<PhoneNumber>) => {
+  const createPhoneNumber = async (payload: ProvisionPhoneNumberPayload) => {
     try {
-      const response = await fetch('/api/phone-numbers', {
+      const response = await fetch('/api/vapi/phone-numbers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(phoneNumberData),
+        body: JSON.stringify(payload),
       })
 
+      const body = await response.json().catch(() => ({}))
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create phone number')
+        throw new Error(body.error || 'Failed to provision phone number')
       }
 
-      const data = await response.json()
-      await fetchPhoneNumbers() // Refresh list
-      return { success: true, data }
+      await fetchPhoneNumbers()
+      return { success: true, data: body.data }
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Unknown error' }
     }
   }
 
-  const updatePhoneNumber = async (id: string, updates: Partial<PhoneNumber>) => {
+  const updatePhoneNumber = async (id: string, updates: UpdatePhoneNumberPayload) => {
     try {
-      const response = await fetch(`/api/phone-numbers/${id}`, {
-        method: 'PUT',
+      const response = await fetch(`/api/vapi/phone-numbers/${id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       })
 
+      const body = await response.json().catch(() => ({}))
+
       if (!response.ok) {
-        throw new Error('Failed to update phone number')
+        throw new Error(body.error || 'Failed to update phone number')
       }
 
       await fetchPhoneNumbers()
@@ -129,12 +147,14 @@ export function usePhoneNumbers() {
 
   const deletePhoneNumber = async (id: string) => {
     try {
-      const response = await fetch(`/api/phone-numbers/${id}`, {
+      const response = await fetch(`/api/vapi/phone-numbers/${id}`, {
         method: 'DELETE',
       })
 
+      const body = await response.json().catch(() => ({}))
+
       if (!response.ok) {
-        throw new Error('Failed to delete phone number')
+        throw new Error(body.error || 'Failed to delete phone number')
       }
 
       await fetchPhoneNumbers()
@@ -152,7 +172,6 @@ export function usePhoneNumbers() {
     phoneNumbers,
     loading,
     error,
-    pagination,
     fetchPhoneNumbers,
     createPhoneNumber,
     updatePhoneNumber,
