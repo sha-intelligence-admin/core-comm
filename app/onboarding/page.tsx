@@ -43,7 +43,17 @@ export default function OnboardingPage() {
     apiKey: "",
     knowledgeBase: "",
 
-    // Step 4: Goals
+    // Step 4: Assistant Configuration
+    assistantName: "",
+    assistantDescription: "",
+    assistantModel: "gpt-4",
+    assistantVoiceProvider: "11labs",
+    assistantVoiceId: "21m00Tcm4TlvDq8ikWAM",
+    assistantGreeting: "",
+    assistantLanguage: "en-US",
+    assistantPersonality: "",
+
+    // Step 5: Goals
     primaryGoals: [] as string[],
     expectedVolume: "",
     successMetrics: "",
@@ -59,19 +69,25 @@ export default function OnboardingPage() {
       icon: Building,
     },
     {
-      id: 2,
+      id: 3,
       title: "Phone Configuration",
       description: "Set up your customer support line",
       icon: Phone,
     },
     {
-      id: 3,
+      id: 4,
       title: "Knowledge Integration",
       description: "Connect your knowledge sources",
       icon: Server,
     },
     {
-      id: 4,
+      id: 2,
+      title: "Assistant Configuration",
+      description: "Customize your AI voice assistant",
+      icon: CheckCircle,
+    },
+    {
+      id: 5,
       title: "Goals & Preferences",
       description: "Define your success metrics",
       icon: Target,
@@ -540,6 +556,166 @@ export default function OnboardingPage() {
             )}
 
             {currentStep === 4 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="assistantName" className="text-foreground font-medium">
+                    Assistant Name
+                  </Label>
+                  <Input
+                    id="assistantName"
+                    placeholder="e.g., Customer Support Concierge"
+                    value={formData.assistantName}
+                    onChange={(e) => handleInputChange("assistantName", e.target.value)}
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
+                  />
+                  <p className="text-xs text-muted-foreground">This is how your AI assistant will be identified internally</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="assistantDescription" className="text-foreground font-medium">
+                    Description
+                  </Label>
+                  <Textarea
+                    id="assistantDescription"
+                    placeholder="Describe what this assistant should help with..."
+                    value={formData.assistantDescription}
+                    onChange={(e) => handleInputChange("assistantDescription", e.target.value)}
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="assistantModel" className="text-foreground font-medium">
+                      AI Model
+                    </Label>
+                    <Select
+                      value={formData.assistantModel}
+                      onValueChange={(value) => handleInputChange("assistantModel", value)}
+                    >
+                      <SelectTrigger className="rounded-lg border-input focus:border-primary">
+                        <SelectValue placeholder="Select AI model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gpt-4">GPT-4 (Recommended)</SelectItem>
+                        <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                        <SelectItem value="claude-3-opus">Claude 3 Opus</SelectItem>
+                        <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="assistantLanguage" className="text-foreground font-medium">
+                      Language
+                    </Label>
+                    <Select
+                      value={formData.assistantLanguage}
+                      onValueChange={(value) => handleInputChange("assistantLanguage", value)}
+                    >
+                      <SelectTrigger className="rounded-lg border-input focus:border-primary">
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en-US">English (US)</SelectItem>
+                        <SelectItem value="en-GB">English (UK)</SelectItem>
+                        <SelectItem value="es-ES">Spanish</SelectItem>
+                        <SelectItem value="fr-FR">French</SelectItem>
+                        <SelectItem value="de-DE">German</SelectItem>
+                        <SelectItem value="it-IT">Italian</SelectItem>
+                        <SelectItem value="pt-BR">Portuguese (Brazil)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="assistantVoiceProvider" className="text-foreground font-medium">
+                      Voice Provider
+                    </Label>
+                    <Select
+                      value={formData.assistantVoiceProvider}
+                      onValueChange={(value) => handleInputChange("assistantVoiceProvider", value)}
+                    >
+                      <SelectTrigger className="rounded-lg border-input focus:border-primary">
+                        <SelectValue placeholder="Select voice provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="11labs">ElevenLabs (Recommended)</SelectItem>
+                        <SelectItem value="openai">OpenAI</SelectItem>
+                        <SelectItem value="azure">Azure</SelectItem>
+                        <SelectItem value="playht">PlayHT</SelectItem>
+                        <SelectItem value="deepgram">Deepgram</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="assistantVoiceId" className="text-foreground font-medium">
+                      Voice Style
+                    </Label>
+                    <Select
+                      value={formData.assistantVoiceId}
+                      onValueChange={(value) => handleInputChange("assistantVoiceId", value)}
+                    >
+                      <SelectTrigger className="rounded-lg border-input focus:border-primary">
+                        <SelectValue placeholder="Select voice" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="21m00Tcm4TlvDq8ikWAM">Rachel (Female, Professional)</SelectItem>
+                        <SelectItem value="EXAVITQu4vr4xnSDxMaL">Bella (Female, Friendly)</SelectItem>
+                        <SelectItem value="pNInz6obpgDQGcFmaJgB">Adam (Male, Professional)</SelectItem>
+                        <SelectItem value="yoZ06aMxZJJ28mfd3POQ">Sam (Male, Casual)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="assistantGreeting" className="text-foreground font-medium">
+                    Greeting Message
+                  </Label>
+                  <Textarea
+                    id="assistantGreeting"
+                    placeholder="Hi, thanks for calling! How can I help you today?"
+                    value={formData.assistantGreeting}
+                    onChange={(e) => handleInputChange("assistantGreeting", e.target.value)}
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
+                    rows={2}
+                  />
+                  <p className="text-xs text-muted-foreground">The first thing your assistant will say when answering a call</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="assistantPersonality" className="text-foreground font-medium">
+                    Personality & Instructions
+                  </Label>
+                  <Textarea
+                    id="assistantPersonality"
+                    placeholder="You are a helpful, professional, and friendly customer support assistant. Keep responses concise and always confirm you understood the customer's request..."
+                    value={formData.assistantPersonality}
+                    onChange={(e) => handleInputChange("assistantPersonality", e.target.value)}
+                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">Define how your assistant should behave and respond to customers</p>
+                </div>
+
+                <div className="rounded-lg bg-primary/5 p-4 border border-input">
+                  <h4 className="font-medium mb-2 text-primary">Assistant Tips</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Use natural, conversational language</li>
+                    <li>• Be specific about tone and style preferences</li>
+                    <li>• Include handling instructions for common scenarios</li>
+                    <li>• Test different voices to match your brand</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {currentStep === 5 && (
               <div className="space-y-6">
                 <div className="space-y-4">
                   <Label className="text-foreground font-medium">Primary Goals (Select all that apply)</Label>

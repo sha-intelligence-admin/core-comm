@@ -143,6 +143,14 @@ export async function POST(request: NextRequest) {
       integrationName,
       mcpEndpoint,
       knowledgeBase,
+      assistantName,
+      assistantDescription,
+      assistantModel,
+      assistantVoiceProvider,
+      assistantVoiceId,
+      assistantGreeting,
+      assistantLanguage,
+      assistantPersonality,
     } = body
 
     const userManagedTwilio = phoneNumberSource === "twilio-user-managed"
@@ -297,6 +305,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to link user to company: " + updateError.message }, { status: 500 })
     }
 
+    // Add user to team_members table
+    const { error: teamMemberError } = await serviceSupabase
+      .from("team_members")
+      .insert({
+        company_id: company.id,
+        user_id: user.id,
+        created_by: user.id,
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Admin User',
+        email: user.email!,
+        role: "admin",
+        status: "active",
+        can_access_analytics: true,
+        can_manage_integrations: true,
+        can_manage_team: true,
+        can_manage_agents: true,
+        can_view_calls: true,
+        can_view_messages: true,
+        can_view_emails: true,
+      })
+
+    if (teamMemberError) {
+      console.error('Failed to add user to team_members:', teamMemberError)
+      // Don't fail onboarding if team member creation fails, just log it
+    }
+
     const phoneNumberRows: Array<Record<string, any>> = []
 
     if (twilioProvisioning) {
@@ -370,24 +403,58 @@ export async function POST(request: NextRequest) {
       integrationName,
       integrationEndpoint: mcpEndpoint,
     })
-    const assistantFirstMessage = buildAssistantFirstMessage(companyName)
+    
+    // Use custom personality if provided, otherwise use generated prompt
+    const finalSystemPrompt = assistantPersonality?.trim() 
+      ? assistantPersonality 
+      : assistantSystemPrompt
+    
+    const assistantFirstMessage = assistantGreeting?.trim() 
+      ? assistantGreeting 
+      : buildAssistantFirstMessage(companyName)
+    
+    const finalAssistantName = assistantName?.trim() 
+      ? assistantName 
+      : `${companyName} Voice Concierge`.slice(0, 100)
+    
+    const finalAssistantDescription = assistantDescription?.trim() 
+      ? assistantDescription 
+      : (successMetrics || description || `${companyName} default assistant`)
+
+    // Parse model configuration
+    let modelProvider: ModelProvider = DEFAULT_MODEL_PROVIDER
+    let modelName = DEFAULT_MODEL_NAME
+    
+    if (assistantModel) {
+      if (assistantModel.startsWith('gpt-')) {
+        modelProvider = 'openai'
+        modelName = assistantModel
+      } else if (assistantModel.startsWith('claude-')) {
+        modelProvider = 'anthropic'
+        modelName = assistantModel
+      }
+    }
+
+    const voiceProvider = normalizeVoiceProvider(assistantVoiceProvider)
+    const voiceId = assistantVoiceId || DEFAULT_VOICE_ID
+
     let assistantRecord: Awaited<ReturnType<typeof createAssistant>> | null = null
     let vapiPhoneRecord: Awaited<ReturnType<typeof createVapiPhoneNumber>> | null = null
 
     try {
       assistantRecord = await createAssistant(company.id, {
-        name: `${companyName} Voice Concierge`.slice(0, 100),
-        description: successMetrics || description || `${companyName} default assistant`,
-        systemPrompt: assistantSystemPrompt,
+        name: finalAssistantName,
+        description: finalAssistantDescription,
+        systemPrompt: finalSystemPrompt,
         firstMessage: assistantFirstMessage,
         model: {
-          provider: DEFAULT_MODEL_PROVIDER,
-          model: DEFAULT_MODEL_NAME,
+          provider: modelProvider,
+          model: modelName,
           temperature: DEFAULT_MODEL_TEMPERATURE,
         },
         voice: {
-          provider: DEFAULT_VOICE_PROVIDER,
-          voiceId: DEFAULT_VOICE_ID,
+          provider: voiceProvider,
+          voiceId: voiceId,
         },
       })
 
@@ -397,6 +464,36 @@ export async function POST(request: NextRequest) {
           number: twilioProvisioning.phoneNumber,
           assistantId: assistantRecord.id,
         })
+      }
+
+      // Save the assistant as a voice agent in the database
+      if (assistantRecord) {
+        const { error: voiceAgentError } = await serviceSupabase
+          .from("voice_agents")
+          .insert({
+            company_id: company.id,
+            created_by: user.id,
+            name: assistantRecord.name,
+            description: assistantRecord.description || finalAssistantDescription,
+            voice_model: `${voiceProvider}-${voiceId}`,
+            personality: finalSystemPrompt,
+            language: assistantLanguage || 'en-US',
+            status: 'active',
+            greeting_message: assistantFirstMessage,
+            config: {
+              vapi_assistant_id: assistantRecord.vapi_assistant_id,
+              model_provider: modelProvider,
+              model_name: modelName,
+              temperature: DEFAULT_MODEL_TEMPERATURE,
+              voice_provider: voiceProvider,
+              voice_id: voiceId,
+            },
+          })
+
+        if (voiceAgentError) {
+          console.error('Failed to create voice agent record:', voiceAgentError)
+          // Don't fail onboarding if voice agent creation fails, just log it
+        }
       }
     } catch (assistantError) {
       await serviceSupabase.from("users").update({ company_id: null }).eq("id", user.id)

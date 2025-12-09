@@ -60,7 +60,8 @@ export async function createPhoneNumber(
 export async function listPhoneNumbers(companyId: string) {
   const supabase = createServiceRoleClient();
 
-  const { data, error } = await supabase
+  // Fetch vapi phone numbers
+  const { data: vapiData, error: vapiError } = await supabase
     .from('vapi_phone_numbers')
     .select(`
       *,
@@ -73,12 +74,51 @@ export async function listPhoneNumbers(companyId: string) {
     .eq('company_id', companyId)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error listing phone numbers:', error);
+  if (vapiError) {
+    console.error('Error listing vapi phone numbers:', vapiError);
     throw new Error('Failed to fetch phone numbers');
   }
 
-  return data;
+  // Fetch legacy phone numbers directly by company_id
+  let legacyData: any[] = [];
+  const { data: legacyNumbers, error: legacyError } = await supabase
+    .from('phone_numbers')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false });
+
+  if (legacyError) {
+    console.error('Error fetching legacy phone numbers:', legacyError);
+  } else {
+    legacyData = legacyNumbers ?? [];
+  }
+
+  // Tag vapi records with source
+  const enrichedVapi = (vapiData ?? []).map((record) => ({
+    ...record,
+    source: 'vapi' as const,
+  }));
+
+  // Transform and tag legacy records
+  const enrichedLegacy = legacyData.map((record) => ({
+    id: record.id,
+    phone_number: record.phone_number,
+    provider: record.provider || 'twilio',
+    country_code: record.country_code,
+    is_active: record.status === 'active',
+    assistant_id: null,
+    vapi_phone_id: record.id,
+    created_at: record.created_at,
+    updated_at: record.updated_at,
+    total_inbound_calls: record.total_inbound_calls ?? 0,
+    total_outbound_calls: record.total_outbound_calls ?? 0,
+    vapi_assistants: null,
+    company_id: companyId,
+    source: 'legacy' as const,
+    assigned_to: record.assigned_to,
+  }));
+
+  return [...enrichedVapi, ...enrichedLegacy];
 }
 
 /**

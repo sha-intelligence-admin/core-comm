@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 
 export type PhoneNumberProvider = 'vapi' | 'twilio' | 'vonage' | 'telnyx' | 'byo'
+export type PhoneNumberSource = 'vapi' | 'legacy'
 
 export interface PhoneNumberAssistant {
   id: string
@@ -25,6 +26,7 @@ export interface PhoneNumber {
   total_inbound_calls: number
   total_outbound_calls: number
   assistant?: PhoneNumberAssistant | null
+  source: PhoneNumberSource
 }
 
 export type ProvisionPhoneNumberPayload = {
@@ -49,21 +51,25 @@ const normalizePhoneNumber = (record: any): PhoneNumber => {
       }
     : null
 
+  const source: PhoneNumberSource = record.source === 'legacy' ? 'legacy' : 'vapi'
+  const isActive = record.is_active ?? record.status === 'active'
+
   return {
     id: record.id,
     phone_number: record.phone_number,
     provider: (record.provider || 'twilio') as PhoneNumberProvider,
     country_code: record.country_code || null,
-    status: record.is_active ? 'active' : 'inactive',
-    is_active: Boolean(record.is_active),
+    status: isActive ? 'active' : 'inactive',
+    is_active: Boolean(isActive),
     assistant_id: record.assistant_id || null,
-    assigned_to: assistant?.name || null,
-    vapi_phone_id: record.vapi_phone_id,
+    assigned_to: assistant?.name || record.assigned_to || null,
+    vapi_phone_id: record.vapi_phone_id || record.id,
     created_at: record.created_at,
     updated_at: record.updated_at,
     total_inbound_calls: record.total_inbound_calls ?? 0,
     total_outbound_calls: record.total_outbound_calls ?? 0,
     assistant,
+    source,
   }
 }
 
