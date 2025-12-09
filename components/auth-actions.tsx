@@ -23,8 +23,8 @@ export function LogoutButton({ children, variant = "ghost", size = "default", cl
     setIsLoading(true)
 
     try {
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut()
+      // Sign out from Supabase (global scope to clear all sessions)
+      const { error } = await supabase.auth.signOut({ scope: 'global' })
 
       if (error) {
         console.error("Error signing out:", error.message)
