@@ -416,7 +416,7 @@ export default function NumbersPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">No assistant</SelectItem>
-                                    {assistants.map((assistant) => (
+                                    {assistants.map((assistant: { id: string; name: string }) => (
                                         <SelectItem key={assistant.id} value={assistant.id}>
                                             {assistant.name}
                                         </SelectItem>

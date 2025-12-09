@@ -40,6 +40,8 @@ export type ProvisionPhoneNumberPayload = {
 export type UpdatePhoneNumberPayload = {
   assistantId?: string | null
   isActive?: boolean
+  assigned_to?: string | null
+  status?: 'active' | 'inactive'
 }
 
 const normalizePhoneNumber = (record: any): PhoneNumber => {
