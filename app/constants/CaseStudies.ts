@@ -1,7 +1,7 @@
 export const caseStudies = [
   {
     id: 'nextpay',
-    title: 'Next Bank',
+    title: 'Next CBA',
     companyName: 'Next Bank',
     description:
       'Next is a financial platform designed to empower microfinance institutions, lenders, fintechs, and startups to compete and innovate affordably within Africa’s fast-growing digital finance ecosystem.',
@@ -69,7 +69,7 @@ export const caseStudies = [
   },
   {
     id: 'saasprohealth',
-    title: 'SaaS Pro Health',
+    title: 'SaaS Pro Healt',
     companyName: 'SaaS Pro Health',
     description:
       'A digital healthcare platform connecting patients, clinics, and labs — now offering always-on care through CoreComm’s voice assistant.',
@@ -84,4 +84,38 @@ export const caseStudies = [
     avatar: '/muhammad_khalifa.webp',
     themeColor: 'bg-[#fefefe]',
   },
+  {
+    id: 'nearpay',
+    title: 'Nearpay',
+    companyName: 'Nearpay',
+    description:
+      'Nearpay provides seamless payment tools and financial services that help entrepreneurs, startups, and growing businesses accept payments and manage finances effortlessly — everywhere, anytime.',
+    results:
+      'Instant customer support • Faster transaction issue resolution • Higher user trust and platform adoption',
+    testimonial:
+      'CoreComm helped us support thousands of business owners at scale — every question gets answered instantly, no waiting. It’s like having a full support team that never sleeps.',
+    name: 'Victor Daniyan',
+    position: 'Founder',
+    image: '/near.webp',
+    hero: '/near.webp',
+    avatar: '/victor.webp',
+    themeColor: 'bg-[#f4eece]',
+  },
+  {
+    id: 'roadrunner',
+    title: 'Roadrunner',
+    companyName: 'Roadrunner Mobility',
+    description:
+      'Roadrunner enables seamless commuting, parcel delivery, and ride-sharing — while empowering mobility entrepreneurs with affordable vehicle financing to drive economic mobility across Africa.',
+    results:
+      'Faster customer response • More on-time deliveries • Higher user satisfaction and retention',
+    testimonial:
+      'CoreComm gave our users a support experience that feels human — riders and drivers are guided instantly, any time of the day.',
+    name: 'Mustapha Ibrahim',
+    position: 'Founder & CEO',
+    image: '/road.webp',
+    hero: '/road.webp',
+    avatar: '/mustapha.webp',
+    themeColor: 'bg-[#fafafa]',
+  }
 ];

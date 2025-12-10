@@ -4,8 +4,17 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { caseStudies } from "@/app/constants/CaseStudies"
+import { useState, useEffect } from "react"
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
+  const [randomIndex, setRandomIndex] = useState(0)
+
+  useEffect(() => {
+    setRandomIndex(Math.floor(Math.random() * caseStudies.length))
+  }, [])
+
+  const selectedCaseStudy = caseStudies[randomIndex]
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden flex flex-col items-center justify-start relative w-full">
       <div className="flex w-full min-h-screen items-center justify-center">
@@ -32,24 +41,24 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z" />
             </svg>
             <blockquote className="google-headline-small text-google-primary italic">
-              "{caseStudies[0].testimonial}"
+              "{selectedCaseStudy.testimonial}"
             </blockquote>
             <div className="flex py-8 mt-6 space-x-4 items-center justify-start">
-              <img src={caseStudies[0].avatar} alt="" className="rounded-full w-14" />
+              <img src={selectedCaseStudy.avatar} alt="" className="rounded-full w-14" />
               <div>
-                <p className="text-xs google-title-medium text-muted-foreground">{caseStudies[0].name}</p>
+                <p className="text-xs google-title-medium text-muted-foreground">{selectedCaseStudy.name}</p>
                 <div className="flex space-x-1">
                   <p className="text-xs google-body-medium text-muted-foreground text-google-secondary mt-1">
-                    {caseStudies[0].position}
+                    {selectedCaseStudy.position}
                   </p>
                   <span className="text-muted-foreground"> • </span>
                   <p className="text-xs google-label-large text-muted-foreground text-google-tertiary mt-1">
-                    {caseStudies[0].title}
+                    {selectedCaseStudy.title}
                   </p>
                 </div>
               </div>
             </div>
-            <Link className="text-primary pt-6 google-title-small" href={`https://corecomm-website.onrender.com/case-studies/${caseStudies[0].id}`}>
+            <Link className="text-primary pt-6 google-title-small" href={`https://corecomm-website.onrender.com/case-studies/${selectedCaseStudy.id}`}>
               Read full Case Study
             </Link>
           </div>
