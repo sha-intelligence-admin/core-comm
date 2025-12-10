@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
   // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get("next") ?? "/dashboard"
+  const next = searchParams.get("next") ?? "/organizations"
 
   console.log('🔍 Auth Callback Debug:', { code: code ? 'EXISTS' : 'MISSING', origin, next })
 
@@ -21,16 +21,14 @@ export async function GET(request: Request) {
     })
     
     if (!error && data?.user) {
-      // ✅ CRITICAL: Create user profile after email confirmation
+      // ✅ Create user profile after email confirmation
       try {
         // First, check if profile already exists
         const { data: existingUser } = await supabase
           .from('users')
-          .select('id, company_id')
+          .select('id')
           .eq('id', data.user.id)
-          .maybeSingle() // Use maybeSingle to avoid error if not found
-
-        let hasCompanyId = false
+          .maybeSingle()
 
         if (!existingUser) {
           // Profile doesn't exist - create it from user_metadata
@@ -46,7 +44,6 @@ export async function GET(request: Request) {
               email: data.user.email!,
               full_name: fullName,
               phone: phone,
-              role: 'admin', // First user is admin
               is_active: true,
             });
 
@@ -54,25 +51,6 @@ export async function GET(request: Request) {
             // Profile creation failed - redirect to error page with details
             const errorMsg = encodeURIComponent(insertError.message);
             return NextResponse.redirect(`${origin}/auth/profile-error?error=${errorMsg}&next=${next}`);
-          }
-          // New user has no company_id
-          hasCompanyId = false
-        } else {
-          // Check if existing user has completed onboarding
-          hasCompanyId = !!existingUser.company_id
-        }
-
-        // If user doesn't have company_id and next param is not already /onboarding, redirect to onboarding
-        if (!hasCompanyId && next !== '/onboarding') {
-          const forwardedHost = request.headers.get("x-forwarded-host")
-          const isLocalEnv = process.env.NODE_ENV === "development"
-          
-          if (isLocalEnv) {
-            return NextResponse.redirect(`${origin}/onboarding`)
-          } else if (forwardedHost) {
-            return NextResponse.redirect(`https://${forwardedHost}/onboarding`)
-          } else {
-            return NextResponse.redirect(`${origin}/onboarding`)
           }
         }
       } catch (profileError) {
@@ -83,10 +61,9 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/auth/profile-error?error=${errorMsg}&next=${next}`);
       }
 
-      const forwardedHost = request.headers.get("x-forwarded-host") // original origin before load balancer
+      const forwardedHost = request.headers.get("x-forwarded-host")
       const isLocalEnv = process.env.NODE_ENV === "development"
       if (isLocalEnv) {
-        // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
         return NextResponse.redirect(`${origin}${next}`)
       } else if (forwardedHost) {
         return NextResponse.redirect(`https://${forwardedHost}${next}`)

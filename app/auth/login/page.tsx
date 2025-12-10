@@ -39,23 +39,9 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // Check if user has completed onboarding (has company_id)
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('company_id')
-          .eq('id', data.user.id)
-          .single()
-
-        if (userError) {
-          // User profile doesn't exist - redirect to onboarding
-          router.push("/onboarding")
-        } else if (!userData?.company_id) {
-          // User exists but hasn't completed onboarding
-          router.push("/onboarding")
-        } else {
-          // User has completed onboarding - go to dashboard
-          router.push("/dashboard")
-        }
+        // Always redirect to organizations page after login
+        // The organizations page will handle showing create/join options if needed
+        router.push("/organizations")
         router.refresh()
       }
     } catch (err) {

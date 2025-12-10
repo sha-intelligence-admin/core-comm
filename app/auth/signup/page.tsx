@@ -104,18 +104,24 @@ export default function SignUpPage() {
             full_name: validated.full_name,
             phone: validated.phone,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/organizations`,
         }
       });
 
       if (authError) {
-        setError(authError.message)
+        // Check for duplicate email error
+        if (authError.message.includes("already registered") || authError.message.includes("already exists")) {
+          setError("This email is already registered. Please sign in instead.")
+        } else {
+          setError(authError.message)
+        }
         return // Exits before hitting setLoading(false) in finally
       }
 
       if (data.user) {
+        // Check if user already exists (email already confirmed)
         if (data.user.email_confirmed_at) {
-          setError("Email already registered. Please sign in instead.")
+          setError("This email is already registered. Please sign in instead.")
           setEmailSent(false)
           setSuccess(false)
           return

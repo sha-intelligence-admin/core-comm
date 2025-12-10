@@ -50,26 +50,24 @@ export default function ForgotPasswordPage() {
           <h1 className="google-headline-medium">Check your email</h1>
           <p className="text-muted-foreground">We've sent you a link to reset your password</p>
         </div>
-        <Card className="rounded-2xl">
-          <CardContent className="pt-6">
+        <div className="rounded-2xl">
+          <div className="">
             <div className="space-y-4">
               <div className="flex justify-center">
-                <div className="flex aspect-square size-16 items-center justify-center rounded-full bg-green-100 text-green-600">
-                  <CheckCircle className="size-8" />
-                </div>
+                
               </div>
-              <div>
+              {/* <div>
                 <h2 className="text-2xl font-bold">Check Your Email</h2>
                 <p className="text-muted-foreground mt-2">
                   We've sent a password reset link to <strong>{email}</strong>. Click the link in the email to reset your password.
                 </p>
-              </div>
+              </div> */}
               <Button asChild className="w-full">
                 <Link href="/auth/login">Back to Login</Link>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </>
     )
   }

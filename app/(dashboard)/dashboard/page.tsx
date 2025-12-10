@@ -43,7 +43,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="google-headline-medium">Dashboard</h1>
-        <p className="text-muted-foreground google-body-medium">Welcome to your CoreComm AI customer support platform</p>
+        <p className="text-muted-foreground google-body-medium">Welcome to your CoreComm,  your AI agent for customer support</p>
       </div>
 
       {/* Metrics Grid */}

@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Phone, Settings, Plug, User, Loader2, Bot, PhoneCall, MessageSquare, Mail, BarChart3, Users, Shield, HelpCircle } from "lucide-react"
+import { LayoutDashboard, Phone, Settings, Plug, User, Loader2, Bot, PhoneCall, MessageSquare, Mail, BarChart3, Users, Shield, HelpCircle, Building2 } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
