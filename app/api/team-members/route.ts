@@ -280,6 +280,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create team member' }, { status: 500 })
     }
 
+    // Also create organization membership
+    // Map team roles to organization roles
+    const orgRoleMap: Record<string, string> = {
+      'admin': 'admin',
+      'manager': 'manager',
+      'agent': 'member',
+      'viewer': 'viewer',
+      'developer': 'member'
+    }
+    const orgRole = orgRoleMap[validatedData.role] || 'member'
+
+    const { error: membershipError } = await supabaseAdmin
+      .from('organization_memberships')
+      .upsert({
+        user_id: userId,
+        company_id: userData.company_id,
+        role: orgRole,
+        status: 'active',
+        is_default: true // Make it default if they don't have one, but upsert handles it
+      }, { onConflict: 'user_id, company_id' })
+
+    if (membershipError) {
+      console.error('Error creating organization membership:', membershipError)
+      // Don't fail the request, but log it
+    }
+
     return NextResponse.json({ 
       ...member,
       inviteLink, // Return the magic link so frontend can display "Copy Link"

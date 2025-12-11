@@ -78,6 +78,17 @@ export async function GET(request: Request) {
             .eq('user_id', data.user.id)
         }
 
+        // ✅ Ensure organization_memberships are active
+        // This fixes the issue where users don't see the organization after joining
+        await supabase
+          .from('organization_memberships')
+          .update({ 
+            status: 'active',
+            last_accessed_at: new Date().toISOString()
+          })
+          .eq('user_id', data.user.id)
+          .eq('status', 'inactive') // Only update if inactive (or invited if that was a status)
+
       } catch (profileError) {
         // Unexpected error during profile creation
         const errorMsg = encodeURIComponent(
