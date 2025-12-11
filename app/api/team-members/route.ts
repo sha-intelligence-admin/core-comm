@@ -180,7 +180,8 @@ export async function POST(request: Request) {
         })
 
         if (linkData?.properties?.action_link) {
-          inviteLink = linkData.properties.action_link
+          const actionLink = linkData.properties.action_link
+          inviteLink = `${origin}/join/verify?redirect=${encodeURIComponent(actionLink)}`
           // Send email via Zoho
           try {
             await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member')
@@ -217,7 +218,9 @@ export async function POST(request: Request) {
              }
              userId = linkData.user.id;
              isExistingUser = true;
-             inviteLink = linkData.properties?.action_link;
+             if (linkData.properties?.action_link) {
+                inviteLink = `${origin}/join/verify?redirect=${encodeURIComponent(linkData.properties.action_link)}`
+             }
            } else {
              console.error('Error creating user:', createError)
              return NextResponse.json({ error: createError.message }, { status: 400 })
@@ -235,7 +238,8 @@ export async function POST(request: Request) {
            })
            
            if (linkData?.properties?.action_link) {
-             inviteLink = linkData.properties.action_link
+             const actionLink = linkData.properties.action_link
+             inviteLink = `${origin}/join/verify?redirect=${encodeURIComponent(actionLink)}`
            }
         }
 
