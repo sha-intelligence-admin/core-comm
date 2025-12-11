@@ -133,10 +133,6 @@ export default function OrganizationsPage() {
             </p>
           </div>
           <div className="flex items-center justify-end  w-full gap-3">
-            <Button variant="outline" className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              Join Organization
-            </Button>
             <Button onClick={() => router.push("/organizations/create")} className="gap-2">
               <Plus className="h-4 w-4" />
               New Organization
@@ -157,10 +153,6 @@ export default function OrganizationsPage() {
                 <Button onClick={() => router.push("/organizations/create")}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Organization
-                </Button>
-                <Button variant="outline">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Join via Invitation
                 </Button>
               </div>
             </CardContent>

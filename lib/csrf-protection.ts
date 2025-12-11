@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server'
-import { createHash, randomBytes } from 'crypto'
 
 interface CSRFConfig {
   secret: string
@@ -32,17 +31,20 @@ export class CSRFProtection {
   }
 
   generateToken(): string {
-    return randomBytes(this.config.tokenLength).toString('hex')
+    const array = new Uint8Array(this.config.tokenLength)
+    crypto.getRandomValues(array)
+    return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('')
   }
 
-  hashToken(token: string): string {
-    return createHash('sha256')
-      .update(token + this.config.secret)
-      .digest('hex')
+  async hashToken(token: string): Promise<string> {
+    const msgBuffer = new TextEncoder().encode(token + this.config.secret)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
   }
 
-  verifyToken(token: string, expectedHash: string): boolean {
-    const computedHash = this.hashToken(token)
+  async verifyToken(token: string, expectedHash: string): Promise<boolean> {
+    const computedHash = await this.hashToken(token)
     return computedHash === expectedHash
   }
 
@@ -88,14 +90,14 @@ export class CSRFProtection {
       throw new CSRFError('CSRF token missing from cookie')
     }
 
-    if (!this.verifyToken(headerToken, cookieHash)) {
+    if (!(await this.verifyToken(headerToken, cookieHash))) {
       throw new CSRFError('Invalid CSRF token')
     }
   }
 
-  generateTokenPair(): { token: string; hash: string } {
+  async generateTokenPair(): Promise<{ token: string; hash: string }> {
     const token = this.generateToken()
-    const hash = this.hashToken(token)
+    const hash = await this.hashToken(token)
     return { token, hash }
   }
 
@@ -146,8 +148,8 @@ export async function validateCSRF(request: NextRequest): Promise<void> {
 }
 
 // Helper to generate token for forms
-export function generateCSRFToken(): { token: string; cookieHeader: string } {
-  const { token, hash } = csrfProtection.generateTokenPair()
+export async function generateCSRFToken(): Promise<{ token: string; cookieHeader: string }> {
+  const { token, hash } = await csrfProtection.generateTokenPair()
   const cookieHeader = csrfProtection.createCookieHeader(hash)
   
   return {

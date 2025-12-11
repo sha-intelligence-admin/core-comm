@@ -122,7 +122,27 @@ export function useTeamMembers() {
 
       const data = await response.json()
       await fetchMembers() // Refresh list
-      return { success: true, data }
+      return { success: true, data, inviteLink: data.inviteLink, emailSent: data.emailSent }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error' }
+    }
+  }
+
+  const resendInvite = async (email: string) => {
+    try {
+      const response = await fetch('/api/team-members/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to resend invite')
+      }
+
+      const data = await response.json()
+      return { success: true, inviteLink: data.inviteLink }
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Unknown error' }
     }
@@ -177,5 +197,6 @@ export function useTeamMembers() {
     createMember,
     updateMember,
     deleteMember,
+    resendInvite,
   }
 }

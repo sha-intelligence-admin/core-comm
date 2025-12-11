@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { zohoMail } from '@/lib/zoho-mail'
 
 // Validation schema for team member creation
 const teamMemberSchema = z.object({
@@ -147,15 +148,121 @@ export async function POST(request: Request) {
     
     // Validate request body
     const validatedData = teamMemberSchema.parse(body)
+    const email = validatedData.email.toLowerCase().trim()
 
-    // Insert team member
+    // Use Service Role to manage users
+    const supabaseAdmin = createServiceRoleClient()
+    const origin = request.headers.get('origin') || ''
+    
+    let userId: string | undefined;
+    let isExistingUser = false;
+
+    let inviteLink: string | undefined;
+
+    // 1. Check if user already exists in our public users table
+    const { data: existingPublicUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle()
+        
+    if (existingPublicUser) {
+        userId = existingPublicUser.id;
+        isExistingUser = true;
+        
+        // Generate magic link for existing user to notify them
+        const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'magiclink',
+          email: email,
+          options: {
+            redirectTo: `${origin}/auth/callback?next=/join`
+          }
+        })
+
+        if (linkData?.properties?.action_link) {
+          inviteLink = linkData.properties.action_link
+          // Send email via Zoho
+          try {
+            await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member')
+          } catch (e) {
+            console.error('Failed to send Zoho email:', e)
+          }
+        }
+    } else {
+        // 2. Create user and generate link (don't use inviteUserByEmail to avoid Supabase email)
+        // We use generateLink with type 'invite' or 'magiclink'
+        
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email: email,
+          email_confirm: true, // Auto confirm so they can login with magic link
+          user_metadata: {
+            company_id: userData.company_id,
+            role: validatedData.role,
+            full_name: validatedData.full_name,
+          }
+        })
+
+        if (createError) {
+           // If error is "email exists", handle it (though we checked public table, auth table might have it)
+           if (createError.message.includes('already been registered') || createError.code === 'email_exists') {
+              // Fallback to existing user logic
+              const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+                 type: 'magiclink',
+                 email: email,
+                 options: { redirectTo: `${origin}/auth/callback?next=/join` }
+             });
+             
+             if (linkError || !linkData.user) {
+                  return NextResponse.json({ error: 'User exists but could not be invited.' }, { status: 400 });
+             }
+             userId = linkData.user.id;
+             isExistingUser = true;
+             inviteLink = linkData.properties?.action_link;
+           } else {
+             console.error('Error creating user:', createError)
+             return NextResponse.json({ error: createError.message }, { status: 400 })
+           }
+        } else {
+           userId = newUser.user.id
+           
+           // Generate the invite link
+           const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
+             type: 'magiclink',
+             email: email,
+             options: {
+               redirectTo: `${origin}/auth/callback?next=/join`
+             }
+           })
+           
+           if (linkData?.properties?.action_link) {
+             inviteLink = linkData.properties.action_link
+           }
+        }
+
+        // Send email via Zoho if we have a link
+        if (inviteLink) {
+           try {
+             await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member')
+           } catch (e) {
+             console.error('Failed to send Zoho email:', e)
+           }
+        }
+    }
+
+    if (!userId) {
+       return NextResponse.json({ error: 'Failed to obtain user ID' }, { status: 500 })
+    }
+
+    // Insert team member linked to the user
     const { data: member, error } = await supabase
       .from('team_members')
       .insert({
         ...validatedData,
+        user_id: userId, 
         company_id: userData.company_id,
         created_by: user.id,
         invitation_sent_at: new Date().toISOString(),
+        status: isExistingUser ? 'active' : 'invited'
       })
       .select()
       .single()
@@ -169,7 +276,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create team member' }, { status: 500 })
     }
 
-    return NextResponse.json(member, { status: 201 })
+    return NextResponse.json({ 
+      ...member,
+      inviteLink, // Return the magic link so frontend can display "Copy Link"
+      emailSent: true
+    }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 })

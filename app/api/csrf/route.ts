@@ -3,7 +3,7 @@ import { generateCSRFToken } from '@/lib/csrf-protection'
 
 export async function GET(request: NextRequest) {
   try {
-    const { token, cookieHeader } = generateCSRFToken()
+    const { token, cookieHeader } = await generateCSRFToken()
     
     const response = NextResponse.json({
       token,

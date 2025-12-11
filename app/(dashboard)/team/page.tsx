@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AddTeamMemberModal } from "@/components/add-team-member-modal"
@@ -92,7 +93,23 @@ const bestPractices = [
 ]
 
 export default function TeamPage() {
-    const { members, loading, error, deleteMember } = useTeamMembers()
+    const { members, loading, error, deleteMember, resendInvite } = useTeamMembers()
+    const [resendingId, setResendingId] = useState<string | null>(null)
+
+    const handleResendInvite = async (memberId: string, email: string) => {
+        setResendingId(memberId)
+        const result = await resendInvite(email)
+        setResendingId(null)
+        
+        if (result.inviteLink) {
+            // Show alert with link
+            alert(`Invitation resent! Link: ${result.inviteLink}`)
+        } else if (result.success) {
+            alert('Invitation resent successfully!')
+        } else {
+            alert('Failed to resend invitation')
+        }
+    }
 
     const getRoleColor = (role: string) => {
         switch (role) {
@@ -176,10 +193,12 @@ export default function TeamPage() {
                             Add Team Member
                         </Button>
                     </AddTeamMemberModal>
-                    <Button variant="outline" className="h-11 rounded-sm border-input bg-transparent px-6 hover:border-primary hover:bg-primary hover:text-white">
-                        <Mail className="mr-2 h-4 w-4" />
-                        Invite by Email
-                    </Button>
+                    <AddTeamMemberModal>
+                        <Button variant="outline" className="h-11 rounded-sm border-input bg-transparent px-6 hover:border-primary hover:bg-primary hover:text-white">
+                            <Mail className="mr-2 h-4 w-4" />
+                            Invite by Email
+                        </Button>
+                    </AddTeamMemberModal>
                     <Button variant="outline" className="h-11 rounded-sm border-input bg-transparent px-6 hover:border-primary hover:bg-primary hover:text-white">
                         <Settings className="mr-2 h-4 w-4" />
                         Role Settings
@@ -268,9 +287,15 @@ export default function TeamPage() {
                                                 <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
                                                     View Activity Log
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-primary/10 hover:text-primary">
-                                                    Resend Invitation
-                                                </DropdownMenuItem>
+                                                {member.status === 'invited' && (
+                                                    <DropdownMenuItem 
+                                                        className="hover:bg-primary/10 hover:text-primary"
+                                                        onClick={() => handleResendInvite(member.id, member.email)}
+                                                        disabled={resendingId === member.id}
+                                                    >
+                                                        {resendingId === member.id ? 'Resending...' : 'Resend Invitation'}
+                                                    </DropdownMenuItem>
+                                                )}
                                                 <DropdownMenuItem 
                                                     className="text-red-600 hover:bg-red-50 hover:text-red-700"
                                                     onClick={() => handleDeleteMember(member.id)}

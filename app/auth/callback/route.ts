@@ -53,6 +53,31 @@ export async function GET(request: Request) {
             return NextResponse.redirect(`${origin}/auth/profile-error?error=${errorMsg}&next=${next}`);
           }
         }
+
+        // ✅ Update team member status if they were invited
+        // This ensures invited users become 'active' as soon as they log in
+        const { error: updateError } = await supabase
+          .from('team_members')
+          .update({ 
+            status: 'active',
+            invitation_accepted_at: new Date().toISOString(),
+            last_login_at: new Date().toISOString()
+          })
+          .eq('user_id', data.user.id)
+          .eq('status', 'invited')
+
+        if (updateError) {
+          console.error('Error updating team member status:', updateError)
+        } else {
+          // Also update last_login_at for users who were already active
+          await supabase
+            .from('team_members')
+            .update({ 
+              last_login_at: new Date().toISOString()
+            })
+            .eq('user_id', data.user.id)
+        }
+
       } catch (profileError) {
         // Unexpected error during profile creation
         const errorMsg = encodeURIComponent(

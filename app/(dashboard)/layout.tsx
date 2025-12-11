@@ -2,6 +2,7 @@ import type React from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { TopNavigation } from "@/components/top-navigation"
+import { PasswordSetupAlert } from "@/components/password-setup-alert"
 
 export default function DashboardLayout({
   children,
@@ -14,7 +15,10 @@ export default function DashboardLayout({
       <AppSidebar />
       <SidebarInset>
         <TopNavigation />
-        <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
+          <PasswordSetupAlert />
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )
