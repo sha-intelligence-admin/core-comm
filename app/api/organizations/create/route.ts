@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     const setupStepsCompleted: Record<string, boolean> = {
       basics: true,
       phone: !!phoneNumberSource,
-      integration: !!integrationName && !!mcpEndpoint,
+      integration: true, // Optional step, always marked as complete
       assistant: !!assistantName,
       goals: !!primaryGoals && primaryGoals.length > 0,
     }

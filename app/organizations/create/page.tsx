@@ -208,6 +208,40 @@ export default function OnboardingPage() {
     formData.phoneNumberSource === "forward-existing" || formData.phoneNumberSource === "twilio-user-managed"
   const requiresRegionPreference = formData.phoneNumberSource === "twilio-new"
 
+  const isStepValid = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          formData.companyName.trim() !== "" &&
+          formData.description.trim() !== "" &&
+          formData.companySize !== "" &&
+          formData.industry !== ""
+        )
+      case 2:
+        return !!formData.selectedChannel
+      case 3:
+        if (!formData.supportVolume) return false
+        if (!formData.phoneNumberSource) return false
+        
+        if (formData.phoneNumberSource === "twilio-new") {
+          if (!formData.regionPreference) return false
+        }
+        
+        if (formData.phoneNumberSource === "forward-existing" || formData.phoneNumberSource === "twilio-user-managed") {
+          if (!formData.phoneNumber) return false
+        }
+        
+        if (!formData.businessHours) return false
+        if (!formData.timezone) return false
+        
+        if (formData.businessHours === "custom" && !formData.customHours) return false
+        
+        return true
+      default:
+        return true
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
       <div className="absolute top-4 right-4">
@@ -581,9 +615,14 @@ export default function OnboardingPage() {
 
             {currentStep === 4 && (
               <div className="space-y-4">
+                <div className="rounded-lg bg-primary/5 p-4 border border-input mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    You can connect your knowledge base now or skip this step and configure it later from the dashboard.
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="integrationName" className="text-foreground font-medium">
-                    Integration Name
+                    Integration Name <span className="text-muted-foreground font-normal">(Optional)</span>
                   </Label>
                   <Input
                     id="integrationName"
@@ -595,7 +634,7 @@ export default function OnboardingPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="mcpEndpoint" className="text-foreground font-medium">
-                    Endpoint URL
+                    Endpoint URL <span className="text-muted-foreground font-normal">(Optional)</span>
                   </Label>
                   <Input
                     id="mcpEndpoint"
@@ -608,7 +647,7 @@ export default function OnboardingPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="apiKey" className="text-foreground font-medium">
-                    API Key
+                    API Key <span className="text-muted-foreground font-normal">(Optional)</span>
                   </Label>
                   <Input
                     id="apiKey"
@@ -621,7 +660,7 @@ export default function OnboardingPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="knowledgeBase" className="text-foreground font-medium">
-                    Knowledge Base Description
+                    Knowledge Base Description <span className="text-muted-foreground font-normal">(Optional)</span>
                   </Label>
                   <Textarea
                     id="knowledgeBase"
@@ -788,7 +827,7 @@ export default function OnboardingPage() {
               )}
               <Button 
                 onClick={handleNext} 
-                disabled={loading}
+                disabled={loading || !isStepValid()}
                 className="bg-primary hover:bg-primary/90 text-white ml-auto"
               >
                 {loading ? (

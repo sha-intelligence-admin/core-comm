@@ -63,6 +63,7 @@ export async function updateSession(request: NextRequest) {
     '/auth/reset-password',
     '/auth/callback',
     '/auth/auth-code-error',
+    '/auth/confirm',
     '/setup',
     '/api/health',
     '/join/verify',

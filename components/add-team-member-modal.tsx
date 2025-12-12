@@ -123,9 +123,9 @@ export function AddTeamMemberModal({ children }: AddTeamMemberModalProps) {
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="flex w-[min(100vw-2rem,480px)] flex-col gap-6 rounded-lg border border-input bg-background p-6 shadow-2xl">
           <DialogHeader className="space-y-2 text-left">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600 mb-2">
-              <Mail className="h-6 w-6" />
-            </div>
+            
+              <Mail className="h-6 w-6 text-primary" />
+
             <DialogTitle className="google-headline-small">{emailSent ? 'Invitation Sent!' : 'User Added to Team'}</DialogTitle>
             <DialogDescription className="google-body-medium text-muted-foreground">
               {emailSent ? (

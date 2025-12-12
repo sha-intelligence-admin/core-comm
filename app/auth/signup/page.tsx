@@ -104,7 +104,7 @@ export default function SignUpPage() {
             full_name: validated.full_name,
             phone: validated.phone,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/organizations`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm?next=/organizations`,
         }
       });
 
