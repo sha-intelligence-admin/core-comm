@@ -90,13 +90,13 @@ export default function OnboardingPage() {
       icon: Server,
     },
     {
-      id: 2,
+      id: 5,
       title: "Assistant Configuration",
       description: "Customize your AI voice assistant",
       icon: CheckCircle,
     },
     {
-      id: 5,
+      id: 6,
       title: "Goals & Preferences",
       description: "Define your success metrics",
       icon: Target,
@@ -287,7 +287,7 @@ export default function OnboardingPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="companyName" className="text-foreground font-medium">
-                    Company Name
+                    Company Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="companyName"
@@ -302,7 +302,7 @@ export default function OnboardingPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description" className="text-foreground font-medium">
-                    Company Description
+                    Company Description <span className="text-red-500">*</span>
                   </Label>
                   <Textarea
                     id="description"
@@ -319,7 +319,7 @@ export default function OnboardingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="companySize" className="text-foreground font-medium">
-                      Company Size
+                      Company Size <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={formData.companySize}
@@ -337,7 +337,7 @@ export default function OnboardingPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="industry" className="text-foreground font-medium">
-                      Industry
+                      Industry <span className="text-red-500">*</span>
                     </Label>
                     <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
                       <SelectTrigger className="rounded-lg border-input focus:border-primary">
@@ -437,7 +437,7 @@ export default function OnboardingPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="supportVolume" className="text-foreground font-medium">
-                    Current Support Volume
+                    Current Support Volume <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={formData.supportVolume}
@@ -456,7 +456,7 @@ export default function OnboardingPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="currentSolution" className="text-foreground font-medium">
-                    Current Solution
+                    Current Solution <span className="text-muted-foreground font-normal text-xs ml-1">(Optional)</span>
                   </Label>
                   <Textarea
                     id="currentSolution"
@@ -468,7 +468,7 @@ export default function OnboardingPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumberSource" className="text-foreground font-medium">
-                    Phone Number Source
+                    Phone Number Source <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={formData.phoneNumberSource}
@@ -488,7 +488,7 @@ export default function OnboardingPage() {
                 {requiresRegionPreference && (
                   <div className="space-y-2">
                     <Label htmlFor="regionPreference" className="text-foreground font-medium">
-                      Region Preference
+                      Region Preference <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={formData.regionPreference}
@@ -515,7 +515,7 @@ export default function OnboardingPage() {
                     <Label htmlFor="phoneNumber" className="text-foreground font-medium">
                       {formData.phoneNumberSource === "twilio-user-managed"
                         ? "Twilio Number You'll Configure"
-                        : "Existing Number to Forward"}
+                        : "Existing Number to Forward"} <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="phoneNumber"
@@ -546,7 +546,7 @@ export default function OnboardingPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="businessHours" className="text-foreground font-medium">
-                        Business Hours
+                        Business Hours <span className="text-red-500">*</span>
                       </Label>
                       <Select
                         value={formData.businessHours}
@@ -565,7 +565,7 @@ export default function OnboardingPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="timezone" className="text-foreground font-medium">
-                        Timezone
+                        Timezone <span className="text-red-500">*</span>
                       </Label>
                       <Select value={formData.timezone} onValueChange={(value) => handleInputChange("timezone", value)}>
                         <SelectTrigger className="rounded-lg border-input focus:border-primary">
@@ -583,7 +583,7 @@ export default function OnboardingPage() {
                   {formData.businessHours === "custom" && (
                     <div className="space-y-2">
                       <Label htmlFor="customHours" className="text-foreground font-medium">
-                        Custom Hours
+                        Custom Hours <span className="text-red-500">*</span>
                       </Label>
                       <Textarea
                         id="customHours"
