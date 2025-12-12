@@ -9,12 +9,11 @@ interface ZohoConfig {
 }
 
 class ZohoMailService {
-  private config: ZohoConfig;
   private accessToken: string | null = null;
   private tokenExpiry: number = 0;
 
-  constructor() {
-    this.config = {
+  private getConfig(): ZohoConfig {
+    return {
       clientId: process.env.ZOHO_CLIENT_ID || '',
       clientSecret: process.env.ZOHO_CLIENT_SECRET || '',
       refreshToken: process.env.ZOHO_REFRESH_TOKEN || '',
@@ -28,11 +27,13 @@ class ZohoMailService {
       return this.accessToken;
     }
 
+    const config = this.getConfig();
+
     try {
       const params = new URLSearchParams({
-        refresh_token: this.config.refreshToken,
-        client_id: this.config.clientId,
-        client_secret: this.config.clientSecret,
+        refresh_token: config.refreshToken,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
         grant_type: 'refresh_token',
       });
 
@@ -62,7 +63,9 @@ class ZohoMailService {
   }
 
   async sendEmail(to: string, subject: string, htmlBody: string) {
-    if (!this.config.clientId || !this.config.refreshToken) {
+    const config = this.getConfig();
+    
+    if (!config.clientId || !config.refreshToken) {
       console.warn('Zoho Mail credentials not configured');
       return false;
     }
@@ -71,9 +74,9 @@ class ZohoMailService {
       const token = await this.getAccessToken();
       
       const response = await axios.post(
-        `https://mail.zoho.com/api/accounts/${this.config.accountId}/messages`,
+        `https://mail.zoho.com/api/accounts/${config.accountId}/messages`,
         {
-          fromAddress: this.config.fromAddress,
+          fromAddress: config.fromAddress,
           toAddress: to,
           subject: subject,
           content: htmlBody,

@@ -81,6 +81,13 @@ export async function GET(request: Request) {
       .select('*', { count: 'exact' })
       .eq('company_id', userData.company_id)
 
+    // Fetch pending invitations as well
+    const { data: invitations } = await supabase
+      .from('organization_invitations')
+      .select('*')
+      .eq('company_id', userData.company_id)
+      .eq('status', 'pending')
+
     // Apply filters
     if (status) {
       query = query.eq('status', status)
@@ -107,13 +114,41 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Failed to fetch team members' }, { status: 500 })
     }
 
+    // Merge members and invitations
+    const allMembers = [...(members || [])]
+    
+    if (invitations) {
+      invitations.forEach(invite => {
+        // Only add if not already in members list (by email)
+        if (!allMembers.find(m => m.email === invite.email)) {
+          allMembers.push({
+            id: 'invite-' + invite.id,
+            full_name: invite.metadata?.full_name || 'Invited User',
+            email: invite.email,
+            role: invite.role,
+            status: 'invited',
+            created_at: invite.created_at,
+            department: invite.metadata?.department,
+            avatar_url: null
+          })
+        }
+      })
+    }
+
+    // Sort combined list
+    allMembers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    // Apply pagination manually since we merged lists
+    const totalItems = allMembers.length
+    const paginatedMembers = allMembers.slice(from, to + 1)
+
     return NextResponse.json({
-      members: members || [],
+      members: paginatedMembers,
       pagination: {
         page,
         limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        total: totalItems,
+        totalPages: Math.ceil(totalItems / limit),
       },
     })
   } catch (error) {
@@ -152,7 +187,7 @@ export async function POST(request: Request) {
 
     // Use Service Role to manage users
     const supabaseAdmin = createServiceRoleClient()
-    const origin = request.headers.get('origin') || ''
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || process.env.NGROK_URL || 'http://localhost:3000'
     
     let userId: string | undefined;
     let isExistingUser = false;
@@ -182,75 +217,72 @@ export async function POST(request: Request) {
         if (linkData?.properties?.action_link) {
           const actionLink = linkData.properties.action_link
           inviteLink = `${origin}/join/verify?redirect=${encodeURIComponent(actionLink)}`
+          
+          console.log('📧 Sending existing user invite to:', email);
+          
           // Send email via Zoho
           try {
             await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member')
           } catch (e) {
-            console.error('Failed to send Zoho email:', e)
+            console.error('❌ Failed to send Zoho email:', e)
           }
         }
     } else {
-        // 2. Create user and generate link (don't use inviteUserByEmail to avoid Supabase email)
-        // We use generateLink with type 'invite' or 'magiclink'
+        // 2. NEW USER: Create invitation record instead of creating auth user immediately
         
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email: email,
-          email_confirm: true, // Auto confirm so they can login with magic link
-          user_metadata: {
+        // Generate a unique token for the invitation
+        const invitationToken = crypto.randomUUID()
+        const expiresAt = new Date()
+        expiresAt.setDate(expiresAt.getDate() + 7) // 7 days expiry
+
+        const { error: inviteError } = await supabaseAdmin
+          .from('organization_invitations')
+          .insert({
             company_id: userData.company_id,
+            email: email,
             role: validatedData.role,
-            full_name: validatedData.full_name,
-          }
-        })
+            invitation_token: invitationToken,
+            expires_at: expiresAt.toISOString(),
+            invited_by: user.id,
+            status: 'pending',
+            metadata: {
+              full_name: validatedData.full_name,
+              phone_number: validatedData.phone_number,
+              department: validatedData.department,
+              permissions: validatedData.permissions
+            }
+          })
 
-        if (createError) {
-           // If error is "email exists", handle it (though we checked public table, auth table might have it)
-           if (createError.message.includes('already been registered') || createError.code === 'email_exists') {
-              // Fallback to existing user logic
-              const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-                 type: 'magiclink',
-                 email: email,
-                 options: { redirectTo: `${origin}/auth/callback?next=/join` }
-             });
-             
-             if (linkError || !linkData.user) {
-                  return NextResponse.json({ error: 'User exists but could not be invited.' }, { status: 400 });
-             }
-             userId = linkData.user.id;
-             isExistingUser = true;
-             if (linkData.properties?.action_link) {
-                inviteLink = `${origin}/join/verify?redirect=${encodeURIComponent(linkData.properties.action_link)}`
-             }
-           } else {
-             console.error('Error creating user:', createError)
-             return NextResponse.json({ error: createError.message }, { status: 400 })
-           }
-        } else {
-           userId = newUser.user.id
-           
-           // Generate the invite link
-           const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
-             type: 'magiclink',
-             email: email,
-             options: {
-               redirectTo: `${origin}/auth/callback?next=/join`
-             }
-           })
-           
-           if (linkData?.properties?.action_link) {
-             const actionLink = linkData.properties.action_link
-             inviteLink = `${origin}/join/verify?redirect=${encodeURIComponent(actionLink)}`
-           }
+        if (inviteError) {
+          console.error('Error creating invitation:', inviteError)
+          return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 })
         }
 
-        // Send email via Zoho if we have a link
-        if (inviteLink) {
-           try {
-             await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member')
-           } catch (e) {
-             console.error('Failed to send Zoho email:', e)
-           }
+        // Generate the manual setup link
+        inviteLink = `${origin}/join/accept/${invitationToken}`
+        
+        console.log('📧 Sending invitation email to:', email);
+        console.log('🔗 Invite Link:', inviteLink);
+
+        // Send email via Zoho
+        try {
+          const sent = await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member')
+          console.log('📧 Email sent result:', sent);
+        } catch (e) {
+          console.error('❌ Failed to send Zoho email:', e)
         }
+
+        // Return a mock member object so the UI updates optimistically
+        return NextResponse.json({ 
+          id: 'pending-' + invitationToken,
+          full_name: validatedData.full_name,
+          email: email,
+          role: validatedData.role,
+          status: 'invited',
+          created_at: new Date().toISOString(),
+          inviteLink,
+          emailSent: true
+        }, { status: 201 })
     }
 
     if (!userId) {

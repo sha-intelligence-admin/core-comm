@@ -18,16 +18,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Verify user has access to this company
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("company_id")
-      .eq("id", user.id)
+    // Verify user has access to this company via organization_memberships
+    const { data: membership, error: membershipError } = await supabase
+      .from("organization_memberships")
+      .select("id, role, status")
+      .eq("user_id", user.id)
+      .eq("company_id", companyId)
+      .eq("status", "active")
       .single()
 
-    if (userError || userData?.company_id !== companyId) {
+    if (membershipError || !membership) {
       return NextResponse.json({ error: "Access denied to this organization" }, { status: 403 })
     }
+
+    // Update user's current company_id in users table
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({ company_id: companyId })
+      .eq("id", user.id)
+
+    if (updateError) {
+      console.error("Failed to update user context:", updateError)
+      return NextResponse.json({ error: "Failed to switch organization" }, { status: 500 })
+    }
+
+    // Update last_accessed_at
+    await supabase
+      .from("organization_memberships")
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq("id", membership.id)
 
     // Store selected company in cookie
     const cookieStore = await cookies()

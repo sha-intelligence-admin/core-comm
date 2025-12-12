@@ -36,6 +36,7 @@ export async function GET(request: Request) {
                           data.user.email?.split('@')[0] || 
                           'User';
           const phone = data.user.user_metadata?.phone || null;
+          const companyId = data.user.user_metadata?.company_id || null;
 
           const { error: insertError } = await supabase
             .from('users')
@@ -45,6 +46,7 @@ export async function GET(request: Request) {
               full_name: fullName,
               phone: phone,
               is_active: true,
+              company_id: companyId
             });
 
           if (insertError) {
