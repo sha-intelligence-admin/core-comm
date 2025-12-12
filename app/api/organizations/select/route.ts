@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
 
 export async function POST(request: Request) {
@@ -18,8 +18,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const serviceSupabase = createServiceRoleClient()
+
     // Verify user has access to this company via organization_memberships
-    const { data: membership, error: membershipError } = await supabase
+    const { data: membership, error: membershipError } = await serviceSupabase
       .from("organization_memberships")
       .select("id, role, status")
       .eq("user_id", user.id)
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
     }
 
     // Update user's current company_id in users table
-    const { error: updateError } = await supabase
+    const { error: updateError } = await serviceSupabase
       .from("users")
       .update({ company_id: companyId })
       .eq("id", user.id)
@@ -43,7 +45,7 @@ export async function POST(request: Request) {
     }
 
     // Update last_accessed_at
-    await supabase
+    await serviceSupabase
       .from("organization_memberships")
       .update({ last_accessed_at: new Date().toISOString() })
       .eq("id", membership.id)

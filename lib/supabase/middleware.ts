@@ -65,12 +65,15 @@ export async function updateSession(request: NextRequest) {
     '/auth/auth-code-error',
     '/setup',
     '/api/health',
-
+    '/join/verify',
+    '/api/auth/verify-invite',
+    '/api/auth/accept-invite',
   ]
 
   const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname) ||
     request.nextUrl.pathname.startsWith('/_next') ||
-    request.nextUrl.pathname.startsWith('/favicon')
+    request.nextUrl.pathname.startsWith('/favicon') ||
+    request.nextUrl.pathname.startsWith('/join/accept/')
 
   // Redirect unauthenticated users from protected routes
   if (!user && !isPublicRoute) {
