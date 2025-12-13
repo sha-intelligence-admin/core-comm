@@ -18,11 +18,36 @@ import { Search, Bell, User, Settings, Loader2 } from "lucide-react"
 import { useUserProfile } from "@/hooks/use-user-profile"
 import { SidebarTrigger } from "./ui/sidebar"
 import { usePathname } from "next/navigation"
-import { Fragment } from "react"
+import { Fragment, useState, useEffect } from "react"
 
 export function TopNavigation() {
   const { profile, loading, getInitials } = useUserProfile()
   const pathname = usePathname()
+  const [orgNameMap, setOrgNameMap] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      if (Object.keys(orgNameMap).length > 0) return
+      
+      try {
+        const res = await fetch('/api/organizations')
+        if (res.ok) {
+          const data = await res.json()
+          const map: Record<string, string> = {}
+          data.companies?.forEach((org: any) => {
+            map[org.id] = org.name
+          })
+          setOrgNameMap(map)
+        }
+      } catch (e) {
+        console.error("Failed to fetch organizations for breadcrumbs", e)
+      }
+    }
+
+    if (pathname.includes('/organizations')) {
+      fetchOrgs()
+    }
+  }, [pathname, orgNameMap])
 
   const rawSegments = pathname.split("?")[0].split("/").filter(Boolean)
   const hasDashboardSegment = rawSegments[0] === "dashboard"
@@ -37,6 +62,7 @@ export function TopNavigation() {
     messaging: "Messaging",
     email: "Email",
     numbers: "Numbers",
+    organizations: "Organizations",
     security: "Security",
     settings: "Settings",
     support: "Support",
@@ -62,8 +88,14 @@ export function TopNavigation() {
         ? ["dashboard", ...additionalSegments.slice(0, index + 1)]
         : additionalSegments.slice(0, index + 1)
 
+      // Check if this segment is an organization ID
+      const isOrgId = index > 0 && additionalSegments[index - 1] === 'organizations'
+      const label = isOrgId && orgNameMap[cleanSegment] 
+        ? orgNameMap[cleanSegment] 
+        : formatSegment(cleanSegment)
+
       return {
-        label: formatSegment(cleanSegment),
+        label: label,
         href: `/${hrefSegments.join("/")}`,
         isCurrent: index === additionalSegments.length - 1,
       }

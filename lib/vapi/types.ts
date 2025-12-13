@@ -212,6 +212,18 @@ export interface WebhookPayload {
   };
 }
 
+export interface TranscriptPayload extends WebhookPayload {
+  message: {
+    type: 'transcript';
+    transcriptType: 'partial' | 'final';
+    transcript: string;
+    role: 'user' | 'assistant';
+    call: {
+      id: string;
+    };
+  };
+}
+
 export interface AssistantRequestPayload extends WebhookPayload {
   message: {
     type: 'assistant-request';

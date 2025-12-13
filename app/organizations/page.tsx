@@ -211,7 +211,7 @@ export default function OrganizationsPage() {
                     </p>
                   )} */}
 
-                  <div className="space-y-2.5">
+                  {/* <div className="space-y-2.5">
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <Badge variant={getCompanySizeBadgeVariant(company.company_size)}>
@@ -231,11 +231,11 @@ export default function OrganizationsPage() {
                       <span>{company.timezone}</span>
                     </div>
 
-                    {/* <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span>Created {formatDistanceToNow(new Date(company.created_at), { addSuffix: true })}</span>
-                    </div> */}
-                  </div>
+                    </div>
+                  </div> */}
 
                   {/* {company.member_count !== undefined && (
                     <div className="pt-4 border-t border-input">

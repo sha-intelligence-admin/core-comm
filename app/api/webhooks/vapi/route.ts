@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
       case 'function-call':
         return handleFunctionCall(message);
 
+      case 'transcript':
+        return handleTranscript(message);
+
       default:
         console.log('[Vapi Webhook] Unknown event type:', message.type);
         return createSuccessResponse({ received: true });
@@ -266,6 +269,47 @@ async function handleEndOfCallReport(message: any) {
   } catch (error) {
     console.error('[Vapi Webhook] Error handling end-of-call report:', error);
     return createSuccessResponse({ received: true }); // Don't fail webhook
+  }
+}
+
+/**
+ * Handle transcript event
+ * Called when a transcript segment is available
+ */
+async function handleTranscript(message: any) {
+  // Only store 'final' transcripts to reduce DB noise
+  if (message.transcriptType !== 'final') {
+    return createSuccessResponse({ received: true });
+  }
+
+  try {
+    const supabase = createServiceRoleClient();
+    
+    // 1. Find our internal call_id using vapi_call_id
+    const { data: call } = await supabase
+      .from('calls')
+      .select('id')
+      .eq('vapi_call_id', message.call.id)
+      .single();
+
+    if (!call) {
+      // Call record might not exist yet if webhook is faster than status-update
+      console.warn('[Vapi Webhook] Call not found for transcript:', message.call.id);
+      return createSuccessResponse({ received: true });
+    }
+
+    // 2. Insert segment
+    await supabase.from('call_transcript_segments').insert({
+      call_id: call.id,
+      role: message.role,
+      content: message.transcript,
+      is_final: true
+    });
+
+    return createSuccessResponse({ received: true });
+  } catch (error) {
+    console.error('[Vapi Webhook] Error handling transcript:', error);
+    return createSuccessResponse({ received: true });
   }
 }
 

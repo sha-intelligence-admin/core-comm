@@ -46,6 +46,8 @@ function buildAssistantSystemPrompt(context: any) {
     `You are the AI voice assistant for ${context.companyName}${context.industry ? ` in the ${context.industry} industry` : ""}.`,
     context.description && `Company overview: ${context.description}`,
     context.primaryGoals?.length ? `Primary goals: ${context.primaryGoals.join(", ")}.` : null,
+    context.knowledgeBase && `Knowledge Base: ${context.knowledgeBase}`,
+    context.integrationName && `Integration: ${context.integrationName} (${context.integrationEndpoint || 'No endpoint provided'})`,
     `Collect caller details, solve their request when possible, and escalate urgent or complex issues to a human teammate.`,
     `Maintain a friendly, confident tone and keep answers concise while confirming next steps before ending the call.`,
   ].filter(Boolean)

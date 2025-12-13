@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Download, Copy } from "lucide-react"
 import { Fragment, useMemo, useState } from "react"
+import { LiveTranscript } from "./live-transcript"
 
 interface Call {
   id: string
@@ -37,36 +38,6 @@ const getStatusColor = (status: string) => {
   }
 }
 
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-
-const parseTranscript = (rawTranscript: string) => {
-  const speakerRegex = /^(Customer|AI Assistant):\s*/i
-
-  return rawTranscript
-    .split(/\n{2,}/)
-    .map((chunk) => chunk.trim())
-    .filter(Boolean)
-    .map((chunk, index) => {
-      const [firstLine, ...rest] = chunk.split(/\n/)
-      const match = firstLine.match(speakerRegex)
-
-      if (!match) {
-        return {
-          speaker: index % 2 === 0 ? "Customer" : "AI Assistant",
-          message: chunk,
-        }
-      }
-
-      const speaker = match[1]
-      const message = [firstLine.replace(match[0], "").trim(), ...rest].join("\n").trim()
-
-      return {
-        speaker,
-        message,
-      }
-    })
-}
-
 export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscriptModalProps) {
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -77,36 +48,7 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
     return Number.isNaN(parsed.getTime()) ? null : parsed
   }, [call])
 
-  const transcriptEntries = useMemo(() => {
-    if (!call?.transcript) return []
-
-    return parseTranscript(call.transcript)
-  }, [call?.transcript])
-
   if (!call) return null
-
-  const normalizedSearch = searchTerm.trim()
-
-  const renderHighlightedText = (text: string) => {
-    if (!normalizedSearch) return text
-
-    try {
-      const regex = new RegExp(`(${escapeRegExp(normalizedSearch)})`, "gi")
-      const parts = text.split(regex)
-
-      return parts.map((part, index) =>
-        index % 2 === 1 ? (
-          <mark key={`${part}-${index}`} className="rounded-sm bg-primary/10 px-1 py-px text-primary">
-            {part}
-          </mark>
-        ) : (
-          <Fragment key={`${part}-${index}`}>{part}</Fragment>
-        )
-      )
-    } catch (error) {
-      return text
-    }
-  }
 
   const handleCopyTranscript = () => {
     if (call?.transcript) {
@@ -123,13 +65,6 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
     document.body.appendChild(element)
     element.click()
     document.body.removeChild(element)
-  }
-
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "N/A"
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}m ${secs}s`
   }
 
   return (
@@ -152,10 +87,11 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
             <div className="relative w-full sm:max-w-lg">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search transcript"
+                placeholder="Search transcript (coming soon)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-11 w-full rounded-sm border-input pl-10"
+                disabled
               />
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -196,42 +132,8 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
 
             <div className="space-y-4">
               <div className="google-title-small text-foreground">Transcript</div>
-              <div className="space-y-4">
-                {transcriptEntries.length > 0 ? (
-                  transcriptEntries.map((entry, index) => {
-                    const isCustomer = entry.speaker.toLowerCase().includes("customer")
-
-                    return (
-                      <div
-                        key={`${entry.speaker}-${index}-${entry.message.slice(0, 12)}`}
-                        className={`flex w-full ${isCustomer ? "justify-start" : "justify-end"}`}
-                      >
-                        <div
-                          className={`max-w-[85%] space-y-2 rounded-md border border-input px-3 py-2 text-sm leading-relaxed shadow-sm ${
-                            isCustomer
-                              ? "bg-muted/60 text-foreground"
-                              : "bg-primary/5 text-foreground border-primary/20"
-                          }`}
-                        >
-                          <div
-                            className={`google-label-medium uppercase tracking-wide ${
-                              isCustomer ? "text-muted-foreground" : "text-primary"
-                            }`}
-                          >
-                            {entry.speaker}
-                          </div>
-                          <div className="whitespace-pre-line text-muted-foreground">
-                            {renderHighlightedText(entry.message)}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <p className="rounded-md border border-dashed border-input bg-card/60 p-4 text-sm text-muted-foreground">
-                    {renderHighlightedText(call.transcript || "No transcript available.")}
-                  </p>
-                )}
+              <div className="rounded-lg border bg-card h-[400px] overflow-y-auto">
+                <LiveTranscript callId={call.id} fallbackTranscript={call.transcript} />
               </div>
             </div>
           </div>
