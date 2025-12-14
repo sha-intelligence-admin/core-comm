@@ -265,6 +265,50 @@ async function handleEndOfCallReport(message: any) {
       await supabase.from('calls').insert(callData);
     }
 
+    // --- BILLING LOGIC ---
+    if (companyId && call.duration > 0) {
+      const durationMinutes = Math.ceil(call.duration / 60);
+      const ratePerMinuteCents = 25; // $0.25
+      const totalCostCents = durationMinutes * ratePerMinuteCents;
+
+      // 1. Deduct from wallet
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('id')
+        .eq('company_id', companyId)
+        .single();
+
+      if (wallet) {
+        await supabase.rpc('increment_wallet_balance', {
+          wallet_id: wallet.id,
+          amount: -totalCostCents
+        });
+
+        // 2. Record Transaction
+        await supabase.from('wallet_transactions').insert({
+          wallet_id: wallet.id,
+          amount: -totalCostCents,
+          type: 'usage',
+          reference_id: call.id, // Vapi Call ID
+          description: `Voice Call Usage (${durationMinutes} min)`,
+        });
+
+        // 3. Log Usage
+        await supabase.from('usage_logs').insert({
+          company_id: companyId,
+          resource_type: 'voice_inbound', // TODO: Detect direction
+          quantity: durationMinutes,
+          cost: totalCostCents,
+          meta: {
+            vapi_call_id: call.id,
+            duration_seconds: call.duration
+          }
+        });
+      } else {
+        console.warn(`[Billing] No wallet found for company ${companyId}`);
+      }
+    }
+
     return createSuccessResponse({ received: true });
   } catch (error) {
     console.error('[Vapi Webhook] Error handling end-of-call report:', error);

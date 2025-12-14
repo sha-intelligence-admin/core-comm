@@ -232,6 +232,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create membership: " + membershipError.message }, { status: 500 })
     }
 
+    // Initialize Billing (Wallet & Subscription)
+    const { error: billingError } = await serviceSupabase.from("wallets").insert({
+      company_id: company.id,
+      balance: 0,
+      currency: 'usd'
+    })
+
+    if (billingError) {
+      console.error("Failed to initialize wallet:", billingError)
+    } else {
+      // Create default trial subscription
+      await serviceSupabase.from("billing_subscriptions").insert({
+        company_id: company.id,
+        plan_id: 'starter',
+        status: 'trialing',
+        current_period_end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days trial
+      })
+    }
+
     // Update user's company_id for backward compatibility
     await serviceSupabase
       .from("users")
