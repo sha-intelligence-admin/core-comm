@@ -9,6 +9,7 @@ import {
 } from "@/lib/twilio/client"
 import { createAssistant, deleteAssistant } from "@/lib/vapi/assistants"
 import { createPhoneNumber as createVapiPhoneNumber } from "@/lib/vapi/phone-numbers"
+import { createVapiTwilioIntegration } from "@/lib/vapi/create-twilio-integration"
 import { VAPI_DEFAULTS } from "@/lib/vapi/client"
 import type { ModelProvider, VoiceProvider } from "@/lib/vapi/types"
 import { nanoid } from "nanoid"
@@ -374,7 +375,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (userManagedTwilio && normalizedIncomingNumber) {
-      const instructions = `Log into your Twilio project and set Voice URL to ${manualVoiceWebhookUrl} (POST) and SMS URL to ${manualSmsWebhookUrl}.`
+      // Create a Vapi Twilio integration and get the webhook URL
+      let vapiWebhookUrl: string | null = null
+      let vapiError: string | null = null
+      try {
+        const vapiApiKey = process.env.VAPI_API_KEY
+        if (!vapiApiKey) throw new Error("VAPI_API_KEY is not configured.")
+        vapiWebhookUrl = await createVapiTwilioIntegration(vapiApiKey, `${companyName} User Managed Twilio`)
+      } catch (err) {
+        vapiError = err instanceof Error ? err.message : String(err)
+      }
+      const instructions = vapiWebhookUrl
+        ? `Log into your Twilio project and set Voice URL to ${vapiWebhookUrl} (POST). This will connect your number to CoreComm via Vapi.`
+        : `Log into your Twilio project and set Voice URL to [Vapi Webhook URL] (POST). (Failed to auto-generate: ${vapiError ?? 'unknown error'})`;
       phoneNumberRows.push({
         phone_number: normalizedIncomingNumber,
         provider: "twilio",
@@ -385,6 +398,7 @@ export async function POST(request: NextRequest) {
           action: "user-managed",
           source: phoneNumberSource ?? null,
           manual_setup_required: true,
+          vapi_webhook_url: vapiWebhookUrl,
           instructions,
         },
         company_id: company.id,
