@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
+import { createPaymentLink, createPlan, createSubscription } from '@/lib/flutterwave';
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,15 +30,22 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Forbidden: Only Owners and Admins can manage billing', { status: 403 });
     }
 
+    // Build Flutterwave payment link payload
+    const origin = req.headers.get('origin') || '';
+    const success_url = successUrl || `${origin}/dashboard/billing?success=true`;
+    const cancel_url = cancelUrl || `${origin}/dashboard/billing?canceled=true`;
+
     let sessionConfig: any = {
-      mode: mode,
-      client_reference_id: companyId,
-      payment_method_types: ['card'],
-      success_url: successUrl || `${req.headers.get('origin')}/dashboard/billing?success=true`,
-      cancel_url: cancelUrl || `${req.headers.get('origin')}/dashboard/billing?canceled=true`,
-      metadata: {
+      tx_ref: `${companyId}-${Date.now()}`,
+      redirect_url: success_url,
+      currency: 'USD',
+      meta: {
         companyId: companyId,
         userId: user.id,
+        mode,
+      },
+      customer: {
+        email: user.email,
       },
     };
 
@@ -46,34 +53,58 @@ export async function POST(req: NextRequest) {
       if (!priceId) {
         return new NextResponse('Price ID is required for subscriptions', { status: 400 });
       }
-      sessionConfig.line_items = [
-        {
-          price: priceId,
-          quantity: quantity,
-        },
-      ];
-      // Allow promotion codes for subscriptions
-      sessionConfig.allow_promotion_codes = true;
+
+      // Create a plan and subscription immediately and return the subscription id.
+      // Note: This creates a Flutterwave plan named per company+priceId and a subscription for the current user.
+      const APP_PLANS: Record<string, { amount: number; interval: 'monthly' | 'yearly' }> = {
+        starter: { amount: 10.0, interval: 'monthly' },
+        growth: { amount: 49.0, interval: 'monthly' },
+        scale: { amount: 199.0, interval: 'monthly' },
+      };
+
+      const plan = APP_PLANS[priceId];
+      if (!plan) return new NextResponse('Unknown priceId', { status: 400 });
+
+      const planPayload = {
+        name: `corecomm-${companyId}-${priceId}`,
+        amount: plan.amount,
+        interval: plan.interval === 'monthly' ? 'monthly' : 'yearly',
+        currency: 'USD',
+        description: `CoreComm ${priceId} plan for company ${companyId}`,
+      };
+
+      const planResp = await createPlan(planPayload);
+      const fwPlanId = planResp?.data?.id || planResp?.data?.plan_id || planResp?.id || null;
+      if (!fwPlanId) return new NextResponse('Failed to create plan', { status: 500 });
+
+      const subPayload = {
+        plan: fwPlanId,
+        customer: { email: user.email },
+        metadata: { companyId, planId: priceId, userId: user.id },
+      };
+
+      const subResp = await createSubscription(subPayload);
+      const fwSubscriptionId = subResp?.data?.id || subResp?.data?.subscription_id || subResp?.id || null;
+      if (!fwSubscriptionId) return new NextResponse('Failed to create subscription', { status: 500 });
+
+      // persist mapping
+      await supabase.from('billing_subscriptions').upsert({
+        company_id: companyId,
+        stripe_subscription_id: fwSubscriptionId,
+        stripe_customer_id: subResp?.data?.customer || user.email,
+        plan_id: priceId,
+        status: 'trialing',
+      }, { onConflict: 'company_id' });
+
+      return NextResponse.json({ subscriptionId: fwSubscriptionId });
     } else if (mode === 'payment') {
-      // Top-up logic
       if (!amount) {
         return new NextResponse('Amount is required for payments', { status: 400 });
       }
-      
-      // Use price_data for dynamic amount top-ups
-      sessionConfig.line_items = [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'CoreComm Credits',
-              description: 'Prepaid credits for voice usage',
-            },
-            unit_amount: amount, // amount in cents
-          },
-          quantity: 1,
-        },
-      ];
+      // Flutterwave expects amount in main currency units
+      sessionConfig.amount = Number((amount / 100).toFixed(2));
+      sessionConfig.description = 'CoreComm Credits';
+      // Use cancel_url by redirecting back to cancel page if needed (Flutterwave supports redirect_url only)
     } else {
       return new NextResponse('Invalid mode. Must be "subscription" or "payment"', { status: 400 });
     }
@@ -102,11 +133,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    const resp = await createPaymentLink(sessionConfig);
+    // flutterwave returns data.link
+    const url = resp?.data?.link || resp?.data?.url || resp?.data?.payment_link || resp?.link || null;
+    if (!url) {
+      return new NextResponse('Failed to create Flutterwave payment link', { status: 500 });
+    }
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url });
   } catch (error: any) {
-    console.error('[Stripe Checkout Error]', error);
+    console.error('[Flutterwave Checkout Error]', error);
     return new NextResponse(error.message, { status: 500 });
   }
 }

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
@@ -30,25 +29,13 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
-    // Get Stripe Customer ID
-    const { data: subscription } = await supabase
-      .from('billing_subscriptions')
-      .select('stripe_customer_id')
-      .eq('company_id', companyId)
-      .single();
-
-    if (!subscription?.stripe_customer_id) {
-      return new NextResponse('No billing account found', { status: 404 });
-    }
-
-    const session = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
-      return_url: returnUrl || `${req.headers.get('origin')}/dashboard/billing`,
-    });
-
-    return NextResponse.json({ url: session.url });
+    // Flutterwave does not provide a hosted customer billing portal equivalent to Stripe Billing Portal.
+    // For now, return a helpful message so UI can direct users to the app billing page or use payment links.
+    return NextResponse.json({
+      error: 'Not implemented: Flutterwave does not provide a hosted billing portal. Use app billing UI or create payment links.',
+    }, { status: 501 });
   } catch (error: any) {
-    console.error('[Stripe Portal Error]', error);
+    console.error('[Billing Portal Error]', error);
     return new NextResponse(error.message, { status: 500 });
   }
 }
