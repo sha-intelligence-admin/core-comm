@@ -33,23 +33,23 @@ export const caseStudies = [
     avatar: '/alamin.webp',
     themeColor: 'bg-[#1b1b1b]',
   },
-  {
-    id: 'eduvacity',
-    title: 'Eduvacity',
-    companyName: 'Eduvacity',
-    description:
-      'An ed-tech startup that helps you gain access to higher education programs and in-demand skills, empowering you to build the career you desire.',
-    results:
-      '24/7 student support • 40% higher retention • Fewer drop-offs during onboarding',
-    testimonial:
-      'CoreComm made support as interactive as our classes — it feels like having a real tutor online.',
-    name: 'Musa Ibrahim',
-    position: 'CEO',
-    image: '/eduvacity.webp',
-    hero: '/eduvacity1.webp',
-    avatar: '/musa_ibrahim.webp',
-    themeColor: 'bg-[#081b22]',
-  },
+  // {
+  //   id: 'eduvacity',
+  //   title: 'Eduvacity',
+  //   companyName: 'Eduvacity',
+  //   description:
+  //     'An ed-tech startup that helps you gain access to higher education programs and in-demand skills, empowering you to build the career you desire.',
+  //   results:
+  //     '24/7 student support • 40% higher retention • Fewer drop-offs during onboarding',
+  //   testimonial:
+  //     'CoreComm made support as interactive as our classes — it feels like having a real tutor online.',
+  //   name: 'Musa Ibrahim',
+  //   position: 'CEO',
+  //   image: '/eduvacity.webp',
+  //   hero: '/eduvacity1.webp',
+  //   avatar: '/musa_ibrahim.webp',
+  //   themeColor: 'bg-[#081b22]',
+  // },
   {
     id: 'tavestack',
     title: 'TaveStack',
