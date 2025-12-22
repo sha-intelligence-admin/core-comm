@@ -2,50 +2,24 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useUserProfile } from "@/hooks/use-user-profile"
 import { useAssistants } from "@/hooks/use-assistants"
 import { useKnowledgeBases } from "@/hooks/use-knowledge-bases"
 import { useState, useEffect } from "react"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, Upload, Bot, BookOpen } from "lucide-react"
 
 export default function SettingsPage() {
-  const { profile, loading, getInitials, updateProfile } = useUserProfile()
   const { assistants, isLoading: assistantsLoading } = useAssistants()
   const { knowledgeBases, isLoading: kbLoading } = useKnowledgeBases()
-
-  const [formData, setFormData] = useState({
-    full_name: "",
-    phone: "",
-    avatar_url: ""
-  })
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null)
 
   // Voice settings state
   const [selectedAssistant, setSelectedAssistant] = useState<string>("")
 
   // Knowledge base state - track which KBs are enabled
   const [enabledKBs, setEnabledKBs] = useState<Record<string, boolean>>({})
-  const [isSavingPrefs, setIsSavingPrefs] = useState(false)
-
-  // Initialize form data when profile loads
-  useEffect(() => {
-    if (profile) {
-      setFormData({
-        full_name: profile.full_name || "",
-        phone: profile.phone || "",
-        avatar_url: profile.avatar_url || ""
-      })
-    }
-  }, [profile])
 
   // Initialize KB enabled state
   useEffect(() => {
@@ -68,34 +42,7 @@ export default function SettingsPage() {
     }
   }, [assistants, selectedAssistant])
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
-
-  const handleProfileUpdate = async () => {
-    setIsUpdating(true)
-    setUpdateMessage(null)
-
-    try {
-      const result = await updateProfile(formData)
-      
-      if (result?.error) {
-        setUpdateMessage({ type: 'error', message: result.error })
-      } else {
-        setUpdateMessage({ type: 'success', message: 'Profile updated successfully!' })
-        setTimeout(() => setUpdateMessage(null), 3000)
-      }
-    } catch (error) {
-      setUpdateMessage({ type: 'error', message: 'Failed to update profile' })
-    } finally {
-      setIsUpdating(false)
-    }
-  }
-
-  if (loading) {
+  if (assistantsLoading || kbLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -109,28 +56,13 @@ export default function SettingsPage() {
         <div className="space-y-1">
           <h1 className="google-headline-medium">Settings</h1>
           <p className="google-body-medium text-muted-foreground">
-            Manage your account, voice configuration, knowledge sources, and notifications
+            Manage your voice configuration, knowledge sources, and notifications
           </p>
         </div>
       </div>
 
-      {updateMessage && (
-        <Alert className={updateMessage.type === 'success' ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription className={updateMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}>
-            {updateMessage.message}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Tabs defaultValue="profile" className="space-y-6 ">
+      <Tabs defaultValue="voice" className="space-y-6 ">
         <TabsList className="flex w-full gap-2 rounded-sm border border-input bg-muted/40 p-2 sm:w-auto">
-          <TabsTrigger
-            value="profile"
-            className="rounded-sm px-4 py-2 text-sm font-medium transition-colors data-[state=active]:bg-primary data-[state=active]:text-white data-[state=inactive]:text-muted-foreground"
-          >
-            Profile
-          </TabsTrigger>
           <TabsTrigger
             value="voice"
             className="rounded-sm px-4 py-2 text-sm font-medium transition-colors data-[state=active]:bg-primary data-[state=active]:text-white data-[state=inactive]:text-muted-foreground"
@@ -150,102 +82,6 @@ export default function SettingsPage() {
             Notifications
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="profile" className="space-y-6">
-          <Card className="rounded-sm border-input transition-all duration-300 hover:border-primary/50">
-            <CardHeader className="space-y-2 ">
-              <CardTitle className="google-headline-small">Profile Information</CardTitle>
-              <CardDescription className="google-body-medium text-muted-foreground">
-                Update your personal information and account details
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <Avatar className="h-20 w-20 border border-input">
-                  <AvatarImage src={profile?.avatar_url || "/placeholder-40x40.png"} />
-                  <AvatarFallback className="google-title-small bg-muted text-foreground">
-                    {getInitials()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    Change Avatar
-                  </Button>
-                  <p className="google-body-small text-muted-foreground">JPG, GIF or PNG. 1MB max.</p>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="full_name" className="google-body-small text-muted-foreground">
-                    Full Name
-                  </Label>
-                  <Input
-                    id="full_name"
-                    value={formData.full_name}
-                    onChange={(e) => handleInputChange('full_name', e.target.value)}
-                    className="rounded-sm border-input focus-visible:border-primary focus-visible:ring-primary/20"
-                    placeholder="Enter your full name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="google-body-small text-muted-foreground">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profile?.email || ""}
-                    disabled
-                    className="rounded-sm border-input bg-muted text-muted-foreground"
-                  />
-                  <p className="google-body-small text-muted-foreground">
-                    Email cannot be changed here. Contact support if needed.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="google-body-small text-muted-foreground">
-                    Phone Number
-                  </Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="rounded-sm border-input focus-visible:border-primary focus-visible:ring-primary/20"
-                    placeholder="Enter your phone number"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="role" className="google-body-small text-muted-foreground">
-                    Role
-                  </Label>
-                  <Input
-                    id="role"
-                    value={profile?.role || "user"}
-                    disabled
-                    className="rounded-sm border-input bg-muted text-muted-foreground capitalize"
-                  />
-                </div>
-              </div>
-
-              <Button
-                onClick={handleProfileUpdate}
-                disabled={isUpdating}
-                className="rounded-sm border border-primary bg-primary text-white hover:bg-primary/90"
-              >
-                {isUpdating && <LoadingSpinner className="mr-2" size="sm" />}
-                {isUpdating ? "Saving..." : "Save Changes"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="voice" className="space-y-6">
           <Card className="rounded-sm border-input transition-all duration-300 hover:border-primary/50">

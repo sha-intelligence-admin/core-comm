@@ -162,13 +162,17 @@ export function AppSidebar() {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
-              <User className="mr-2 h-4 w-4" />
-              Profile
+            <DropdownMenuItem asChild className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
+              <Link href="/profile">
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
+            <DropdownMenuItem asChild className="hover:bg-brand/10 hover:text-brand transition-colors duration-200">
+              <Link href="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="hover:bg-red-50 hover:text-red-600 transition-colors duration-200 p-0">
               <LogoutButton
