@@ -119,6 +119,14 @@ export default function SignUpPage() {
       }
 
       if (data.user) {
+        // Check if user already exists (identities is empty array when user exists and email enumeration protection is on)
+        if (data.user.identities && data.user.identities.length === 0) {
+          setError("This email is already registered. Please sign in instead.")
+          setEmailSent(false)
+          setSuccess(false)
+          return
+        }
+
         // Check if user already exists (email already confirmed)
         if (data.user.email_confirmed_at) {
           setError("This email is already registered. Please sign in instead.")

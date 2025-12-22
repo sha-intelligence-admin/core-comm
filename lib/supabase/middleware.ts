@@ -87,7 +87,8 @@ export async function updateSession(request: NextRequest) {
 
   // Redirect authenticated users away from auth pages
   if (user && request.nextUrl.pathname.startsWith('/auth/') &&
-    request.nextUrl.pathname !== '/auth/callback') {
+    request.nextUrl.pathname !== '/auth/callback' &&
+    request.nextUrl.pathname !== '/auth/reset-password') {
     const url = request.nextUrl.clone()
     url.pathname = "/dashboard"
     const redirectResponse = NextResponse.redirect(url)

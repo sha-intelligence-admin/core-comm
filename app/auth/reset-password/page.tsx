@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
     // Handle the auth callback
     const handleAuthCallback = async () => {
       const { data, error } = await supabase.auth.getSession()
-      if (error) {
+      if (error || !data.session) {
         setError("Invalid or expired reset link")
       }
     }
