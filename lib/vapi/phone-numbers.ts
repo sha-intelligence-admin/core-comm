@@ -20,6 +20,8 @@ export async function createPhoneNumber(
       ...(params.areaCode && { areaCode: params.areaCode }),
       ...(params.number && { number: params.number }),
       ...(params.fallbackNumber && { fallbackDestination: { number: params.fallbackNumber } }),
+      ...(params.twilioAccountSid && { twilioAccountSid: params.twilioAccountSid }),
+      ...(params.twilioAuthToken && { twilioAuthToken: params.twilioAuthToken }),
     } as any);
 
     // Store in database

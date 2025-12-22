@@ -1,11 +1,17 @@
+"use client"
+
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
-export default function AuthCodeErrorPage() {
-  // Content only; outer layout provided by app/auth/layout.tsx
+function AuthCodeErrorContent() {
+  const searchParams = useSearchParams()
+  const error = searchParams.get("error")
+
   return (
     <>
       <div className="text-start space-y-2">
@@ -24,7 +30,7 @@ export default function AuthCodeErrorPage() {
         <div className="space-y-4">
           <Alert variant="destructive" className="my-4">
             <AlertDescription>
-              The authentication link may have expired or been used already.
+              {error ? decodeURIComponent(error) : "The authentication link may have expired or been used already."}
             </AlertDescription>
           </Alert>
 
@@ -39,5 +45,13 @@ export default function AuthCodeErrorPage() {
         </div>
       </div>
     </>
+  )
+}
+
+export default function AuthCodeErrorPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthCodeErrorContent />
+    </Suspense>
   )
 }

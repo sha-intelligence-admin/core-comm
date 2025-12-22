@@ -111,9 +111,12 @@ export async function GET(request: Request) {
     } else {
       // Log why we're failing
       console.log('❌ Auth failed:', { hasError: !!error, errorMsg: error?.message, hasData: !!data })
+      const errorMsg = error?.message ? encodeURIComponent(error.message) : 'Authentication failed'
+      return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${errorMsg}`)
     }
   } else {
     console.log('❌ No code parameter in callback URL')
+    return NextResponse.redirect(`${origin}/auth/auth-code-error?error=No%20code%20parameter%20provided`)
   }
 
   // return the user to an error page with instructions

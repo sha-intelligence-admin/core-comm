@@ -240,6 +240,7 @@ export async function POST(request: NextRequest) {
           })
         }
       } catch (twilioError) {
+        console.error('Twilio provisioning error details:', twilioError);
         const message = twilioError instanceof Error ? twilioError.message : "Unknown Twilio error"
         return NextResponse.json({ error: `Twilio provisioning failed: ${message}` }, { status: 502 })
       }
@@ -496,6 +497,8 @@ export async function POST(request: NextRequest) {
           provider: "twilio",
           number: twilioProvisioning.phoneNumber,
           assistantId: assistantRecord.id,
+          twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+          twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
         })
       }
 

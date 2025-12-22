@@ -215,6 +215,8 @@ export const CreatePhoneNumberSchema = z.object({
   areaCode: z.string().regex(/^\d{3}$/, 'Area code must be 3 digits').optional(),
   number: z.string().optional(), // For BYO
   fallbackNumber: z.string().optional(),
+  twilioAccountSid: z.string().optional(),
+  twilioAuthToken: z.string().optional(),
 });
 
 export const UpdatePhoneNumberSchema = z.object({
