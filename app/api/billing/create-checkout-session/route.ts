@@ -88,6 +88,8 @@ export async function POST(req: NextRequest) {
       if (!fwSubscriptionId) return new NextResponse('Failed to create subscription', { status: 500 });
 
       // persist mapping
+      // Note: We are using the existing 'stripe_subscription_id' and 'stripe_customer_id' columns 
+      // to store Flutterwave IDs to avoid database migration complexity.
       await supabase.from('billing_subscriptions').upsert({
         company_id: companyId,
         stripe_subscription_id: fwSubscriptionId,
@@ -119,8 +121,7 @@ export async function POST(req: NextRequest) {
     if (subscription?.stripe_customer_id) {
       sessionConfig.customer = subscription.stripe_customer_id;
     } else {
-      // If no customer ID, Stripe will create one. 
-      // We pre-fill email for better UX
+      // If no customer ID, we pre-fill email for better UX
       sessionConfig.customer_email = user.email;
       
       // We can also add subscription_data.metadata to help track the new customer creation if needed

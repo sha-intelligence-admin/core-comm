@@ -50,7 +50,6 @@
     "next-themes": "latest",
     "react": "^18",
     "react-dom": "^18",
-    "stripe": "^20.0.0",
     "swr": "^2.3.6",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",

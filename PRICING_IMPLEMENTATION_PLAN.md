@@ -4,7 +4,7 @@ This document outlines the technical roadmap for implementing the Hybrid Pricing
 
 ## 1. Architecture Overview
 
-We will use **Stripe** for payment processing, handling both recurring subscriptions and one-time credit top-ups.
+We will use **Flutterwave** for payment processing, handling both recurring subscriptions and one-time credit top-ups.
 *   **Subscriptions**: Handle the monthly platform fee (Starter, Growth, Scale).
 *   **Wallet System**: An internal ledger system to track prepaid credits for usage (calls, etc.).
 *   **Usage Tracking**: Real-time deduction of credits based on call duration.
@@ -12,7 +12,7 @@ We will use **Stripe** for payment processing, handling both recurring subscript
 ## 2. Phase 1: Foundation & Database Schema
 
 ### 2.1 Dependencies
-- Install Stripe SDK: `npm install stripe`
+- Install Flutterwave SDK or use Axios for API calls.
 
 ### 2.2 Database Schema (Supabase)
 We need new tables to manage billing state.
@@ -20,8 +20,8 @@ We need new tables to manage billing state.
 **`billing_subscriptions`**
 *   `id` (uuid)
 *   `company_id` (uuid, FK)
-*   `stripe_subscription_id` (text)
-*   `stripe_customer_id` (text)
+*   `stripe_subscription_id` (text) - *Note: Stores Flutterwave Subscription ID*
+*   `stripe_customer_id` (text) - *Note: Stores Flutterwave Customer Email or ID*
 *   `plan_id` (text) - e.g., 'starter', 'growth'
 *   `status` (text) - 'active', 'past_due', 'canceled'
 *   `current_period_end` (timestamp)
@@ -38,7 +38,7 @@ We need new tables to manage billing state.
 *   `wallet_id` (uuid, FK)
 *   `amount` (numeric) - Positive for top-ups, negative for usage
 *   `type` (text) - 'top_up', 'usage', 'monthly_grant', 'bonus'
-*   `reference_id` (text) - e.g., Stripe Payment Intent ID or Call ID
+*   `reference_id` (text) - e.g., Flutterwave Transaction ID or Call ID
 *   `description` (text)
 *   `created_at` (timestamp)
 
@@ -51,33 +51,32 @@ We need new tables to manage billing state.
 *   `meta` (jsonb) - Details like call_id, phone_number
 *   `created_at` (timestamp)
 
-## 3. Phase 2: Stripe Configuration
+## 3. Phase 2: Flutterwave Configuration
 
-### 3.1 Stripe Dashboard Setup
-*   Create **Products** for Subscriptions:
+### 3.1 Flutterwave Dashboard Setup
+*   Create **Payment Plans** for Subscriptions:
     *   Starter ($49/mo)
     *   Growth ($199/mo)
-*   Create **Product** for Credit Top-ups (or use dynamic pricing).
+*   Create **Payment Links** for Credit Top-ups (or use dynamic pricing).
 
 ### 3.2 Environment Variables
-*   `STRIPE_SECRET_KEY`
-*   `STRIPE_PUBLISHABLE_KEY`
-*   `STRIPE_WEBHOOK_SECRET`
-*   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+*   `FLUTTERWAVE_SECRET_KEY`
+*   `FLUTTERWAVE_PUBLIC_KEY`
+*   `FLUTTERWAVE_ENCRYPTION_KEY`
+*   `FLUTTERWAVE_WEBHOOK_HASH`
 
 ## 4. Phase 3: Backend Implementation
 
 ### 4.1 API Routes
-*   `POST /api/billing/create-checkout-session`: Creates a Stripe Checkout session for either a subscription or a one-time top-up.
-*   `POST /api/billing/portal`: Creates a Stripe Customer Portal session for managing payment methods/subscriptions.
+*   `POST /api/billing/create-checkout-session`: Creates a Flutterwave Payment Link for either a subscription or a one-time top-up.
+*   `POST /api/billing/portal`: (Not supported by Flutterwave directly, use custom UI).
 *   `GET /api/billing/status`: Returns current plan, wallet balance, and recent transactions.
 
-### 4.2 Webhook Handler (`app/api/webhooks/stripe/route.ts`)
-*   `checkout.session.completed`:
-    *   If mode='subscription': Create/Update `billing_subscriptions` record. Grant initial monthly credits if applicable.
-    *   If mode='payment': Add funds to `wallets` and record `wallet_transactions`.
-*   `invoice.payment_succeeded`: Handle recurring subscription renewals (reset/add monthly credits).
-*   `customer.subscription.updated/deleted`: Update local subscription status.
+### 4.2 Webhook Handler (`app/api/webhooks/flutterwave/route.ts`)
+*   `charge.completed`:
+    *   If payment for subscription: Create/Update `billing_subscriptions` record. Grant initial monthly credits if applicable.
+    *   If payment for top-up: Add funds to `wallets` and record `wallet_transactions`.
+*   `subscription.cancelled`: Update local subscription status.
 
 ### 4.3 Usage Logic Integration
 *   **Modify Vapi Webhook (`app/api/webhooks/vapi/route.ts`)**:
@@ -113,7 +112,7 @@ We need new tables to manage billing state.
 
 ## 7. Implementation Steps (Immediate)
 
-1.  [ ] Install Stripe SDK.
+1.  [ ] Install Flutterwave SDK (or use Axios).
 2.  [ ] Create Supabase Migration for Billing Tables.
-3.  [ ] Create Stripe Webhook Handler skeleton.
+3.  [ ] Create Flutterwave Webhook Handler skeleton.
 4.  [ ] Implement "Top Up" flow (easiest to start with).
