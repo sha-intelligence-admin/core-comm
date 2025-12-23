@@ -27,6 +27,19 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     // Handle the auth callback
     const handleAuthCallback = async () => {
+      // Check if we have a code in the URL (fallback from server-side failure)
+      const code = searchParams.get("code")
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) {
+          setError(error.message)
+          return
+        }
+        // Remove code from URL to clean up
+        const newUrl = window.location.pathname
+        window.history.replaceState({}, document.title, newUrl)
+      }
+
       const { data, error } = await supabase.auth.getSession()
       if (error || !data.session) {
         setError("Invalid or expired reset link")
@@ -34,7 +47,7 @@ export default function ResetPasswordPage() {
     }
 
     handleAuthCallback()
-  }, [supabase.auth])
+  }, [supabase.auth, searchParams])
 
   const validateForm = () => {
     if (password !== confirmPassword) {

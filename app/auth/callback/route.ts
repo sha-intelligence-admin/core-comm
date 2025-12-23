@@ -35,6 +35,17 @@ export async function GET(request: Request) {
       hasUser: !!data?.user,
       userId: data?.user?.id 
     })
+
+    // Fallback for missing code verifier (PKCE issue)
+    if (error?.message?.includes("code verifier should be non-empty")) {
+      console.warn("⚠️ PKCE Verifier missing on server. Redirecting to client-side exchange.")
+      // Redirect to the target page with the code, letting the client handle the exchange
+      // We construct a URL that the client page can intercept
+      const clientRedirectUrl = new URL(next, origin)
+      clientRedirectUrl.searchParams.set("code", code)
+      if (type) clientRedirectUrl.searchParams.set("type", type)
+      return NextResponse.redirect(clientRedirectUrl)
+    }
     
     if (!error && data?.user) {
       // ✅ Create user profile after email confirmation
