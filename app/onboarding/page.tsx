@@ -16,6 +16,19 @@ import { useToast } from "@/hooks/use-toast"
 import { withCsrfHeaders } from "@/lib/csrf-client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
+const LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'fr', label: 'French' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'de', label: 'German' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'zh', label: 'Mandarin' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'sw', label: 'Swahili' },
+];
+
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -50,7 +63,7 @@ export default function OnboardingPage() {
     assistantVoiceProvider: "11labs",
     assistantVoiceId: "21m00Tcm4TlvDq8ikWAM",
     assistantGreeting: "",
-    assistantLanguage: "en-US",
+    assistantLanguage: "en",
     assistantPersonality: "",
 
     // Step 5: Goals
@@ -582,6 +595,27 @@ export default function OnboardingPage() {
                     onChange={(e) => handleInputChange("assistantDescription", e.target.value)}
                     className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="assistantLanguage" className="text-foreground font-medium">
+                    Language
+                  </Label>
+                  <Select
+                    value={formData.assistantLanguage}
+                    onValueChange={(value) => handleInputChange("assistantLanguage", value)}
+                  >
+                    <SelectTrigger className="rounded-lg border-input focus:border-primary">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.map((lang) => (
+                        <SelectItem key={lang.value} value={lang.value}>
+                          {lang.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

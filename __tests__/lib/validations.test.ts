@@ -2,10 +2,57 @@ import {
   SignupSchema,
   CreateCallSchema,
   CreateIntegrationSchema,
-  CallsQuerySchema
+  CallsQuerySchema,
+  CreateAssistantSchema
 } from '@/lib/validations'
 
 describe('Validation Schemas', () => {
+  describe('CreateAssistantSchema', () => {
+    it('should validate correct assistant data with language', () => {
+      const validData = {
+        name: 'Test Assistant',
+        systemPrompt: 'You are a helpful assistant.',
+        firstMessage: 'Hello!',
+        language: 'es',
+        model: {
+          provider: 'openai',
+          model: 'gpt-4',
+          temperature: 0.7
+        },
+        voice: {
+          provider: 'deepgram',
+          voiceId: 'aura-asteria-en'
+        }
+      }
+
+      const result = CreateAssistantSchema.safeParse(validData)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.language).toBe('es')
+      }
+    })
+
+    it('should reject invalid language code', () => {
+      const invalidData = {
+        name: 'Test Assistant',
+        systemPrompt: 'You are a helpful assistant.',
+        firstMessage: 'Hello!',
+        language: 'xx', // Invalid language
+        model: {
+          provider: 'openai',
+          model: 'gpt-4'
+        },
+        voice: {
+          provider: 'deepgram',
+          voiceId: 'aura-asteria-en'
+        }
+      }
+
+      const result = CreateAssistantSchema.safeParse(invalidData)
+      expect(result.success).toBe(false)
+    })
+  })
+
   describe('SignupSchema', () => {
     it('should validate correct signup data', () => {
       const validData = {

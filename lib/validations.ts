@@ -166,6 +166,7 @@ export const CreateAssistantSchema = z.object({
   description: z.string().max(500).optional(),
   systemPrompt: z.string().min(10, 'System prompt must be at least 10 characters'),
   firstMessage: z.string().min(1, 'First message is required'),
+  language: z.enum(['en', 'ar', 'fr', 'es', 'pt', 'de', 'hi', 'zh', 'ja', 'sw']).optional(),
   model: ModelConfigSchema,
   voice: VoiceConfigSchema,
   knowledgeBaseId: z.string().uuid().optional(),

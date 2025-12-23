@@ -27,8 +27,13 @@ const PUBLIC_WEBHOOK_BASE_URL =
   enforceHttpsUrl(process.env.NEXT_PUBLIC_APP_URL) ||
   FALLBACK_WEBHOOK_BASE_URL
 
-const manualVoiceWebhookUrl = `${PUBLIC_WEBHOOK_BASE_URL.replace(/\/$/, "")}/api/webhooks/twilio/voice`
-const manualSmsWebhookUrl = `${PUBLIC_WEBHOOK_BASE_URL.replace(/\/$/, "")}/api/webhooks/twilio/sms`
+// Ensure we don't use localhost for Twilio webhooks as it will fail validation
+const FINAL_WEBHOOK_BASE_URL = (PUBLIC_WEBHOOK_BASE_URL?.includes('localhost') || PUBLIC_WEBHOOK_BASE_URL?.includes('127.0.0.1'))
+  ? FALLBACK_WEBHOOK_BASE_URL
+  : PUBLIC_WEBHOOK_BASE_URL
+
+const manualVoiceWebhookUrl = `${FINAL_WEBHOOK_BASE_URL.replace(/\/$/, "")}/api/webhooks/twilio/voice`
+const manualSmsWebhookUrl = `${FINAL_WEBHOOK_BASE_URL.replace(/\/$/, "")}/api/webhooks/twilio/sms`
 
 const DEFAULT_MODEL_PROVIDER = (process.env.VAPI_DEFAULT_MODEL_PROVIDER as ModelProvider) ?? "openai"
 const DEFAULT_MODEL_NAME = VAPI_DEFAULTS.model
@@ -481,6 +486,7 @@ export async function POST(request: NextRequest) {
         description: finalAssistantDescription,
         systemPrompt: finalSystemPrompt,
         firstMessage: assistantFirstMessage,
+        language: assistantLanguage,
         model: {
           provider: modelProvider,
           model: modelName,

@@ -8,6 +8,7 @@ import { useAssistants } from "@/hooks/use-assistants"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Plus, Bot, Mic, Edit, Trash2, Loader2 } from "lucide-react"
+import { AddAgentModal } from "@/components/add-agent-modal"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,13 +63,14 @@ export default function VoiceAgentsPage() {
             <h1 className="text-3xl font-bold tracking-tight text-brand">Voice Agents</h1>
             <p className="text-muted-foreground">Manage your AI-powered voice assistants</p>
           </div>
-          <Button
-            className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg"
-            onClick={() => alert("Voice assistant creation coming soon! This requires Vapi API integration.")}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Assistant
-          </Button>
+          <AddAgentModal>
+            <Button
+              className="rounded-xl bg-brand hover:bg-brand/90 hover:scale-105 transition-all duration-200 shadow-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Assistant
+            </Button>
+          </AddAgentModal>
         </div>
       </div>
 
@@ -84,13 +86,14 @@ export default function VoiceAgentsPage() {
             <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
               Create your first AI voice assistant to start handling customer calls automatically
             </p>
-            <Button
-              className="rounded-xl bg-brand hover:bg-brand/90"
-              onClick={() => alert("Voice assistant creation coming soon! This requires Vapi API integration.")}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Assistant
-            </Button>
+            <AddAgentModal>
+              <Button
+                className="rounded-xl bg-brand hover:bg-brand/90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Assistant
+              </Button>
+            </AddAgentModal>
           </CardContent>
         </Card>
       ) : (

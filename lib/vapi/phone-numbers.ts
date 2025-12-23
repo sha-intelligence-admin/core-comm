@@ -13,10 +13,44 @@ export async function createPhoneNumber(
   const supabase = createServiceRoleClient();
 
   try {
+    // Resolve assistant IDs (Internal vs Vapi)
+    let internalAssistantId: string | null = null;
+    let vapiAssistantId: string | null = null;
+
+    if (params.assistantId) {
+      // Try to find by internal ID first
+      const { data: byInternal } = await supabase
+        .from('vapi_assistants')
+        .select('id, vapi_assistant_id')
+        .eq('id', params.assistantId)
+        .single();
+      
+      if (byInternal) {
+        internalAssistantId = byInternal.id;
+        vapiAssistantId = byInternal.vapi_assistant_id;
+      } else {
+        // Try to find by Vapi ID
+        const { data: byVapi } = await supabase
+          .from('vapi_assistants')
+          .select('id, vapi_assistant_id')
+          .eq('vapi_assistant_id', params.assistantId)
+          .single();
+        
+        if (byVapi) {
+          internalAssistantId = byVapi.id;
+          vapiAssistantId = byVapi.vapi_assistant_id;
+        } else {
+           console.warn(`Warning: Assistant ID ${params.assistantId} not found in database.`);
+           // Fallback: assume the passed ID is intended for Vapi API
+           vapiAssistantId = params.assistantId;
+        }
+      }
+    }
+
     // Create phone number in Vapi
     const vapiPhone: any = await vapi.phoneNumbers.create({
       provider: params.provider === 'byo' ? 'byo-phone-number' : params.provider as any,
-      ...(params.assistantId && { assistantId: params.assistantId }),
+      ...(vapiAssistantId && { assistantId: vapiAssistantId }),
       ...(params.areaCode && { areaCode: params.areaCode }),
       ...(params.number && { number: params.number }),
       ...(params.fallbackNumber && { fallbackDestination: { number: params.fallbackNumber } }),
@@ -31,7 +65,7 @@ export async function createPhoneNumber(
         company_id: companyId,
         vapi_phone_id: vapiPhone.id,
         phone_number: vapiPhone.number || vapiPhone.phoneNumber || '',
-        assistant_id: params.assistantId || null,
+        assistant_id: internalAssistantId,
         provider: params.provider,
         country_code: vapiPhone.countryCode || 'US',
         is_active: true,
@@ -40,6 +74,7 @@ export async function createPhoneNumber(
       .single();
 
     if (error) {
+      console.error('Supabase error storing phone number:', error);
       // Cleanup: Delete from Vapi if database insert fails
       try {
         await vapi.phoneNumbers.delete(vapiPhone.id);

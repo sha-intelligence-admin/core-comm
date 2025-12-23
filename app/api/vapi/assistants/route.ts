@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       description: validatedData.description,
       systemPrompt: validatedData.systemPrompt,
       firstMessage: validatedData.firstMessage,
+      language: validatedData.language,
       model: validatedData.model,
       voice: validatedData.voice,
       knowledgeBaseId: validatedData.knowledgeBaseId,

@@ -26,6 +26,11 @@ const PUBLIC_WEBHOOK_BASE_URL =
   enforceHttpsUrl(process.env.NEXT_PUBLIC_APP_URL) ||
   FALLBACK_WEBHOOK_BASE_URL
 
+// Ensure we don't use localhost for Twilio webhooks as it will fail validation
+const FINAL_WEBHOOK_BASE_URL = (PUBLIC_WEBHOOK_BASE_URL?.includes('localhost') || PUBLIC_WEBHOOK_BASE_URL?.includes('127.0.0.1'))
+  ? FALLBACK_WEBHOOK_BASE_URL
+  : PUBLIC_WEBHOOK_BASE_URL
+
 const normalizeVoiceProvider = (value?: string | null): VoiceProvider => {
   if (!value) return "11labs"
   const normalized = value.toLowerCase()
@@ -392,6 +397,7 @@ export async function POST(request: NextRequest) {
           description: assistantDescription || `${companyName} AI assistant`,
           systemPrompt: assistantSystemPrompt,
           firstMessage: assistantFirstMessage,
+          language: assistantLanguage,
           model: {
             provider: modelProvider,
             model: modelName,
@@ -404,6 +410,45 @@ export async function POST(request: NextRequest) {
         })
 
         console.log('✅ Assistant created in VAPI with ID:', assistantRecord?.vapi_assistant_id)
+
+        // Link Twilio number to Vapi assistant if provisioned
+        if ((twilioProvisioning || userManagedNumber) && assistantRecord?.vapi_assistant_id) {
+          console.log('🔗 Linking phone number to Vapi assistant...')
+          try {
+            if (twilioProvisioning) {
+              await createVapiPhoneNumber(company.id, {
+                provider: "twilio",
+                number: twilioProvisioning.phoneNumber,
+                assistantId: assistantRecord.vapi_assistant_id,
+                twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+                twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
+              })
+              console.log('✅ Phone number linked to Vapi assistant')
+            } else if (userManagedNumber) {
+              // For user-managed numbers without credentials, we cannot create a Vapi Phone Number object
+              // The user must forward calls to the Assistant SIP URI manually
+              console.log('ℹ️ User-managed number: Skipping Vapi Phone Number creation (no credentials).')
+              console.log(`ℹ️ User should forward calls to SIP URI: sip:${assistantRecord.vapi_assistant_id}@sip.vapi.ai`)
+            }
+          } catch (linkError) {
+            console.error('❌ Failed to link phone number to Vapi assistant:', linkError)
+          }
+        }
+
+        // Update user-managed phone number with assigned assistant
+        if (userManagedNumber && assistantRecord?.id) {
+          const { error: updateError } = await serviceSupabase
+            .from("phone_numbers")
+            .update({ assigned_to: assistantRecord.id })
+            .eq("phone_number", userManagedNumber)
+            .eq("company_id", company.id)
+
+          if (updateError) {
+            console.error('❌ Failed to assign assistant to user-managed phone number:', updateError)
+          } else {
+            console.log('✅ Assigned assistant to user-managed phone number')
+          }
+        }
 
         // Also store assistant in voice_agents table for backward compatibility
         if (assistantRecord?.vapi_assistant_id) {

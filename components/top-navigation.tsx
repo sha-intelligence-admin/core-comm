@@ -44,10 +44,8 @@ export function TopNavigation() {
       }
     }
 
-    if (pathname.includes('/organizations')) {
-      fetchOrgs()
-    }
-  }, [pathname, orgNameMap])
+    fetchOrgs()
+  }, [orgNameMap])
 
   const rawSegments = pathname.split("?")[0].split("/").filter(Boolean)
   const hasDashboardSegment = rawSegments[0] === "dashboard"
@@ -76,31 +74,74 @@ export function TopNavigation() {
     return segmentLabelMap[clean] ?? clean.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ")
   }
 
-  const breadcrumbItems = [
-    {
-      label: "Dashboard",
-      href: "/dashboard",
-      isCurrent: hasDashboardSegment ? additionalSegments.length === 0 : rawSegments.length === 0,
-    },
-    ...additionalSegments.map((segment, index) => {
-      const cleanSegment = segment.replace(/[\[\]]/g, "")
-      const hrefSegments = hasDashboardSegment
-        ? ["dashboard", ...additionalSegments.slice(0, index + 1)]
-        : additionalSegments.slice(0, index + 1)
+  const currentOrgName = profile?.company_id ? orgNameMap[profile.company_id] : null
+  let breadcrumbItems: { label: string; href: string; isCurrent: boolean }[] = []
 
-      // Check if this segment is an organization ID
-      const isOrgId = index > 0 && additionalSegments[index - 1] === 'organizations'
-      const label = isOrgId && orgNameMap[cleanSegment] 
-        ? orgNameMap[cleanSegment] 
-        : formatSegment(cleanSegment)
+  if (pathname.startsWith('/organizations')) {
+    // Organizations context
+    breadcrumbItems.push({ 
+      label: "Organizations", 
+      href: "/organizations", 
+      isCurrent: pathname === '/organizations' 
+    })
 
-      return {
-        label: label,
-        href: `/${hrefSegments.join("/")}`,
-        isCurrent: index === additionalSegments.length - 1,
-      }
-    }),
-  ]
+    if (pathname !== '/organizations') {
+      additionalSegments.forEach((segment, index) => {
+        if (segment === 'organizations') return
+
+        const cleanSegment = segment.replace(/[\[\]]/g, "")
+        const isOrgId = index > 0 && additionalSegments[index - 1] === 'organizations' // In raw segments, organizations is index 0
+        // Actually, rawSegments for /organizations/123 is ['organizations', '123']
+        // additionalSegments is same.
+        
+        // If segment is ID, use name
+        const label = orgNameMap[cleanSegment] || formatSegment(cleanSegment)
+        const href = `/${additionalSegments.slice(0, index + 1).join("/")}`
+        
+        breadcrumbItems.push({
+          label,
+          href,
+          isCurrent: index === additionalSegments.length - 1
+        })
+      })
+    }
+  } else {
+    // Dashboard context
+    breadcrumbItems.push({ 
+      label: "Organizations", 
+      href: "/organizations", 
+      isCurrent: false 
+    })
+
+    if (currentOrgName) {
+      breadcrumbItems.push({ 
+        label: currentOrgName, 
+        href: "/dashboard", 
+        isCurrent: false 
+      })
+    }
+
+    if (pathname === '/dashboard' || (hasDashboardSegment && additionalSegments.length === 0)) {
+      breadcrumbItems.push({ 
+        label: "Dashboard", 
+        href: "/dashboard", 
+        isCurrent: true 
+      })
+    } else {
+      // Other pages
+      additionalSegments.forEach((segment, index) => {
+        const href = hasDashboardSegment 
+          ? `/dashboard/${additionalSegments.slice(0, index + 1).join("/")}`
+          : `/${additionalSegments.slice(0, index + 1).join("/")}`
+
+        breadcrumbItems.push({
+          label: formatSegment(segment),
+          href,
+          isCurrent: index === additionalSegments.length - 1
+        })
+      })
+    }
+  }
 
   const renderBreadcrumbs = () => (
     <Breadcrumb>

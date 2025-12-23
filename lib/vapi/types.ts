@@ -59,6 +59,8 @@ export interface VoiceConfig {
 // Assistant
 // ==============================================
 
+export type SupportedLanguage = 'en' | 'ar' | 'fr' | 'es' | 'pt' | 'de' | 'hi' | 'zh' | 'ja' | 'sw';
+
 export interface CreateAssistantParams {
   name: string;
   description?: string;
@@ -66,6 +68,7 @@ export interface CreateAssistantParams {
   firstMessage: string;
   model: ModelConfig;
   voice: VoiceConfig;
+  language?: SupportedLanguage;
   knowledgeBaseId?: string;
 }
 
@@ -76,6 +79,7 @@ export interface UpdateAssistantParams {
   firstMessage?: string;
   model?: Partial<ModelConfig>;
   voice?: Partial<VoiceConfig>;
+  language?: SupportedLanguage;
   knowledgeBaseId?: string;
 }
 
@@ -84,6 +88,7 @@ export interface VapiAssistant {
   name: string;
   model: ModelConfig;
   voice: VoiceConfig;
+  language?: SupportedLanguage;
   firstMessage: string;
   createdAt: string;
   updatedAt: string;

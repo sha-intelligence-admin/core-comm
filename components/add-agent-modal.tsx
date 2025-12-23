@@ -10,14 +10,27 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { LoadingSpinner } from "./loading-spinner"
-import { useVoiceAgents } from "@/hooks/use-voice-agents"
+import { useAssistants } from "@/hooks/use-assistants"
+
+const LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'fr', label: 'French' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'de', label: 'German' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'zh', label: 'Mandarin' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'sw', label: 'Swahili' },
+];
 
 interface AddAgentModalProps {
   children: React.ReactNode
 }
 
 export function AddAgentModal({ children }: AddAgentModalProps) {
-  const { createAgent } = useVoiceAgents()
+  const { createAssistant } = useAssistants()
   const [open, setOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
@@ -27,8 +40,8 @@ export function AddAgentModal({ children }: AddAgentModalProps) {
     goal: "",
     knowledgeBase: "",
     handoff: "",
-    voiceModel: "en-US-neural",
-    language: "en-US",
+    voiceModel: "en-US-JennyNeural",
+    language: "en",
   })
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -38,39 +51,40 @@ export function AddAgentModal({ children }: AddAgentModalProps) {
 
     // Only create voice agents for now (voice channel)
     if (formData.channel === "voice") {
-      const result = await createAgent({
-        name: formData.name,
-        description: formData.goal,
-        voice_model: formData.voiceModel,
-        language: formData.language,
-        personality: formData.goal,
-        status: 'active',
-        greeting_message: `Hello! I'm ${formData.name}. How can I help you today?`,
-        knowledge_base_id: formData.knowledgeBase || undefined,
-        config: {
-          handoff: formData.handoff,
-          channel: formData.channel,
-        },
-      })
+      try {
+        await createAssistant({
+          name: formData.name,
+          description: formData.goal,
+          systemPrompt: formData.goal || "You are a helpful assistant.",
+          firstMessage: `Hello! I'm ${formData.name}. How can I help you today?`,
+          language: formData.language,
+          model: {
+            provider: 'openai',
+            model: 'gpt-4o',
+            temperature: 0.7,
+          },
+          voice: {
+            provider: 'azure',
+            voiceId: formData.voiceModel,
+          },
+          // knowledgeBaseId: formData.knowledgeBase || undefined,
+        })
 
-      setIsSaving(false)
-
-      if (result.error) {
-        setErrorMessage(result.error)
-        return
+        setIsSaving(false)
+        setOpen(false)
+        setFormData({ 
+          name: "", 
+          channel: "", 
+          goal: "", 
+          knowledgeBase: "", 
+          handoff: "",
+          voiceModel: "en-US-JennyNeural",
+          language: "en",
+        })
+      } catch (err: any) {
+        setErrorMessage(err.message || "Failed to create assistant")
+        setIsSaving(false)
       }
-
-      // Success - close modal and reset form
-      setOpen(false)
-      setFormData({ 
-        name: "", 
-        channel: "", 
-        goal: "", 
-        knowledgeBase: "", 
-        handoff: "",
-        voiceModel: "en-US-neural",
-        language: "en-US",
-      })
     } else {
       // For non-voice channels, just show a message for now
       setErrorMessage("Only voice agents are supported at this time")
@@ -116,6 +130,24 @@ export function AddAgentModal({ children }: AddAgentModalProps) {
                 <SelectItem value="messaging">Messaging (WhatsApp/Telegram)</SelectItem>
                 <SelectItem value="email">Email</SelectItem>
                 <SelectItem value="workspace">Internal Workspace</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="agent-language" className="google-label-medium text-muted-foreground">
+              Language
+            </Label>
+            <Select value={formData.language} onValueChange={(value) => setFormData((prev) => ({ ...prev, language: value }))}>
+              <SelectTrigger id="agent-language" className="h-11 rounded-sm border-input">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

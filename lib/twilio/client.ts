@@ -35,11 +35,17 @@ function enforceHttps(url?: string | null) {
   return url.startsWith("http://") ? url.replace("http://", "https://") : url
 }
 
-const DEFAULT_BASE_WEBHOOK_URL =
-  enforceHttps(process.env.TWILIO_WEBHOOK_BASE_URL) ||
-  enforceHttps(process.env.APP_BASE_URL) ||
-  enforceHttps(process.env.NEXT_PUBLIC_APP_URL) ||
-  "https://corecomm.vercel.app"
+const DEFAULT_BASE_WEBHOOK_URL = (() => {
+  const url = enforceHttps(process.env.TWILIO_WEBHOOK_BASE_URL) ||
+    enforceHttps(process.env.APP_BASE_URL) ||
+    enforceHttps(process.env.NEXT_PUBLIC_APP_URL) ||
+    "https://corecomm.vercel.app"
+  
+  if (url.includes('localhost') || url.includes('127.0.0.1')) {
+    return "https://corecomm.vercel.app"
+  }
+  return url
+})()
 
 const defaultVoiceWebhook = buildWebhookUrl(process.env.TWILIO_VOICE_WEBHOOK_URL, "/api/webhooks/twilio/voice")
 const defaultSmsWebhook = buildWebhookUrl(process.env.TWILIO_SMS_WEBHOOK_URL, "/api/webhooks/twilio/sms")

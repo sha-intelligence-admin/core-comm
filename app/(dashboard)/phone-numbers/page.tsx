@@ -196,6 +196,14 @@ export default function PhoneNumbersPage() {
                         {assignedAssistant?.name || "Not assigned"}
                       </p>
                     </div>
+                    {assignedAssistant?.vapi_assistant_id && (
+                      <div className="p-3 rounded-lg bg-brand/5 border border-brand/10">
+                        <p className="text-xs text-muted-foreground mb-1">SIP URI (For Call Forwarding)</p>
+                        <p className="font-mono text-xs text-brand break-all select-all">
+                          sip:{assignedAssistant.vapi_assistant_id}@sip.vapi.ai
+                        </p>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between p-2 rounded-lg hover:bg-brand/5 transition-colors duration-200">
                       <span className="text-muted-foreground">Created</span>
                       <span className="font-medium">

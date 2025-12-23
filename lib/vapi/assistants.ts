@@ -10,7 +10,44 @@ import type {
   CreateAssistantParams,
   UpdateAssistantParams,
   VapiAssistant,
+  SupportedLanguage,
 } from './types';
+
+function getLanguageName(code?: SupportedLanguage): string {
+  const languages: Record<string, string> = {
+    en: 'English',
+    ar: 'Arabic',
+    fr: 'French',
+    es: 'Spanish',
+    pt: 'Portuguese',
+    de: 'German',
+    hi: 'Hindi',
+    zh: 'Mandarin Chinese',
+    ja: 'Japanese',
+    sw: 'Swahili',
+  };
+  return languages[code || 'en'] || 'English';
+}
+
+function getTranscriberLanguageCode(code?: SupportedLanguage): string {
+  // Map our supported languages to Deepgram nova-2 supported language codes
+  // The error message list: en, bg, ca, zh, zh-CN, zh-HK, zh-Hans, zh-TW, zh-Hant, cs, da, da-DK, nl, en-US, en-AU, en-GB, en-NZ, en-IN, et, fi, nl-BE, fr, fr-CA, de, de-CH, el, hi, hu, id, it, ja, ko, ko-KR, lv, lt, ms, multi, no, pl, pt, pt-BR, ro, ru, sk, es, es-419, sv, sv-SE, th, th-TH, tr, uk, vi
+  const mapping: Record<string, string> = {
+    en: 'en',
+    ar: 'multi', // Arabic is not in the supported list for nova-2, using 'multi'
+    fr: 'fr',
+    es: 'es',
+    pt: 'pt',
+    de: 'de',
+    hi: 'hi',
+    zh: 'zh',
+    ja: 'ja',
+    sw: 'multi', // Swahili is not in the supported list for nova-2, using 'multi'
+  };
+  
+  // If the language is not in the mapping, default to 'en'
+  return mapping[code || 'en'] || 'en';
+}
 
 /**
  * Create a new voice assistant in Vapi and store in database
@@ -21,9 +58,17 @@ export async function createAssistant(
 ) {
   const vapi = getVapiClient();
 
+  // Configure transcriber based on language
+  const transcriber = {
+    provider: 'deepgram',
+    model: 'nova-2',
+    language: getTranscriberLanguageCode(params.language),
+  };
+
   // Create assistant in Vapi
   const vapiAssistant = await vapi.assistants.create({
     name: params.name,
+    transcriber: transcriber as any,
     model: {
       provider: params.model.provider as any,
       model: params.model.model as any,
@@ -32,7 +77,9 @@ export async function createAssistant(
       messages: [
         {
           role: 'system',
-          content: params.systemPrompt,
+          content: params.language 
+            ? `${params.systemPrompt}\n\nIMPORTANT: You must converse in ${getLanguageName(params.language)}.`
+            : params.systemPrompt,
         },
       ],
       ...(params.knowledgeBaseId && {
@@ -62,7 +109,7 @@ export async function createAssistant(
       description: params.description || null,
       system_prompt: params.systemPrompt,
       first_message: params.firstMessage,
-      model_config: params.model,
+      model_config: { ...params.model, language: params.language || 'en' },
       voice_config: params.voice,
       is_active: true,
     })
