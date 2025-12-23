@@ -5,9 +5,15 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
   // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get("next") ?? "/organizations"
+  let next = searchParams.get("next") ?? "/organizations"
 
-  console.log('🔍 Auth Callback Debug:', { code: code ? 'EXISTS' : 'MISSING', origin, next })
+  // Handle recovery flow specifically
+  const type = searchParams.get("type")
+  if (type === "recovery") {
+    next = "/auth/reset-password"
+  }
+
+  console.log('🔍 Auth Callback Debug:', { code: code ? 'EXISTS' : 'MISSING', origin, next, type })
 
   if (code) {
     const supabase = await createClient()
