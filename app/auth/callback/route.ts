@@ -15,6 +15,16 @@ export async function GET(request: Request) {
 
   console.log('🔍 Auth Callback Debug:', { code: code ? 'EXISTS' : 'MISSING', origin, next, type })
 
+  // Debug cookies
+  const cookieStore = request.headers.get('cookie')
+  console.log('🍪 Cookies present:', cookieStore ? 'YES' : 'NO')
+  if (cookieStore) {
+    const cookieNames = cookieStore.split(';').map(c => c.trim().split('=')[0])
+    console.log('🍪 Cookie names:', cookieNames)
+    const hasVerifier = cookieNames.some(n => n.includes('code-verifier'))
+    console.log('🍪 Has code verifier:', hasVerifier)
+  }
+
   if (code) {
     const supabase = await createClient()
     const { error, data } = await supabase.auth.exchangeCodeForSession(code)
