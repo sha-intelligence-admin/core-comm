@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState, Suspense, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ function ConfirmEmailContent() {
   const code = searchParams.get('code')
   const next = searchParams.get('next') || '/organizations'
   const supabase = createClient()
+  const effectRan = useRef(false)
 
   const handleConfirm = async () => {
     if (!code) {
@@ -27,7 +28,21 @@ function ConfirmEmailContent() {
     setStatus('loading')
     try {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
-      if (error) throw error
+      if (error) {
+        // If error, check if we actually have a session anyway
+        // This handles cases where the code might have been consumed but session established
+        // or if the user is already logged in and verified
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+           console.log("Session found despite error, proceeding as success")
+           setStatus('success')
+           setTimeout(() => {
+             router.push(next)
+           }, 2000)
+           return
+        }
+        throw error
+      }
       
       setStatus('success')
       // Wait a moment to show success state before redirecting
@@ -35,16 +50,25 @@ function ConfirmEmailContent() {
         router.push(next)
       }, 2000)
     } catch (error: any) {
+      console.error("Verification error:", error)
       setStatus('error')
-      setMessage(error.message || 'Failed to verify email')
+      // Improve error message for common cases
+      if (error.message?.includes("code") || error.message?.includes("expired")) {
+        setMessage("Link expired or already used. You may already be verified.")
+      } else {
+        setMessage(error.message || 'Failed to verify email')
+      }
     }
   }
 
-  // If no code, show error immediately
+  // Auto-verify on mount
   useEffect(() => {
     if (!code) {
       setStatus('error')
       setMessage('Invalid verification link')
+    } else if (!effectRan.current) {
+      effectRan.current = true
+      handleConfirm()
     }
   }, [code])
 
@@ -56,17 +80,13 @@ function ConfirmEmailContent() {
         </div>
         <CardTitle>Confirm Email</CardTitle>
         <CardDescription>
-          Please confirm your email address to continue.
+          Verifying your email address...
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-4">
-        {status === 'idle' && (
-          <Button onClick={handleConfirm} className="w-full">
-            Verify Email
-          </Button>
-        )}
+        {/* Removed manual button since we auto-verify */}
 
-        {status === 'loading' && (
+        {(status === 'loading' || status === 'idle') && (
           <div className="flex flex-col items-center gap-2">
             <LoadingSpinner />
             <p className="text-sm text-muted-foreground">Verifying...</p>
