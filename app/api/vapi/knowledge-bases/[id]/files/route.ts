@@ -94,8 +94,25 @@ export async function POST(
       return createErrorResponse('User not associated with a company', 403);
     }
 
+    // Check permissions
+    let hasPermission = userProfile.role === 'admin' || userProfile.role === 'owner';
+
+    if (!hasPermission) {
+      // Fallback: Check organization_memberships
+      const { data: membership } = await supabase
+        .from('organization_memberships')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('company_id', userProfile.company_id)
+        .single();
+      
+      if (membership && (membership.role === 'owner' || membership.role === 'admin')) {
+        hasPermission = true;
+      }
+    }
+
     // Only admins can upload files
-    if (userProfile.role !== 'admin') {
+    if (!hasPermission) {
       return createErrorResponse('Only admins can upload files', 403);
     }
 
@@ -197,8 +214,25 @@ export async function DELETE(
       return createErrorResponse('User not associated with a company', 403);
     }
 
+    // Check permissions
+    let hasPermission = userProfile.role === 'admin' || userProfile.role === 'owner';
+
+    if (!hasPermission) {
+      // Fallback: Check organization_memberships
+      const { data: membership } = await supabase
+        .from('organization_memberships')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('company_id', userProfile.company_id)
+        .single();
+      
+      if (membership && (membership.role === 'owner' || membership.role === 'admin')) {
+        hasPermission = true;
+      }
+    }
+
     // Only admins can delete files
-    if (userProfile.role !== 'admin') {
+    if (!hasPermission) {
       return createErrorResponse('Only admins can delete files', 403);
     }
 

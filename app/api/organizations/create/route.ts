@@ -266,6 +266,7 @@ export async function POST(request: NextRequest) {
           company_id: company.id,
           full_name: user.user_metadata?.full_name || null,
           phone: user.user_metadata?.phone || null,
+          role: 'admin',
           is_active: true,
         },
         { onConflict: "id" }

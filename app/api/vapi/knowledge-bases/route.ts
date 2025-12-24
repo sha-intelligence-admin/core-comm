@@ -75,8 +75,25 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('User not associated with a company', 403);
     }
 
+    // Check permissions
+    let hasPermission = userProfile.role === 'admin' || userProfile.role === 'owner';
+
+    if (!hasPermission) {
+      // Fallback: Check organization_memberships
+      const { data: membership } = await supabase
+        .from('organization_memberships')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('company_id', userProfile.company_id)
+        .single();
+      
+      if (membership && (membership.role === 'owner' || membership.role === 'admin')) {
+        hasPermission = true;
+      }
+    }
+
     // Only admins can create knowledge bases
-    if (userProfile.role !== 'admin') {
+    if (!hasPermission) {
       return createErrorResponse('Only admins can create knowledge bases', 403);
     }
 
