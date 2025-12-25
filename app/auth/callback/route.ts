@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/api"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
@@ -50,8 +51,11 @@ export async function GET(request: Request) {
     if (!error && data?.user) {
       // ✅ Create user profile after email confirmation
       try {
+        // Use service role client to bypass RLS for profile creation
+        const supabaseAdmin = createServiceRoleClient()
+
         // First, check if profile already exists
-        const { data: existingUser } = await supabase
+        const { data: existingUser } = await supabaseAdmin
           .from('users')
           .select('id')
           .eq('id', data.user.id)
@@ -60,12 +64,13 @@ export async function GET(request: Request) {
         if (!existingUser) {
           // Profile doesn't exist - create it from user_metadata
           const fullName = data.user.user_metadata?.full_name || 
+                          data.user.user_metadata?.name ||
                           data.user.email?.split('@')[0] || 
                           'User';
           const phone = data.user.user_metadata?.phone || null;
           const companyId = data.user.user_metadata?.company_id || null;
 
-          const { error: insertError } = await supabase
+          const { error: insertError } = await supabaseAdmin
             .from('users')
             .insert({
               id: data.user.id,
@@ -77,6 +82,7 @@ export async function GET(request: Request) {
             });
 
           if (insertError) {
+            console.error('Error creating user profile in callback:', insertError)
             // Profile creation failed - redirect to error page with details
             const errorMsg = encodeURIComponent(insertError.message);
             return NextResponse.redirect(`${origin}/auth/profile-error?error=${errorMsg}&next=${next}`);

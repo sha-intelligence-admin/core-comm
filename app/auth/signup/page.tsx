@@ -50,6 +50,28 @@ export default function SignUpPage() {
     })
   }
 
+  const handleGoogleLogin = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        setError(error.message)
+      }
+    } catch (err) {
+      setError("An unexpected error occurred")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const validateForm = () => {
     // Schema names usually use snake_case for consistency with databases,
     // so we map the camelCase state fields to the schema's expected names.
@@ -305,7 +327,7 @@ export default function SignUpPage() {
             type="button"
             variant="outline"
             className="w-full border-input hover:bg-primary/10 hover:text-primary bg-transparent"
-            // onClick={handleGoogleLogin} // Uncomment when implemented
+            onClick={handleGoogleLogin}
             disabled={loading}
           >
             {loading && <LoadingSpinner className="mr-2" size="sm" />}
