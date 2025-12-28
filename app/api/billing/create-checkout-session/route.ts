@@ -18,16 +18,15 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Company ID is required', { status: 400 });
     }
 
-    // Verify user belongs to company and has permission
-    const { data: membership } = await supabase
-      .from('organization_memberships')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('company_id', companyId)
+    // Verify user belongs to company
+    const { data: userData } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
       .single();
 
-    if (!membership || !['owner', 'admin'].includes(membership.role)) {
-      return new NextResponse('Forbidden: Only Owners and Admins can manage billing', { status: 403 });
+    if (!userData || userData.company_id !== companyId) {
+      return new NextResponse('Forbidden: User does not belong to this company', { status: 403 });
     }
 
     // Build Flutterwave payment link payload

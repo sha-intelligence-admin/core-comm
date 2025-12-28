@@ -222,7 +222,7 @@ export async function POST(request: Request) {
           
           // Send email via Zoho
           try {
-            await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member')
+            await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member', userData.company_id)
           } catch (e) {
             console.error('❌ Failed to send Zoho email:', e)
           }
@@ -266,7 +266,7 @@ export async function POST(request: Request) {
 
         // Send email via Zoho
         try {
-          const sent = await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member')
+          const sent = await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member', userData.company_id)
           console.log('📧 Email sent result:', sent);
         } catch (e) {
           console.error('❌ Failed to send Zoho email:', e)

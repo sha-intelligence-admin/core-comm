@@ -8,7 +8,9 @@ if (!FLW_SECRET) {
 }
 
 export async function createPaymentLink(payload: Record<string, any>) {
-  const url = `${FLW_BASE}/payment-links`;
+  // Use /payments for standard payments (one-time or initial subscription payment)
+  // For subscriptions, include 'payment_plan' in the payload.
+  const url = `${FLW_BASE}/payments`;
   const resp = await axios.post(url, payload, {
     headers: {
       Authorization: `Bearer ${FLW_SECRET}`,
@@ -19,7 +21,7 @@ export async function createPaymentLink(payload: Record<string, any>) {
 }
 
 export async function createPlan(payload: Record<string, any>) {
-  const url = `${FLW_BASE}/plans`;
+  const url = `${FLW_BASE}/payment-plans`;
   const resp = await axios.post(url, payload, {
     headers: {
       Authorization: `Bearer ${FLW_SECRET}`,

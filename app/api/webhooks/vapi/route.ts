@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api';
 import type { WebhookPayload } from '@/lib/vapi/types';
+import { PRICING_TIERS, OVERAGE_RATES, PlanId } from '@/app/constants/pricing';
 
 /**
  * POST /api/webhooks/vapi
@@ -268,45 +269,96 @@ async function handleEndOfCallReport(message: any) {
     // --- BILLING LOGIC ---
     if (companyId && call.duration > 0) {
       const durationMinutes = Math.ceil(call.duration / 60);
-      const ratePerMinuteCents = 25; // $0.25
-      const totalCostCents = durationMinutes * ratePerMinuteCents;
+      let overageMinutes = durationMinutes;
+      let costCents = 0;
+      let planName = 'unknown';
 
-      // 1. Deduct from wallet
-      const { data: wallet } = await supabase
-        .from('wallets')
-        .select('id')
+      // 1. Check Subscription & Allowance
+      const { data: subscription } = await supabase
+        .from('billing_subscriptions')
+        .select('id, plan_id')
         .eq('company_id', companyId)
+        .eq('status', 'active')
         .single();
 
-      if (wallet) {
-        await supabase.rpc('increment_wallet_balance', {
-          wallet_id: wallet.id,
-          amount: -totalCostCents
-        });
+      if (subscription) {
+        const plan = PRICING_TIERS[subscription.plan_id as PlanId];
+        if (plan) {
+          planName = plan.name;
+          
+          // Get current usage period
+          const now = new Date().toISOString();
+          const { data: usagePeriod } = await supabase
+            .from('billing_usage_periods')
+            .select('id, voice_minutes_used')
+            .eq('subscription_id', subscription.id)
+            .lte('period_start', now)
+            .gte('period_end', now)
+            .single();
 
-        // 2. Record Transaction
-        await supabase.from('wallet_transactions').insert({
-          wallet_id: wallet.id,
-          amount: -totalCostCents,
-          type: 'usage',
-          reference_id: call.id, // Vapi Call ID
-          description: `Voice Call Usage (${durationMinutes} min)`,
-        });
-
-        // 3. Log Usage
-        await supabase.from('usage_logs').insert({
-          company_id: companyId,
-          resource_type: 'voice_inbound', // TODO: Detect direction
-          quantity: durationMinutes,
-          cost: totalCostCents,
-          meta: {
-            vapi_call_id: call.id,
-            duration_seconds: call.duration
+          if (usagePeriod && plan.limits.voice_minutes !== null) {
+             const used = Number(usagePeriod.voice_minutes_used);
+             const limit = plan.limits.voice_minutes;
+             const remaining = Math.max(0, limit - used);
+             
+             const covered = Math.min(remaining, durationMinutes);
+             overageMinutes = Math.max(0, durationMinutes - covered);
+             
+             // Update usage period
+             await supabase
+               .from('billing_usage_periods')
+               .update({ 
+                 voice_minutes_used: used + durationMinutes 
+               })
+               .eq('id', usagePeriod.id);
           }
-        });
-      } else {
-        console.warn(`[Billing] No wallet found for company ${companyId}`);
+        }
       }
+
+      // 2. Calculate Cost for Overage
+      if (overageMinutes > 0) {
+        const ratePerMinuteCents = OVERAGE_RATES.voice_minute * 100;
+        costCents = Math.round(overageMinutes * ratePerMinuteCents);
+
+        // Deduct from wallet
+        const { data: wallet } = await supabase
+          .from('wallets')
+          .select('id')
+          .eq('company_id', companyId)
+          .single();
+
+        if (wallet) {
+          await supabase.rpc('increment_wallet_balance', {
+            wallet_id: wallet.id,
+            amount: -costCents
+          });
+
+          // Record Transaction
+          await supabase.from('wallet_transactions').insert({
+            wallet_id: wallet.id,
+            amount: -costCents,
+            type: 'usage',
+            reference_id: call.id,
+            description: `Voice Call Overage (${overageMinutes} min) - Plan: ${planName}`,
+          });
+        } else {
+          console.warn(`[Billing] No wallet found for company ${companyId}`);
+        }
+      }
+
+      // 3. Log Usage
+      await supabase.from('usage_logs').insert({
+        company_id: companyId,
+        resource_type: 'voice_inbound', // TODO: Detect direction
+        quantity: durationMinutes,
+        cost: costCents,
+        meta: {
+          vapi_call_id: call.id,
+          duration_seconds: call.duration,
+          overage_minutes: overageMinutes,
+          plan_id: subscription?.plan_id
+        }
+      });
     }
 
     return createSuccessResponse({ received: true });

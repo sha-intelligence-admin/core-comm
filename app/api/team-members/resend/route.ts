@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       
       // Send email via Zoho
       try {
-        await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member')
+        await zohoMail.sendInvitationEmail(email, inviteLink, user.email || 'A team member', userData.company_id)
       } catch (e) {
         console.error('Failed to send Zoho email:', e)
       }

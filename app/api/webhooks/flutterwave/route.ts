@@ -5,7 +5,7 @@ import { verifyWebhookSignature } from '@/lib/flutterwave';
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
-  const sig = headers().get('verif-hash') || headers().get('x-flutterwave-signature') || null;
+  const sig = req.headers.get('verif-hash') || req.headers.get('x-flutterwave-signature') || null;
 
   const supabase = createServiceRoleClient();
 

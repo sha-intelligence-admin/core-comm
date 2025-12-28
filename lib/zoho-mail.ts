@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { trackUsage } from '@/lib/billing/usage-tracker';
 
 interface ZohoConfig {
   clientId: string;
@@ -62,12 +63,28 @@ class ZohoMailService {
     }
   }
 
-  async sendEmail(to: string, subject: string, htmlBody: string) {
+  /**
+   * Sends an email using Zoho Mail API.
+   * @param to Recipient email
+   * @param subject Email subject
+   * @param htmlBody Email content
+   * @param companyId Optional company ID for billing tracking. If provided, usage will be tracked.
+   */
+  async sendEmail(to: string, subject: string, htmlBody: string, companyId?: string) {
     const config = this.getConfig();
     
     if (!config.clientId || !config.refreshToken) {
       console.warn('Zoho Mail credentials not configured');
       return false;
+    }
+
+    // Billing Check
+    if (companyId) {
+      const usage = await trackUsage(companyId, 'email', 1);
+      if (!usage.allowed) {
+        console.warn(`[Billing] Email blocked for company ${companyId}: ${usage.reason}`);
+        throw new Error(`Email sending blocked: ${usage.reason}`);
+      }
     }
 
     try {
@@ -100,7 +117,7 @@ class ZohoMailService {
     }
   }
 
-  async sendInvitationEmail(to: string, inviteLink: string, inviterName: string) {
+  async sendInvitationEmail(to: string, inviteLink: string, inviterName: string, companyId?: string) {
     const subject = `You've been invited to join CoreComm`;
     const htmlBody = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -117,7 +134,7 @@ class ZohoMailService {
       </div>
     `;
 
-    return this.sendEmail(to, subject, htmlBody);
+    return this.sendEmail(to, subject, htmlBody, companyId);
   }
 }
 

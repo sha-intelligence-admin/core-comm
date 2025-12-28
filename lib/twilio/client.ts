@@ -3,7 +3,7 @@ import type { IncomingPhoneNumberInstance } from "twilio/lib/rest/api/v2010/acco
 
 let cachedClient: Twilio | null = null
 
-function getTwilioClient(): Twilio {
+export function getTwilioClient(): Twilio {
   const accountSid = process.env.TWILIO_ACCOUNT_SID
   const authToken = process.env.TWILIO_AUTH_TOKEN
 
@@ -99,12 +99,12 @@ export function normalizePhoneNumber(value?: string | null): string | null {
   return `+${digitsOnly}`
 }
 
-interface WebhookConfig {
+export interface WebhookConfig {
   voiceWebhookUrl?: string
   smsWebhookUrl?: string
 }
 
-function resolveWebhookConfig(config?: WebhookConfig) {
+export function resolveWebhookConfig(config?: WebhookConfig) {
   return {
     voiceWebhookUrl: config?.voiceWebhookUrl ?? defaultVoiceWebhook,
     smsWebhookUrl: config?.smsWebhookUrl ?? defaultSmsWebhook,

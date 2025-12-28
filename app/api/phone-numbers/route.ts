@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { checkProvisioningLimit } from '@/lib/billing/usage-tracker'
 
 // Validation schema for phone number
 const phoneNumberSchema = z.object({
@@ -128,6 +129,15 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json()
     const validatedData = phoneNumberSchema.parse(body)
+
+    // Check Provisioning Limits
+    const limitCheck = await checkProvisioningLimit(userData.company_id, 'phone_numbers');
+    if (!limitCheck.allowed) {
+      return NextResponse.json({ 
+        error: 'Phone number limit reached', 
+        details: `You have used ${limitCheck.current} of ${limitCheck.limit} allowed phone numbers. Upgrade your plan or purchase an add-on.` 
+      }, { status: 403 })
+    }
 
     // Check if phone number already exists
     const { data: existing } = await supabase

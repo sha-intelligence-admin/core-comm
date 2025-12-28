@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+// import { Card, div, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
@@ -26,12 +26,12 @@ export function CreditBalance({ balance, onTopUp }: CreditBalanceProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Credit Balance</CardTitle>
-        <CardDescription>Available funds for usage-based charges</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="flex flex-col gap-4 p-6 border border-input rounded-lg">
+      <div>
+        <h2 className="google-headline-small">Credit Balance</h2>
+        <p className="text-muted-foreground google-body-small">Available funds for usage-based charges</p>
+      </div>
+      <div>
         <div className="text-4xl font-bold mb-6">
           ${(balance / 100).toFixed(2)}
         </div>
@@ -56,7 +56,7 @@ export function CreditBalance({ balance, onTopUp }: CreditBalanceProps) {
             Auto-recharge is disabled. You will be notified when balance is low.
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
