@@ -2,39 +2,124 @@ import { getVapiClient } from './client';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { CreateKnowledgeBaseInput, UpdateKnowledgeBaseInput } from '@/lib/validations';
 
+// Helper to upload file to Vapi
+export async function createVapiFile(file: any) {
+  const vapi = getVapiClient();
+  return vapi.files.create({ file });
+}
+
+// Helper to create KB on Vapi
+export async function createVapiKnowledgeBase(name: string, fileIds: string[]) {
+  const vapi = getVapiClient();
+  return (vapi as any).knowledgeBases.create({
+    name,
+    provider: 'trieve',
+    fileIds,
+  });
+}
+
+// Helper to delete file from Vapi
+export async function deleteVapiFile(fileId: string) {
+  const vapi = getVapiClient();
+  return vapi.files.delete(fileId);
+}
+
+// Helper to delete KB from Vapi
+export async function deleteVapiKnowledgeBase(kbId: string) {
+  const vapi = getVapiClient();
+  return (vapi as any).knowledgeBases.delete(kbId);
+}
+
 /**
  * Create a new knowledge base
- * Note: Vapi manages knowledge bases through assistants, not as a separate resource
- * This creates a record in our database for tracking purposes
+ * Creates a KB on Vapi first, then records it in the database
  */
 export async function createKnowledgeBase(
   companyId: string,
-  params: CreateKnowledgeBaseInput
+  params: CreateKnowledgeBaseInput & { files?: any[] }
 ) {
   const supabase = createServiceRoleClient();
 
-  // Generate a unique identifier for this knowledge base
-  const kbId = `kb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // 1. Upload files to Vapi if any
+  const fileIds: string[] = [];
+  const uploadedFiles: any[] = [];
 
-  // Store in database
-  const { data, error } = await supabase
+  if (params.files && params.files.length > 0) {
+    for (const file of params.files) {
+      try {
+        const vapiFile = await createVapiFile(file);
+        fileIds.push(vapiFile.id);
+        uploadedFiles.push({ ...vapiFile, originalName: file.name });
+      } catch (e) {
+        console.error('Error uploading file to Vapi:', e);
+        // Cleanup already uploaded files
+        for (const id of fileIds) {
+            try { await deleteVapiFile(id); } catch (err) { console.error('Cleanup error:', err); }
+        }
+        throw new Error('Failed to upload files to Vapi');
+      }
+    }
+  }
+
+  // 2. Create KB on Vapi
+  let vapiKb;
+  try {
+    // If no files, we still create a KB (empty)
+    vapiKb = await createVapiKnowledgeBase(params.name, fileIds);
+  } catch (e) {
+    console.error('Error creating KB on Vapi:', e);
+    // Cleanup files
+    for (const id of fileIds) {
+      try { await deleteVapiFile(id); } catch (err) { console.error('Cleanup error:', err); }
+    }
+    throw new Error('Failed to create Knowledge Base on Vapi');
+  }
+
+  // 3. Store in database
+  const { data: kbData, error: kbError } = await supabase
     .from('vapi_knowledge_bases')
     .insert({
       company_id: companyId,
-      vapi_kb_id: kbId,
+      vapi_kb_id: vapiKb.id,
       name: params.name,
       description: params.description || null,
-      provider: params.provider || 'google',
+      provider: params.provider || 'trieve',
+      status: 'synced',
     })
     .select()
     .single();
 
-  if (error) {
-    console.error('Error creating knowledge base:', error);
-    throw new Error('Failed to create knowledge base');
+  if (kbError) {
+    console.error('Error creating knowledge base in DB:', kbError);
+    // Cleanup Vapi KB
+    try { await deleteVapiKnowledgeBase(vapiKb.id); } catch (err) { console.error('Cleanup error:', err); }
+    throw new Error('Failed to create knowledge base record');
   }
 
-  return data;
+  // 4. Store files in database
+  if (uploadedFiles.length > 0) {
+    const fileRecords = uploadedFiles.map(f => ({
+      knowledge_base_id: kbData.id,
+      vapi_file_id: f.id,
+      filename: f.originalName,
+      file_size: f.size || 0,
+      mime_type: f.mimetype || 'application/octet-stream',
+      file_url: f.url || '',
+      parsing_status: 'completed',
+    }));
+
+    const { error: filesError } = await supabase
+      .from('vapi_kb_files')
+      .insert(fileRecords);
+
+    if (filesError) {
+      console.error('Error storing files in DB:', filesError);
+      // We don't rollback the KB creation here, but we log the error.
+      // The files exist in Vapi but not in our DB files table.
+    }
+  }
+
+  return kbData;
 }
 
 /**
@@ -96,6 +181,179 @@ export async function getKnowledgeBase(id: string, companyId: string) {
     ...kb,
     files: files || [],
   };
+}
+
+/**
+ * Upload a file to an existing knowledge base
+ */
+export async function uploadFile(
+  kbId: string,
+  companyId: string,
+  file: any
+) {
+  const supabase = createServiceRoleClient();
+
+  // 1. Get KB to verify ownership and get vapi_kb_id
+  const { data: kb, error: kbError } = await supabase
+    .from('vapi_knowledge_bases')
+    .select('vapi_kb_id')
+    .eq('id', kbId)
+    .eq('company_id', companyId)
+    .single();
+
+  if (kbError || !kb) {
+    throw new Error('Knowledge base not found');
+  }
+
+  // 2. Upload file to Vapi
+  let vapiFile;
+  try {
+    vapiFile = await createVapiFile(file);
+  } catch (e) {
+    console.error('Error uploading file to Vapi:', e);
+    throw new Error('Failed to upload file to Vapi');
+  }
+
+  // 3. Add file to Vapi KB
+  const { data: existingFiles } = await supabase
+    .from('vapi_kb_files')
+    .select('vapi_file_id')
+    .eq('knowledge_base_id', kbId);
+    
+  const currentFileIds = existingFiles?.map(f => f.vapi_file_id) || [];
+  const newFileIds = [...currentFileIds, vapiFile.id];
+
+  const vapi = getVapiClient();
+  try {
+    await (vapi as any).knowledgeBases.update(kb.vapi_kb_id, {
+      fileIds: newFileIds,
+    });
+  } catch (e) {
+    console.error('Error updating KB on Vapi:', e);
+    // Cleanup uploaded file
+    await deleteVapiFile(vapiFile.id);
+    throw new Error('Failed to update Knowledge Base on Vapi');
+  }
+
+  // 4. Store file in database
+  const { data: fileRecord, error: fileError } = await supabase
+    .from('vapi_kb_files')
+    .insert({
+      knowledge_base_id: kbId,
+      vapi_file_id: vapiFile.id,
+      filename: file.name,
+      file_size: (vapiFile as any).size || file.size,
+      mime_type: (vapiFile as any).mimetype || file.type,
+      file_url: (vapiFile as any).url || '',
+      parsing_status: 'completed',
+    })
+    .select()
+    .single();
+
+  if (fileError) {
+    console.error('Error storing file in DB:', fileError);
+  }
+
+  return fileRecord;
+}
+
+/**
+ * Delete a file from a knowledge base
+ */
+export async function deleteFile(
+  kbId: string,
+  fileId: string,
+  companyId: string
+) {
+  const supabase = createServiceRoleClient();
+
+  // 1. Get file and KB details
+  const { data: fileRecord, error: fetchError } = await supabase
+    .from('vapi_kb_files')
+    .select('*, vapi_knowledge_bases!inner(company_id, vapi_kb_id)')
+    .eq('id', fileId)
+    .eq('knowledge_base_id', kbId)
+    .single();
+
+  if (fetchError || !fileRecord) {
+    throw new Error('File not found');
+  }
+
+  if (fileRecord.vapi_knowledge_bases.company_id !== companyId) {
+    throw new Error('Unauthorized');
+  }
+
+  const vapiKbId = fileRecord.vapi_knowledge_bases.vapi_kb_id;
+  const vapiFileId = fileRecord.vapi_file_id;
+
+  // 2. Update Vapi KB to remove file
+  const { data: existingFiles } = await supabase
+    .from('vapi_kb_files')
+    .select('vapi_file_id')
+    .eq('knowledge_base_id', kbId)
+    .neq('id', fileId);
+
+  const newFileIds = existingFiles?.map(f => f.vapi_file_id) || [];
+
+  const vapi = getVapiClient();
+  try {
+    await (vapi as any).knowledgeBases.update(vapiKbId, {
+      fileIds: newFileIds,
+    });
+  } catch (e) {
+    console.error('Error updating KB on Vapi:', e);
+    throw new Error('Failed to update Knowledge Base on Vapi');
+  }
+
+  // 3. Delete file from Vapi
+  try {
+    await deleteVapiFile(vapiFileId);
+  } catch (e) {
+    console.error('Error deleting file from Vapi:', e);
+  }
+
+  // 4. Delete from DB
+  const { error: deleteError } = await supabase
+    .from('vapi_kb_files')
+    .delete()
+    .eq('id', fileId);
+
+  if (deleteError) {
+    throw new Error('Failed to delete file record');
+  }
+
+  return true;
+}
+
+/**
+ * List files in a knowledge base
+ */
+export async function listFiles(kbId: string, companyId: string) {
+    const supabase = createServiceRoleClient();
+    
+    // Verify KB ownership
+    const { data: kb, error: kbError } = await supabase
+        .from('vapi_knowledge_bases')
+        .select('id')
+        .eq('id', kbId)
+        .eq('company_id', companyId)
+        .single();
+
+    if (kbError || !kb) {
+        throw new Error('Knowledge base not found');
+    }
+
+    const { data: files, error } = await supabase
+        .from('vapi_kb_files')
+        .select('*')
+        .eq('knowledge_base_id', kbId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        throw new Error('Failed to list files');
+    }
+
+    return files;
 }
 
 /**
@@ -185,146 +443,6 @@ export async function deleteKnowledgeBase(id: string, companyId: string) {
 
   if (deleteError) {
     throw new Error('Failed to delete knowledge base');
-  }
-}
-
-/**
- * Upload a file to a knowledge base
- */
-export async function uploadFile(
-  kbId: string,
-  companyId: string,
-  file: File
-) {
-  const supabase = createServiceRoleClient();
-
-  // Verify knowledge base exists and belongs to company
-  const { data: kb, error: kbError } = await supabase
-    .from('vapi_knowledge_bases')
-    .select('vapi_kb_id')
-    .eq('id', kbId)
-    .eq('company_id', companyId)
-    .single();
-
-  if (kbError || !kb) {
-    throw new Error('Knowledge base not found');
-  }
-
-  // Upload to Vapi using the files API
-  const vapi = getVapiClient();
-
-  // Convert File to the format expected by Vapi SDK
-  const vapiFile = await vapi.files.create({
-    file: file as any, // The SDK expects a File object
-  });
-
-  // Store file metadata in database
-  const { data: fileData, error: fileError } = await supabase
-    .from('vapi_kb_files')
-    .insert({
-      knowledge_base_id: kbId,
-      vapi_file_id: vapiFile.id,
-      filename: file.name,
-      file_size: file.size,
-      mime_type: file.type,
-      file_url: (vapiFile as any).url || null,
-      parsing_status: 'pending',
-    })
-    .select()
-    .single();
-
-  if (fileError) {
-    // Cleanup: Delete from Vapi if database insert fails
-    try {
-      await vapi.files.delete(vapiFile.id);
-    } catch (cleanupError) {
-      console.error('Error cleaning up Vapi file:', cleanupError);
-    }
-    throw new Error('Failed to store file metadata');
-  }
-
-  return fileData;
-}
-
-/**
- * List files in a knowledge base
- */
-export async function listFiles(kbId: string, companyId: string) {
-  const supabase = createServiceRoleClient();
-
-  // Verify knowledge base belongs to company
-  const { data: kb, error: kbError } = await supabase
-    .from('vapi_knowledge_bases')
-    .select('id')
-    .eq('id', kbId)
-    .eq('company_id', companyId)
-    .single();
-
-  if (kbError || !kb) {
-    throw new Error('Knowledge base not found');
-  }
-
-  // Get files
-  const { data: files, error: filesError } = await supabase
-    .from('vapi_kb_files')
-    .select('*')
-    .eq('knowledge_base_id', kbId)
-    .order('created_at', { ascending: false });
-
-  if (filesError) {
-    console.error('Error listing files:', filesError);
-    throw new Error('Failed to list files');
-  }
-
-  return files || [];
-}
-
-/**
- * Delete a file from a knowledge base
- */
-export async function deleteFile(fileId: string, kbId: string, companyId: string) {
-  const supabase = createServiceRoleClient();
-
-  // Get file and verify it belongs to the company's knowledge base
-  const { data: file, error: fileError } = await supabase
-    .from('vapi_kb_files')
-    .select(`
-      *,
-      vapi_knowledge_bases (
-        company_id
-      )
-    `)
-    .eq('id', fileId)
-    .eq('knowledge_base_id', kbId)
-    .single();
-
-  if (fileError || !file) {
-    throw new Error('File not found');
-  }
-
-  // Verify company ownership
-  const kb = file.vapi_knowledge_bases as any;
-  if (kb?.company_id !== companyId) {
-    throw new Error('Knowledge base not found');
-  }
-
-  // Delete from Vapi
-  const vapi = getVapiClient();
-  try {
-    await vapi.files.delete(file.vapi_file_id);
-  } catch (error) {
-    console.error('Error deleting file from Vapi:', error);
-    // Continue with database deletion
-  }
-
-  // Delete from database
-  const { error: deleteError } = await supabase
-    .from('vapi_kb_files')
-    .delete()
-    .eq('id', fileId);
-
-  if (deleteError) {
-    throw new Error('Failed to delete file');
   }
 }
 

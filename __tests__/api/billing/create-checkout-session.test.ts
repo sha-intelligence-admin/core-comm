@@ -46,7 +46,7 @@ describe('Create Checkout Session', () => {
 
     // Mock membership check
     mockSupabase.single.mockResolvedValue({
-      data: { role: 'owner' },
+      data: { company_id: 'company-123', role: 'owner' },
     });
 
     // Mock Flutterwave response
@@ -87,7 +87,7 @@ describe('Create Checkout Session', () => {
 
     // Mock membership check
     mockSupabase.single.mockResolvedValue({
-      data: { role: 'owner' },
+      data: { company_id: 'company-123', role: 'owner' },
     });
 
     // Mock Flutterwave responses

@@ -38,6 +38,7 @@ export default function KnowledgeBasePage() {
   const [deleting, setDeleting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState({ name: "", description: "" })
+  const [createFiles, setCreateFiles] = useState<File[]>([])
 
   const { knowledgeBase, files, uploadFile, deleteFile, refetch } = useKnowledgeBase(selectedKB)
 
@@ -48,9 +49,11 @@ export default function KnowledgeBasePage() {
       await createKnowledgeBase({
         name: formData.name,
         description: formData.description,
-        provider: "google",
+        provider: "trieve",
+        files: createFiles,
       })
       setFormData({ name: "", description: "" })
+      setCreateFiles([])
       setCreateOpen(false)
     } catch (err) {
       console.error('Failed to create knowledge base:', err)
@@ -355,6 +358,25 @@ export default function KnowledgeBasePage() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="rounded-xl"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-files">Initial Files (Optional)</Label>
+              <Input
+                id="create-files"
+                type="file"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setCreateFiles(Array.from(e.target.files))
+                  }
+                }}
+                className="rounded-xl cursor-pointer"
+              />
+              {createFiles.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {createFiles.length} file(s) selected
+                </p>
+              )}
             </div>
             <DialogFooter>
               <Button

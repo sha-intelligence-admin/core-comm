@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api'
 import { CreateIntegrationSchema, IntegrationsQuerySchema } from '@/lib/validations'
+import { IntegrationFactory } from '@/lib/integrations/factory'
+import { IntegrationType } from '@/lib/integrations/types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -106,6 +108,26 @@ export async function POST(request: NextRequest) {
     const integrationWithCompany = {
       ...integrationData,
       company_id: userData.company_id,
+    }
+
+    // Validate and test connection
+    try {
+      const provider = IntegrationFactory.getProvider(integrationData.type as IntegrationType);
+      
+      // Validate config structure
+      const isValidConfig = await provider.validateConfig(integrationData.config);
+      if (!isValidConfig) {
+        return createErrorResponse('Invalid configuration for this integration type', 400);
+      }
+
+      // Test connection
+      const isConnected = await provider.testConnection(integrationData.config);
+      if (!isConnected) {
+        return createErrorResponse('Failed to connect to the integration provider. Please check your credentials.', 400);
+      }
+    } catch (e) {
+      console.error('Integration validation failed:', e);
+      return createErrorResponse('Failed to validate integration configuration', 400);
     }
 
     const { data: integration, error } = await supabase

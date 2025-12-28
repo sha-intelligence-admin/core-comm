@@ -98,13 +98,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate request body
-    const body = await request.json();
-    const validatedData = CreateKnowledgeBaseSchema.parse(body);
+    let validatedData;
+    let files: File[] = [];
+
+    const contentType = request.headers.get('content-type') || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const name = formData.get('name') as string;
+      const description = formData.get('description') as string;
+      const provider = formData.get('provider') as any;
+      
+      // Extract files
+      const fileEntries = formData.getAll('files');
+      files = fileEntries.filter(f => f instanceof File) as File[];
+
+      validatedData = CreateKnowledgeBaseSchema.parse({
+        name,
+        description,
+        provider: provider || undefined,
+      });
+    } else {
+      const body = await request.json();
+      validatedData = CreateKnowledgeBaseSchema.parse(body);
+    }
 
     // Create knowledge base
     const knowledgeBase = await createKnowledgeBase(
       userProfile.company_id,
-      validatedData
+      { ...validatedData, files }
     );
 
     return createSuccessResponse(

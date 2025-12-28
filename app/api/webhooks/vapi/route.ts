@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api';
 import type { WebhookPayload } from '@/lib/vapi/types';
 import { PRICING_TIERS, OVERAGE_RATES, PlanId } from '@/app/constants/pricing';
+import { IntegrationFactory } from '@/lib/integrations/factory';
 
 /**
  * POST /api/webhooks/vapi
@@ -100,6 +101,59 @@ async function handleAssistantRequest(message: any) {
       console.error('[Vapi Webhook] Assistant not found for phone:', phoneNumber);
       return createErrorResponse('Assistant not configured for this number', 404);
     }
+
+    // --- BILLING ENFORCEMENT ---
+    const companyId = phoneNumbers.company_id;
+    
+    // 1. Check Wallet Balance
+    const { data: wallet } = await supabase
+      .from('wallets')
+      .select('balance')
+      .eq('company_id', companyId)
+      .single();
+
+    // 2. Check Subscription Status
+    const { data: subscription } = await supabase
+      .from('billing_subscriptions')
+      .select('status, plan_id')
+      .eq('company_id', companyId)
+      .eq('status', 'active')
+      .single();
+
+    // Logic:
+    // - If Enterprise plan: Allow (assuming post-paid or high limits)
+    // - If Active Subscription:
+    //   - Check if within monthly limits (optional, but good)
+    //   - OR Check if wallet has funds for overage
+    // - If No Subscription / Inactive:
+    //   - Check if wallet has funds (Pay-as-you-go)
+    
+    const isEnterprise = subscription?.plan_id === 'enterprise';
+    const hasActiveSubscription = subscription?.status === 'active';
+    const hasFunds = (wallet?.balance || 0) > 0; // Balance is in cents
+
+    // Strict check: Must have funds OR be Enterprise
+    // You might want to allow if they have an active subscription even with 0 balance 
+    // IF they haven't used up their included minutes. 
+    // For simplicity/safety, we require positive balance or Enterprise.
+    
+    if (!isEnterprise && !hasFunds) {
+      console.warn(`[Billing] Call rejected for company ${companyId}: Insufficient funds (Balance: ${wallet?.balance})`);
+      
+      // Return a specific "Payment Required" message
+      return createSuccessResponse({
+        assistant: {
+          firstMessage: "I'm sorry, but this account has insufficient funds to complete this call. Please contact the administrator.",
+          voice: {
+            provider: '11labs',
+            voiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel
+          },
+          // End call immediately after message
+          endCallAfterSpoken: true,
+        },
+      });
+    }
+    // ---------------------------
 
     const assistant = phoneNumbers.vapi_assistants as any;
 
@@ -416,25 +470,91 @@ async function handleTranscript(message: any) {
 async function handleFunctionCall(message: any) {
   try {
     const { call, functionCall } = message;
+    const assistantId = call?.assistantId;
 
     console.log('[Vapi Webhook] Function call:', {
       callId: call?.id,
+      assistantId,
       function: functionCall?.name,
       params: functionCall?.parameters,
     });
 
-    // TODO: Implement custom function handlers
-    // Example: Transfer call, create ticket, schedule callback, etc.
+    if (!assistantId) {
+      throw new Error('Missing assistant ID');
+    }
 
+    // 1. Get company ID from assistant
+    const supabase = createServiceRoleClient();
+    const { data: assistant, error: assistantError } = await supabase
+      .from('vapi_assistants')
+      .select('company_id')
+      .eq('vapi_assistant_id', assistantId)
+      .single();
+
+    if (assistantError || !assistant) {
+      console.error('[Vapi Webhook] Assistant not found:', assistantId);
+      return createSuccessResponse({
+        result: {
+          status: 'error',
+          message: 'Assistant not found',
+        },
+      });
+    }
+
+    // 2. Get active integrations
+    const { data: integrations, error: integrationsError } = await supabase
+      .from('integrations')
+      .select('*')
+      .eq('company_id', assistant.company_id)
+      .eq('is_active', true);
+
+    if (integrationsError || !integrations || integrations.length === 0) {
+      console.warn('[Vapi Webhook] No active integrations found for company:', assistant.company_id);
+      return createSuccessResponse({
+        result: {
+          status: 'error',
+          message: 'No active integrations configured',
+        },
+      });
+    }
+
+    // 3. Execute function on integrations
+    const results = [];
+    for (const integration of integrations) {
+      try {
+        const provider = IntegrationFactory.getProvider(integration.type);
+        if (provider.executeAction) {
+          const result = await provider.executeAction(
+            integration.config,
+            functionCall.name,
+            functionCall.parameters
+          );
+          results.push({ integration: integration.type, result });
+        }
+      } catch (error: any) {
+        console.error(`[Vapi Webhook] Integration ${integration.type} failed:`, error);
+        results.push({ integration: integration.type, error: error.message });
+      }
+    }
+
+    // Return the first successful result or a summary
+    const successResult = results.find(r => !r.error);
+    
     return createSuccessResponse({
-      result: {
-        status: 'success',
-        message: 'Function executed successfully',
+      result: successResult ? successResult.result : {
+        status: 'completed',
+        results
       },
     });
-  } catch (error) {
+
+  } catch (error: any) {
     console.error('[Vapi Webhook] Error handling function call:', error);
-    return createErrorResponse('Function execution failed', 500);
+    return createSuccessResponse({
+      result: {
+        status: 'error',
+        message: error.message || 'Internal server error',
+      },
+    });
   }
 }
 

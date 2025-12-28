@@ -181,7 +181,7 @@ export const UpdateAssistantSchema = CreateAssistantSchema.partial();
 export const CreateKnowledgeBaseSchema = z.object({
   name: z.string().min(1, 'Knowledge base name is required').max(100),
   description: z.string().max(500).optional(),
-  provider: z.enum(['google', 'openai']).default('google'),
+  provider: z.enum(['google', 'openai', 'trieve', 'vapi-doc']).default('trieve'),
 });
 
 export const UpdateKnowledgeBaseSchema = CreateKnowledgeBaseSchema.partial();

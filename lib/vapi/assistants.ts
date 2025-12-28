@@ -109,7 +109,11 @@ export async function createAssistant(
       description: params.description || null,
       system_prompt: params.systemPrompt,
       first_message: params.firstMessage,
-      model_config: { ...params.model, language: params.language || 'en' },
+      model_config: { 
+        ...params.model, 
+        language: params.language || 'en',
+        ...(params.knowledgeBaseId && { knowledgeBaseId: params.knowledgeBaseId })
+      },
       voice_config: params.voice,
       is_active: true,
     })
@@ -248,10 +252,11 @@ export async function updateAssistant(
       ...(params.description !== undefined && { description: params.description }),
       ...(params.systemPrompt && { system_prompt: params.systemPrompt }),
       ...(params.firstMessage && { first_message: params.firstMessage }),
-      ...(params.model && {
+      ...((params.model || params.knowledgeBaseId !== undefined) && {
         model_config: {
           ...existingAssistant.model_config,
-          ...params.model,
+          ...(params.model || {}),
+          ...(params.knowledgeBaseId !== undefined && { knowledgeBaseId: params.knowledgeBaseId }),
         },
       }),
       ...(params.voice && {

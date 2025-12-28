@@ -54,10 +54,29 @@ export function useKnowledgeBases() {
   )
 
   const createKnowledgeBase = async (kbData: any) => {
+    let body;
+    let headers: Record<string, string> = {};
+
+    if (kbData.files && kbData.files.length > 0) {
+      const formData = new FormData();
+      formData.append('name', kbData.name);
+      if (kbData.description) formData.append('description', kbData.description);
+      if (kbData.provider) formData.append('provider', kbData.provider);
+      
+      kbData.files.forEach((file: File) => {
+        formData.append('files', file);
+      });
+      body = formData;
+      // Content-Type header is automatically set by browser with boundary for FormData
+    } else {
+      body = JSON.stringify(kbData);
+      headers = { 'Content-Type': 'application/json' };
+    }
+
     const res = await fetch('/api/vapi/knowledge-bases', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(kbData),
+      headers,
+      body,
     })
 
     if (!res.ok) {

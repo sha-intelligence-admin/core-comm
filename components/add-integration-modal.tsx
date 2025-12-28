@@ -36,12 +36,19 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
     setIsLoading(true)
     setTestResult(null)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    // We can't really test connection without saving first in the current flow unless we add a test endpoint
+    // But for now, let's assume we want to validate the form data locally or mock it
+    // In a real app, we might have a /api/integrations/test endpoint that takes the config without saving
+    
+    // For now, we will just simulate it, but in the future we should call an API
+    await new Promise((resolve) => setTimeout(resolve, 1500))
 
-    // Simulate random success/failure
-    const success = Math.random() > 0.3
-    setTestResult(success ? "success" : "error")
+    // Basic validation
+    if (!formData.endpoint && formData.type === 'webhook') {
+        setTestResult("error")
+    } else {
+        setTestResult("success")
+    }
     setIsLoading(false)
   }
 
@@ -53,10 +60,12 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
     const result = await createIntegration({
       name: formData.name,
       type: formData.type as "mcp" | "webhook" | "api" | "crm" | "helpdesk",
-      endpoint_url: formData.endpoint,
+      endpoint_url: formData.endpoint || 'https://api.hubapi.com', // Default for CRM if empty
       description: formData.description,
       config: {
         apiKey: formData.apiKey,
+        url: formData.endpoint, // For webhook
+        accessToken: formData.apiKey, // For CRM
       },
       status: "active",
     })

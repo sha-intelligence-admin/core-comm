@@ -5,10 +5,15 @@
 import { GET, POST } from '@/app/api/phone-numbers/route';
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { checkProvisioningLimit } from '@/lib/billing/usage-tracker';
 
 // Mock dependencies
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
+}));
+
+jest.mock('@/lib/billing/usage-tracker', () => ({
+  checkProvisioningLimit: jest.fn(),
 }));
 
 describe('Phone Numbers API', () => {
@@ -32,6 +37,7 @@ describe('Phone Numbers API', () => {
     };
 
     (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    (checkProvisioningLimit as jest.Mock).mockResolvedValue({ allowed: true, limit: 10, current: 0 });
   });
 
   describe('GET /api/phone-numbers', () => {

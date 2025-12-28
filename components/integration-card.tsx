@@ -1,8 +1,10 @@
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Edit, Trash2, RefreshCw, type LucideIcon } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, RefreshCw, type LucideIcon, Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface Integration {
   id: string
@@ -33,6 +35,35 @@ const getStatusColor = (status: string) => {
 
 export function IntegrationCard({ integration }: IntegrationCardProps) {
   const Icon = integration.icon
+  const { toast } = useToast()
+  const [syncing, setSyncing] = useState(false)
+
+  const handleSync = async () => {
+    setSyncing(true)
+    try {
+      const res = await fetch(`/api/integrations/${integration.id}/sync`, {
+        method: 'POST',
+      })
+      
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.message || 'Failed to sync')
+      }
+
+      toast({
+        title: "Sync started",
+        description: `Synchronization for ${integration.name} has started.`,
+      })
+    } catch (error) {
+      toast({
+        title: "Sync failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   return (
     <Card className="group rounded-sm border-input bg-metricCard transition-all duration-300 hover:border-primary/50">
@@ -63,8 +94,8 @@ export function IntegrationCard({ integration }: IntegrationCardProps) {
               <Edit className="h-4 w-4" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 text-sm">
-              <RefreshCw className="h-4 w-4" />
+            <DropdownMenuItem className="gap-2 text-sm" onClick={handleSync} disabled={syncing}>
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Sync now
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2 text-sm text-red-600 focus:text-red-600">

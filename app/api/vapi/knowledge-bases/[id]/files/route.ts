@@ -237,7 +237,7 @@ export async function DELETE(
     }
 
     // Delete file
-    await deleteFile(fileId, id, userProfile.company_id);
+    await deleteFile(id, fileId, userProfile.company_id);
 
     return createSuccessResponse(null, 'File deleted successfully');
   } catch (error) {

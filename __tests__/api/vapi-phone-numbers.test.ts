@@ -6,6 +6,7 @@ import { POST } from '@/app/api/vapi/phone-numbers/route';
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createPhoneNumber } from '@/lib/vapi/phone-numbers';
+import { purchaseTwilioPhoneNumberByAreaCode } from '@/lib/twilio/client';
 
 // Mock dependencies
 jest.mock('@/lib/supabase/server', () => ({
@@ -15,6 +16,10 @@ jest.mock('@/lib/supabase/server', () => ({
 jest.mock('@/lib/vapi/phone-numbers', () => ({
   createPhoneNumber: jest.fn(),
   listPhoneNumbers: jest.fn(),
+}));
+
+jest.mock('@/lib/twilio/client', () => ({
+  purchaseTwilioPhoneNumberByAreaCode: jest.fn(),
 }));
 
 describe('Vapi Phone Numbers API', () => {
@@ -36,6 +41,7 @@ describe('Vapi Phone Numbers API', () => {
     };
 
     (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    (purchaseTwilioPhoneNumberByAreaCode as jest.Mock).mockResolvedValue({ phoneNumber: '+14155550100' });
   });
 
   afterAll(() => {
@@ -74,7 +80,7 @@ describe('Vapi Phone Numbers API', () => {
         'company-123',
         expect.objectContaining({
           provider: 'twilio',
-          areaCode: '415',
+          number: '+14155550100',
           twilioAccountSid: 'env-sid',
           twilioAuthToken: 'env-token'
         })
@@ -111,7 +117,7 @@ describe('Vapi Phone Numbers API', () => {
         'company-123',
         expect.objectContaining({
           provider: 'twilio',
-          areaCode: '415',
+          number: '+14155550100',
           twilioAccountSid: 'payload-sid',
           twilioAuthToken: 'payload-token'
         })

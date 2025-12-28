@@ -275,6 +275,7 @@ export async function POST(request: Request) {
         // Return a mock member object so the UI updates optimistically
         return NextResponse.json({ 
           id: 'pending-' + invitationToken,
+          company_id: userData.company_id,
           full_name: validatedData.full_name,
           email: email,
           role: validatedData.role,

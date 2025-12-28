@@ -29,25 +29,25 @@ describe('CSRF Protection', () => {
       expect(token1).not.toBe(token2)
     })
 
-    it('should hash tokens consistently', () => {
+    it('should hash tokens consistently', async () => {
       const token = 'test-token'
-      const hash1 = csrfProtection.hashToken(token)
-      const hash2 = csrfProtection.hashToken(token)
+      const hash1 = await csrfProtection.hashToken(token)
+      const hash2 = await csrfProtection.hashToken(token)
       expect(hash1).toBe(hash2)
     })
   })
 
   describe('Token Verification', () => {
-    it('should verify valid tokens', () => {
+    it('should verify valid tokens', async () => {
       const token = 'test-token'
-      const hash = csrfProtection.hashToken(token)
-      expect(csrfProtection.verifyToken(token, hash)).toBe(true)
+      const hash = await csrfProtection.hashToken(token)
+      expect(await csrfProtection.verifyToken(token, hash)).toBe(true)
     })
 
-    it('should reject invalid tokens', () => {
+    it('should reject invalid tokens', async () => {
       const token = 'test-token'
-      const wrongHash = csrfProtection.hashToken('wrong-token')
-      expect(csrfProtection.verifyToken(token, wrongHash)).toBe(false)
+      const wrongHash = await csrfProtection.hashToken('wrong-token')
+      expect(await csrfProtection.verifyToken(token, wrongHash)).toBe(false)
     })
   })
 
@@ -77,7 +77,7 @@ describe('CSRF Protection', () => {
     })
 
     it('should validate requests with correct tokens', async () => {
-      const { token, hash } = csrfProtection.generateTokenPair()
+      const { token, hash } = await csrfProtection.generateTokenPair()
       
       const request = new NextRequest('http://localhost/api/test', {
         method: 'POST',
@@ -151,8 +151,8 @@ describe('CSRF Protection', () => {
   })
 
   describe('Global Functions', () => {
-    it('should generate token pair with helper function', () => {
-      const { token, cookieHeader } = generateCSRFToken()
+    it('should generate token pair with helper function', async () => {
+      const { token, cookieHeader } = await generateCSRFToken()
       
       expect(token).toBeDefined()
       expect(typeof token).toBe('string')

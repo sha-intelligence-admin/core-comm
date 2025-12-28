@@ -9,6 +9,7 @@ import {
 } from "@/lib/twilio/client"
 import { createAssistant } from "@/lib/vapi/assistants"
 import { createPhoneNumber as createVapiPhoneNumber } from "@/lib/vapi/phone-numbers"
+import { createKnowledgeBase } from "@/lib/vapi/knowledge-bases"
 import { VAPI_DEFAULTS } from "@/lib/vapi/client"
 import type { ModelProvider, VoiceProvider } from "@/lib/vapi/types"
 import { nanoid } from "nanoid"
@@ -356,6 +357,54 @@ export async function POST(request: NextRequest) {
       console.log('⚠️ No twilioProvisioning - phoneNumberSource:', phoneNumberSource, 'phoneNumber:', phoneNumber)
     }
 
+    // Create Knowledge Base if content provided
+    let knowledgeBaseId: string | undefined;
+    if (knowledgeBase && knowledgeBase.trim().length > 0) {
+      console.log('📚 Creating default Knowledge Base...');
+      try {
+        const kbFile = new File([knowledgeBase], "onboarding-info.txt", { type: "text/plain" });
+        const kb = await createKnowledgeBase(company.id, {
+          name: `${companyName} Knowledge Base`,
+          description: "Created during onboarding",
+          provider: "trieve",
+          files: [kbFile]
+        });
+        knowledgeBaseId = kb.vapi_kb_id;
+        console.log('✅ Created default Knowledge Base:', knowledgeBaseId);
+      } catch (error) {
+        console.error('❌ Failed to create default Knowledge Base:', error);
+      }
+    }
+
+    // Create Integration if endpoint provided
+    if (mcpEndpoint && mcpEndpoint.trim().length > 0) {
+      console.log('🔌 Creating default Integration...');
+      try {
+        const { error: integrationError } = await serviceSupabase
+          .from('integrations')
+          .insert({
+            company_id: company.id,
+            type: 'webhook',
+            name: integrationName || 'Default Webhook',
+            description: 'Created during onboarding',
+            config: {
+              url: mcpEndpoint,
+              events: ['function-call'],
+            },
+            status: 'active',
+            is_active: true,
+          });
+        
+        if (integrationError) {
+          console.error('❌ Failed to create default Integration:', integrationError);
+        } else {
+          console.log('✅ Created default Integration');
+        }
+      } catch (error) {
+        console.error('❌ Failed to create default Integration:', error);
+      }
+    }
+
     // Create AI assistant if configured
     if (assistantName) {
       console.log('🤖 Creating assistant:', assistantName)
@@ -408,6 +457,7 @@ export async function POST(request: NextRequest) {
             provider: voiceProvider,
             voiceId: voiceId,
           },
+          knowledgeBaseId: knowledgeBaseId,
         })
 
         console.log('✅ Assistant created in VAPI with ID:', assistantRecord?.vapi_assistant_id)

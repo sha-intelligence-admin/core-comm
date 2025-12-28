@@ -1,3 +1,71 @@
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+import { checkProvisioningLimit } from '@/lib/billing/usage-tracker';
+
+// Mock crypto.randomUUID
+if (!global.crypto) {
+  Object.defineProperty(global, 'crypto', {
+    value: {
+      randomUUID: () => 'test-uuid-1234',
+    }
+  });
+} else if (!global.crypto.randomUUID) {
+  // @ts-ignore
+  global.crypto.randomUUID = () => 'test-uuid-1234';
+}
+
+// Mock NextRequest and NextResponse
+jest.mock('next/server', () => {
+  return {
+    NextRequest: class {
+      url: string;
+      method: string;
+      body: any;
+      headers: any;
+      nextUrl: { searchParams: { get: Function } };
+      constructor(url: string, init: any) {
+        this.url = url;
+        this.method = init?.method || 'GET';
+        this.body = init?.body;
+        this.headers = { get: () => null };
+        this.nextUrl = { searchParams: { get: () => null } };
+      }
+      json() {
+        return Promise.resolve(this.body ? JSON.parse(this.body) : {});
+      }
+    },
+    NextResponse: {
+      json: (body: any, init: any) => ({
+        json: () => Promise.resolve(body),
+        status: init?.status || 200,
+      }),
+    },
+  };
+});
+
+jest.mock('@/lib/supabase/server', () => ({
+  createClient: jest.fn(),
+  createServiceRoleClient: jest.fn(),
+}));
+
+jest.mock('next/headers', () => ({
+  cookies: jest.fn(),
+}));
+
+jest.mock('@/lib/billing/usage-tracker', () => ({
+  checkProvisioningLimit: jest.fn(),
+  trackUsage: jest.fn(),
+}));
+
+jest.mock('@/lib/zoho-mail', () => ({
+  zohoMail: {
+    sendEmail: jest.fn().mockResolvedValue(true),
+    sendInvitationEmail: jest.fn().mockResolvedValue(true),
+  },
+}));
+
+
 /**
  * Backend Integration Tests - Phase 2 & 3 Features
  * Tests database schema and company-scoped architecture
@@ -622,10 +690,26 @@ const mockTeamMember = {
 
 describe('Backend Integration Tests', () => {
   let mockSupabase: any;
+  let mockQueryBuilder: any;
 
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
+
+    // Mock Query Builder
+    mockQueryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { company_id: mockCompany.id }, error: null }),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+      order: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
+      or: jest.fn().mockReturnThis(),
+      then: jest.fn((resolve) => resolve({ data: [], error: null, count: 0 })),
+    };
 
     // Mock Supabase client
     mockSupabase = {
@@ -635,17 +719,13 @@ describe('Backend Integration Tests', () => {
           error: null,
         }),
       },
-      from: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
-    (createClient as jest.Mock).mockReturnValue(mockSupabase);
+    (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    (createServiceRoleClient as jest.Mock).mockReturnValue(mockSupabase);
     (cookies as jest.Mock).mockReturnValue({});
+    (checkProvisioningLimit as jest.Mock).mockResolvedValue({ allowed: true, limit: 10, current: 0 });
   });
 
   // =============================================================================
@@ -654,36 +734,37 @@ describe('Backend Integration Tests', () => {
 
   describe('Voice Agents API', () => {
     test('GET /api/voice-agents - should fetch all voice agents for company', async () => {
-      mockSupabase.select.mockResolvedValue({
+      mockQueryBuilder.then.mockImplementation((resolve: any) => resolve({
         data: [mockVoiceAgent],
         error: null,
-      });
+        count: 1
+      }));
 
       const { GET } = await import('@/app/api/voice-agents/route');
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost:3001/api/voice-agents'));
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.data).toHaveLength(1);
-      expect(data.data[0].company_id).toBe(mockCompany.id);
+      expect(data.agents).toHaveLength(1);
+      expect(data.agents[0].company_id).toBe(mockCompany.id);
       expect(mockSupabase.from).toHaveBeenCalledWith('voice_agents');
     });
 
     test('POST /api/voice-agents - should create new voice agent with company_id', async () => {
       // Mock getting user's company_id
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [{ company_id: mockCompany.id }],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { company_id: mockCompany.id },
         error: null,
       });
 
       // Mock insert operation
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [mockVoiceAgent],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: mockVoiceAgent,
         error: null,
       });
 
       const { POST } = await import('@/app/api/voice-agents/route');
-      const request = new Request('http://localhost:3001/api/voice-agents', {
+      const request = new NextRequest('http://localhost:3001/api/voice-agents', {
         method: 'POST',
         body: JSON.stringify({
           name: 'Customer Service Agent',
@@ -696,18 +777,18 @@ describe('Backend Integration Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.data.company_id).toBe(mockCompany.id);
-      expect(mockSupabase.insert).toHaveBeenCalled();
+      expect(data.agent.company_id).toBe(mockCompany.id);
+      expect(mockQueryBuilder.insert).toHaveBeenCalled();
     });
 
     test('PUT /api/voice-agents/[id] - should update voice agent', async () => {
-      mockSupabase.single.mockResolvedValue({
+      mockQueryBuilder.single.mockResolvedValue({
         data: { ...mockVoiceAgent, name: 'Updated Agent Name' },
         error: null,
       });
 
       const { PUT } = await import('@/app/api/voice-agents/[id]/route');
-      const request = new Request('http://localhost:3001/api/voice-agents/agent-id-1', {
+      const request = new NextRequest('http://localhost:3001/api/voice-agents/agent-id-1', {
         method: 'PUT',
         body: JSON.stringify({ name: 'Updated Agent Name' }),
       });
@@ -716,27 +797,27 @@ describe('Backend Integration Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.data.name).toBe('Updated Agent Name');
-      expect(mockSupabase.update).toHaveBeenCalled();
-      expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'agent-id-1');
+      expect(data.agent.name).toBe('Updated Agent Name');
+      expect(mockQueryBuilder.update).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'agent-id-1');
     });
 
     test('DELETE /api/voice-agents/[id] - should delete voice agent', async () => {
-      mockSupabase.eq.mockResolvedValue({
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) => resolve({
         data: null,
         error: null,
-      });
+      }));
 
       const { DELETE } = await import('@/app/api/voice-agents/[id]/route');
       const response = await DELETE(
-        new Request('http://localhost:3001/api/voice-agents/agent-id-1'),
+        new NextRequest('http://localhost:3001/api/voice-agents/agent-id-1'),
         { params: { id: 'agent-id-1' } }
       );
       const data = await response.json();
 
       expect(response.status).toBe(200);
       expect(data.message).toContain('deleted');
-      expect(mockSupabase.delete).toHaveBeenCalled();
+      expect(mockQueryBuilder.delete).toHaveBeenCalled();
     });
   });
 
@@ -746,33 +827,39 @@ describe('Backend Integration Tests', () => {
 
   describe('Phone Numbers API', () => {
     test('GET /api/phone-numbers - should fetch all phone numbers for company', async () => {
-      mockSupabase.select.mockResolvedValue({
+      mockQueryBuilder.then.mockImplementation((resolve: any) => resolve({
         data: [mockPhoneNumber],
         error: null,
-      });
+        count: 1
+      }));
 
       const { GET } = await import('@/app/api/phone-numbers/route');
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost:3001/api/phone-numbers'));
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.data).toHaveLength(1);
-      expect(data.data[0].company_id).toBe(mockCompany.id);
+      expect(data.phoneNumbers).toHaveLength(1);
+      expect(data.phoneNumbers[0].company_id).toBe(mockCompany.id);
     });
 
     test('POST /api/phone-numbers - should create new phone number with company_id', async () => {
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [{ company_id: mockCompany.id }],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { company_id: mockCompany.id },
         error: null,
       });
 
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [mockPhoneNumber],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: mockPhoneNumber,
         error: null,
       });
 
       const { POST } = await import('@/app/api/phone-numbers/route');
-      const request = new Request('http://localhost:3001/api/phone-numbers', {
+      const request = new NextRequest('http://localhost:3001/api/phone-numbers', {
         method: 'POST',
         body: JSON.stringify({
           phone_number: '+15551234567',
@@ -784,7 +871,7 @@ describe('Backend Integration Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.data.company_id).toBe(mockCompany.id);
+      expect(data.phoneNumber.company_id).toBe(mockCompany.id);
     });
   });
 
@@ -794,33 +881,34 @@ describe('Backend Integration Tests', () => {
 
   describe('Messaging Channels API', () => {
     test('GET /api/messaging-channels - should fetch all channels for company', async () => {
-      mockSupabase.select.mockResolvedValue({
+      mockQueryBuilder.then.mockImplementation((resolve: any) => resolve({
         data: [mockMessagingChannel],
         error: null,
-      });
+        count: 1
+      }));
 
       const { GET } = await import('@/app/api/messaging-channels/route');
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost:3001/api/messaging-channels'));
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.data).toHaveLength(1);
-      expect(data.data[0].company_id).toBe(mockCompany.id);
+      expect(data.channels).toHaveLength(1);
+      expect(data.channels[0].company_id).toBe(mockCompany.id);
     });
 
     test('POST /api/messaging-channels - should create new channel with company_id', async () => {
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [{ company_id: mockCompany.id }],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { company_id: mockCompany.id },
         error: null,
       });
 
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [mockMessagingChannel],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: mockMessagingChannel,
         error: null,
       });
 
       const { POST } = await import('@/app/api/messaging-channels/route');
-      const request = new Request('http://localhost:3001/api/messaging-channels', {
+      const request = new NextRequest('http://localhost:3001/api/messaging-channels', {
         method: 'POST',
         body: JSON.stringify({
           channel_name: 'WhatsApp Support',
@@ -832,7 +920,7 @@ describe('Backend Integration Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.data.company_id).toBe(mockCompany.id);
+      expect(data.channel.company_id).toBe(mockCompany.id);
     });
   });
 
@@ -842,33 +930,34 @@ describe('Backend Integration Tests', () => {
 
   describe('Email Accounts API', () => {
     test('GET /api/email-accounts - should fetch all email accounts for company', async () => {
-      mockSupabase.select.mockResolvedValue({
+      mockQueryBuilder.then.mockImplementation((resolve: any) => resolve({
         data: [mockEmailAccount],
         error: null,
-      });
+        count: 1
+      }));
 
       const { GET } = await import('@/app/api/email-accounts/route');
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost:3001/api/email-accounts'));
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.data).toHaveLength(1);
-      expect(data.data[0].company_id).toBe(mockCompany.id);
+      expect(data.accounts).toHaveLength(1);
+      expect(data.accounts[0].company_id).toBe(mockCompany.id);
     });
 
     test('POST /api/email-accounts - should create new email account with company_id', async () => {
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [{ company_id: mockCompany.id }],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { company_id: mockCompany.id },
         error: null,
       });
 
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [mockEmailAccount],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: mockEmailAccount,
         error: null,
       });
 
       const { POST } = await import('@/app/api/email-accounts/route');
-      const request = new Request('http://localhost:3001/api/email-accounts', {
+      const request = new NextRequest('http://localhost:3001/api/email-accounts', {
         method: 'POST',
         body: JSON.stringify({
           account_name: 'Support Email',
@@ -881,7 +970,7 @@ describe('Backend Integration Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.data.company_id).toBe(mockCompany.id);
+      expect(data.company_id).toBe(mockCompany.id);
     });
   });
 
@@ -891,33 +980,34 @@ describe('Backend Integration Tests', () => {
 
   describe('Team Members API', () => {
     test('GET /api/team-members - should fetch all team members for company', async () => {
-      mockSupabase.select.mockResolvedValue({
+      mockQueryBuilder.then.mockImplementation((resolve: any) => resolve({
         data: [mockTeamMember],
         error: null,
-      });
+        count: 1
+      }));
 
       const { GET } = await import('@/app/api/team-members/route');
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost:3001/api/team-members'));
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.data).toHaveLength(1);
-      expect(data.data[0].company_id).toBe(mockCompany.id);
+      expect(data.members).toHaveLength(1);
+      expect(data.members[0].company_id).toBe(mockCompany.id);
     });
 
     test('POST /api/team-members - should create new team member with company_id', async () => {
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [{ company_id: mockCompany.id }],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { company_id: mockCompany.id },
         error: null,
       });
 
-      mockSupabase.select.mockResolvedValueOnce({
-        data: [mockTeamMember],
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: mockTeamMember,
         error: null,
       });
 
       const { POST } = await import('@/app/api/team-members/route');
-      const request = new Request('http://localhost:3001/api/team-members', {
+      const request = new NextRequest('http://localhost:3001/api/team-members', {
         method: 'POST',
         body: JSON.stringify({
           full_name: 'John Doe',
@@ -931,7 +1021,7 @@ describe('Backend Integration Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.data.company_id).toBe(mockCompany.id);
+      expect(data.company_id).toBe(mockCompany.id);
     });
   });
 
@@ -942,7 +1032,7 @@ describe('Backend Integration Tests', () => {
   describe('Analytics Dashboard', () => {
     test('Should aggregate data from all 6 backend systems', async () => {
       // Mock all data sources
-      mockSupabase.select
+      mockQueryBuilder.select
         .mockResolvedValueOnce({ data: [mockVoiceAgent], error: null }) // voice_agents
         .mockResolvedValueOnce({ data: [mockPhoneNumber], error: null }) // phone_numbers
         .mockResolvedValueOnce({ data: [mockMessagingChannel], error: null }) // messaging_channels
@@ -965,7 +1055,7 @@ describe('Backend Integration Tests', () => {
 
       // Test analytics data aggregation
       expect(mockSupabase.from).toBeDefined();
-      expect(mockSupabase.select).toBeDefined();
+      expect(mockQueryBuilder.select).toBeDefined();
     });
 
     test('Should calculate total metrics correctly', () => {
@@ -997,18 +1087,19 @@ describe('Backend Integration Tests', () => {
         company_id: 'other-company-id',
       };
 
-      mockSupabase.select.mockResolvedValue({
+      mockQueryBuilder.then.mockImplementation((resolve: any) => resolve({
         data: [mockVoiceAgent], // Should NOT include otherCompanyData
         error: null,
-      });
+        count: 1
+      }));
 
       const { GET } = await import('@/app/api/voice-agents/route');
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost:3001/api/voice-agents'));
       const data = await response.json();
 
-      expect(data.data).toHaveLength(1);
-      expect(data.data[0].company_id).toBe(mockCompany.id);
-      expect(data.data[0].company_id).not.toBe('other-company-id');
+      expect(data.agents).toHaveLength(1);
+      expect(data.agents[0].company_id).toBe(mockCompany.id);
+      expect(data.agents[0].company_id).not.toBe('other-company-id');
     });
 
     test('Created_by field should track user who created the resource', async () => {
@@ -1032,19 +1123,20 @@ describe('Backend Integration Tests', () => {
       });
 
       const { GET } = await import('@/app/api/voice-agents/route');
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost:3001/api/voice-agents'));
 
       expect(response.status).toBe(401);
     });
 
     test('Should handle database errors gracefully', async () => {
-      mockSupabase.select.mockResolvedValue({
+      mockQueryBuilder.then.mockImplementation((resolve: any) => resolve({
         data: null,
         error: { message: 'Database connection failed' },
-      });
+        count: 0
+      }));
 
       const { GET } = await import('@/app/api/voice-agents/route');
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost:3001/api/voice-agents'));
       const data = await response.json();
 
       expect(response.status).toBe(500);
@@ -1053,7 +1145,7 @@ describe('Backend Integration Tests', () => {
 
     test('Should validate required fields on POST', async () => {
       const { POST } = await import('@/app/api/voice-agents/route');
-      const request = new Request('http://localhost:3001/api/voice-agents', {
+      const request = new NextRequest('http://localhost:3001/api/voice-agents', {
         method: 'POST',
         body: JSON.stringify({}), // Missing required fields
       });
