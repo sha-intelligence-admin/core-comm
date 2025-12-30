@@ -5,13 +5,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { Eye, EyeOff } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Eye, EyeOff, Mail } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password')
+  const [otpSent, setOtpSent] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -66,6 +68,32 @@ export default function LoginPage() {
       if (error) {
         setError(error.message)
       }
+    } catch (err) {
+      setError("An unexpected error occurred")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEmailOTP = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        },
+      })
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      setOtpSent(true)
     } catch (err) {
       setError("An unexpected error occurred")
     } finally {
@@ -121,7 +149,23 @@ export default function LoginPage() {
                   </Alert>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-4">
+                {otpSent && (
+                  <Alert>
+                    <Mail className="h-4 w-4" />
+                    <AlertDescription>
+                      Check your email for a sign-in link. You can close this page.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Tabs value={loginMethod} onValueChange={(v) => setLoginMethod(v as 'password' | 'otp')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="password">Password</TabsTrigger>
+                    <TabsTrigger value="otp">Email Code</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="password">
+                    <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text- font-medium">
                       Email
@@ -174,8 +218,37 @@ export default function LoginPage() {
                     Sign In
                   </Button>
                 </form>
+                  </TabsContent>
+
+                  <TabsContent value="otp">
+                    <form onSubmit={handleEmailOTP} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="otp-email" className="text- font-medium">
+                          Email
+                        </Label>
+                        <Input
+                          id="otp-email"
+                          type="email"
+                          placeholder="john@company.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          disabled={loading || otpSent}
+                          className="border-input focus:border-none focus:ring-primary/50 placeholder:text-input"
+                        />
+                      </div>
+
+                      <Button type="submit" className="w-full text-white bg-primary hover:bg-primary/90" disabled={loading || otpSent}>
+                        {loading && <LoadingSpinner className="mr-2" size="sm" />}
+                        <Mail className="mr-2 h-4 w-4" />
+                        Send Sign-In Link
+                      </Button>
+                    </form>
+                  </TabsContent>
+                </Tabs>
+
                 <div className="text-center text-sm py-4">
-                  <span className="text-muted-foreground">Don't have an account? </span>
+                  <span className="text-muted-foreground">Don&apos;t have an account? </span>
                   <Link href="/auth/signup" className="text-primary hover:underline">
                     Sign up
                   </Link>

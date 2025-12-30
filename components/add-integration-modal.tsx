@@ -35,21 +35,33 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
   const handleTestConnection = async () => {
     setIsLoading(true)
     setTestResult(null)
+    setErrorMessage("")
 
-    // We can't really test connection without saving first in the current flow unless we add a test endpoint
-    // But for now, let's assume we want to validate the form data locally or mock it
-    // In a real app, we might have a /api/integrations/test endpoint that takes the config without saving
-    
-    // For now, we will just simulate it, but in the future we should call an API
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const response = await fetch('/api/integrations/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: formData.type,
+          endpoint: formData.endpoint,
+          apiKey: formData.apiKey
+        })
+      })
 
-    // Basic validation
-    if (!formData.endpoint && formData.type === 'webhook') {
+      const data = await response.json()
+
+      if (!response.ok) {
         setTestResult("error")
-    } else {
+        setErrorMessage(data.error || "Connection failed")
+      } else {
         setTestResult("success")
+      }
+    } catch (error) {
+      setTestResult("error")
+      setErrorMessage("Network error occurred")
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,7 +98,7 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="flex w-[min(100vw-2rem,440px)] flex-col gap-6 rounded-lg border border-input bg-background p-6 shadow-2xl">
+      <DialogContent className="flex w-[min(100vw-2rem,440px)] max-h-[85vh] overflow-y-auto flex-col gap-6 rounded-lg border border-input bg-background p-6 shadow-2xl">
         <DialogHeader className="space-y-2 text-left">
           <DialogTitle className="google-headline-small">Add new integration</DialogTitle>
           <DialogDescription className="google-body-medium text-muted-foreground">
@@ -197,10 +209,6 @@ export function AddIntegrationModal({ children }: AddIntegrationModalProps) {
               </div>
             )}
           </div>
-
-          {testResult === "error" && (
-            <p className="text-sm text-red-600">Connection failed. Check your endpoint URL and API key.</p>
-          )}
 
           {errorMessage && (
             <p className="text-sm text-red-600">{errorMessage}</p>

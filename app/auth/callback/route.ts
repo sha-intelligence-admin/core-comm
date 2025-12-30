@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createServiceRoleClient } from "@/lib/supabase/api"
 import { NextResponse } from "next/server"
+import { validateAuthMethod } from "@/lib/auth/validate-auth-policy"
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -123,6 +124,34 @@ export async function GET(request: Request) {
           })
           .eq('user_id', data.user.id)
           .eq('status', 'inactive') // Only update if inactive (or invited if that was a status)
+
+        // ✅ Validate authentication method against company policy
+        const validation = await validateAuthMethod(data.user.id);
+        
+        if (!validation.isAllowed) {
+          console.warn('⚠️ Authentication method not allowed:', {
+            userId: data.user.id,
+            method: validation.method,
+            allowedMethods: validation.allowedMethods,
+            companyName: validation.companyName
+          });
+
+          // Sign out the user
+          await supabase.auth.signOut();
+
+          // Redirect to login with error message
+          const errorMsg = encodeURIComponent(
+            `This authentication method (${validation.method}) is not allowed for your organization. ` +
+            `Please use one of: ${validation.allowedMethods.join(', ')}`
+          );
+          return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${errorMsg}`);
+        }
+
+        console.log('✅ Authentication method validated:', {
+          userId: data.user.id,
+          method: validation.method,
+          isAllowed: validation.isAllowed
+        });
 
       } catch (profileError) {
         // Unexpected error during profile creation

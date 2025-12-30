@@ -39,11 +39,32 @@ export function AddChannelModal({ children }: AddChannelModalProps) {
     setTestResult(null)
     setError(null)
 
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const response = await fetch('/api/messaging-channels/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: formData.platform,
+          provider: formData.provider,
+          accessToken: formData.accessToken,
+          phoneNumber: formData.phoneNumber
+        })
+      })
 
-    const success = Math.random() > 0.25
-    setTestResult(success ? "success" : "error")
-    setIsTesting(false)
+      const data = await response.json()
+
+      if (!response.ok) {
+        setTestResult("error")
+        setError(data.error || "Verification failed")
+      } else {
+        setTestResult("success")
+      }
+    } catch (err) {
+      setTestResult("error")
+      setError("Network error occurred")
+    } finally {
+      setIsTesting(false)
+    }
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -85,7 +106,7 @@ export function AddChannelModal({ children }: AddChannelModalProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="flex w-[min(100vw-2rem,460px)] flex-col gap-6 rounded-lg border border-input bg-background p-6 shadow-2xl">
+      <DialogContent className="flex w-[min(100vw-2rem,460px)] max-h-[85vh] overflow-y-auto flex-col gap-6 rounded-lg border border-input bg-background p-6 shadow-2xl">
         <DialogHeader className="space-y-2 text-left">
           <DialogTitle className="google-headline-small">Connect messaging channel</DialogTitle>
           <DialogDescription className="google-body-medium text-muted-foreground">

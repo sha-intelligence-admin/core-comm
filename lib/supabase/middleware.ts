@@ -85,10 +85,35 @@ export async function updateSession(request: NextRequest) {
     return setSecurityHeaders(redirectResponse)
   }
 
+  // 2FA Enforcement
+  if (user && !isPublicRoute && request.nextUrl.pathname !== '/auth/verify-mfa') {
+    try {
+      const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      const level = data?.currentLevel
+      
+      // Check if user has any verified factors
+      const factors = user.factors || []
+      const hasVerifiedFactors = factors.some(f => f.status === 'verified')
+
+      // If user has 2FA enabled but is only at level 1 (password only), redirect to verify
+      if (hasVerifiedFactors && level === 'aal1') {
+        const url = request.nextUrl.clone()
+        url.pathname = "/auth/verify-mfa"
+        const redirectResponse = NextResponse.redirect(url)
+        return setSecurityHeaders(redirectResponse)
+      }
+    } catch (error) {
+      console.error('Error checking MFA status:', error)
+      // Fail open or closed? Fail open for now to avoid locking users out on error
+    }
+  }
+
   // Redirect authenticated users away from auth pages
   if (user && request.nextUrl.pathname.startsWith('/auth/') &&
     request.nextUrl.pathname !== '/auth/callback' &&
-    request.nextUrl.pathname !== '/auth/reset-password') {
+    request.nextUrl.pathname !== '/auth/reset-password' &&
+    request.nextUrl.pathname !== '/auth/verify-mfa' &&
+    request.nextUrl.pathname !== '/auth/setup-mfa') {
     const url = request.nextUrl.clone()
     url.pathname = "/dashboard"
     const redirectResponse = NextResponse.redirect(url)

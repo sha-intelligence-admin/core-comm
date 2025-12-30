@@ -14,13 +14,24 @@ interface TranscriptSegment {
 interface LiveTranscriptProps {
   callId: string
   fallbackTranscript?: string
+  searchTerm?: string
 }
 
-export function LiveTranscript({ callId, fallbackTranscript }: LiveTranscriptProps) {
+export function LiveTranscript({ callId, fallbackTranscript, searchTerm = "" }: LiveTranscriptProps) {
   const [segments, setSegments] = useState<TranscriptSegment[]>([])
   const [loading, setLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+
+  const highlightText = (text: string) => {
+    if (!searchTerm) return text
+    const parts = text.split(new RegExp(`(${searchTerm})`, 'gi'))
+    return parts.map((part, i) => 
+      part.toLowerCase() === searchTerm.toLowerCase() 
+        ? <mark key={i} className="bg-yellow-200 text-black rounded-sm px-0.5">{part}</mark> 
+        : part
+    )
+  }
 
   useEffect(() => {
     if (!callId) {
@@ -77,8 +88,8 @@ export function LiveTranscript({ callId, fallbackTranscript }: LiveTranscriptPro
   // This handles legacy calls or calls before this feature was enabled
   if (!loading && segments.length === 0 && fallbackTranscript) {
     return (
-      <div className="whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed">
-        {fallbackTranscript}
+      <div className="whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed p-4">
+        {highlightText(fallbackTranscript)}
       </div>
     )
   }
@@ -100,26 +111,31 @@ export function LiveTranscript({ callId, fallbackTranscript }: LiveTranscriptPro
   }
 
   return (
-    <div className="space-y-4 p-1">
-      {segments.map((segment) => (
-        <div
-          key={segment.id}
-          className={`flex ${segment.role === "user" ? "justify-end" : "justify-start"}`}
-        >
+    <div className="space-y-4 p-4">
+      {segments.map((segment) => {
+        if (searchTerm && !segment.content.toLowerCase().includes(searchTerm.toLowerCase())) {
+          return null
+        }
+        return (
           <div
-            className={`max-w-[85%] rounded-lg p-3 text-sm ${
-              segment.role === "user"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-foreground"
-            }`}
+            key={segment.id}
+            className={`flex ${segment.role === "user" ? "justify-end" : "justify-start"}`}
           >
-            <p className="font-semibold text-xs mb-1 opacity-70 uppercase">
-              {segment.role === "user" ? "Customer" : "AI Assistant"}
-            </p>
-            <p>{segment.content}</p>
+            <div
+              className={`max-w-[85%] rounded-lg p-3 text-sm ${
+                segment.role === "user"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-foreground"
+              }`}
+            >
+              <p className="font-semibold text-xs mb-1 opacity-70 uppercase">
+                {segment.role === "user" ? "Customer" : "AI Assistant"}
+              </p>
+              <p>{highlightText(segment.content)}</p>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
       <div ref={bottomRef} />
     </div>
   )

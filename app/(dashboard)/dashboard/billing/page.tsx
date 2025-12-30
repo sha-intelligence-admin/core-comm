@@ -23,61 +23,79 @@ export default function BillingPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Get company from users table
-      const { data: userData } = await supabase
-        .from('users')
-        .select('company_id')
-        .eq('id', user.id)
-        .single()
-      
-      if (userData?.company_id) {
-        setCompanyId(userData.company_id)
-        
-        // Get Subscription
-        const { data: sub } = await supabase
-          .from('billing_subscriptions')
-          .select('*')
-          .eq('company_id', userData.company_id)
-          .single()
-        setSubscription(sub)
-
-        // Get Wallet
-        const { data: wal } = await supabase
-          .from('wallets')
-          .select('*')
-          .eq('company_id', userData.company_id)
-          .single()
-        setWallet(wal)
-
-        // Get Addons
-        const { data: addonsData } = await supabase
-          .from('billing_addons')
-          .select('*')
-          .eq('company_id', userData.company_id)
-          .eq('status', 'active')
-        setAddons(addonsData || [])
-
-        // Get Usage Period
-        if (sub) {
-            const now = new Date().toISOString()
-            const { data: usageData } = await supabase
-            .from('billing_usage_periods')
-            .select('*')
-            .eq('subscription_id', sub.id)
-            .lte('period_start', now)
-            .gte('period_end', now)
-            .single()
-            setUsage(usageData)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          setLoading(false)
+          toast({
+            title: "Authentication Error",
+            description: "Could not verify user session. Please try logging in again.",
+            variant: "destructive"
+          })
+          return
         }
+
+        // Get company from users table
+        const { data: userData } = await supabase
+          .from('users')
+          .select('company_id')
+          .eq('id', user.id)
+          .single()
+        
+        if (userData?.company_id) {
+          setCompanyId(userData.company_id)
+          
+          // Get Subscription
+          const { data: sub } = await supabase
+            .from('billing_subscriptions')
+            .select('*')
+            .eq('company_id', userData.company_id)
+            .single()
+          setSubscription(sub)
+
+          // Get Wallet
+          const { data: wal } = await supabase
+            .from('wallets')
+            .select('*')
+            .eq('company_id', userData.company_id)
+            .single()
+          setWallet(wal)
+
+          // Get Addons
+          const { data: addonsData } = await supabase
+            .from('billing_addons')
+            .select('*')
+            .eq('company_id', userData.company_id)
+            .eq('status', 'active')
+          setAddons(addonsData || [])
+
+          // Get Usage Period
+          if (sub) {
+              const now = new Date().toISOString()
+              const { data: usageData } = await supabase
+              .from('billing_usage_periods')
+              .select('*')
+              .eq('subscription_id', sub.id)
+              .lte('period_start', now)
+              .gte('period_end', now)
+              .single()
+              setUsage(usageData)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching billing data:', error)
+        toast({ 
+          title: "Error", 
+          description: "Failed to load billing information. Please try again.", 
+          variant: "destructive" 
+        })
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     fetchData()
-  }, [supabase])
+  }, [supabase, toast])
 
   const handlePurchaseAddon = async (addonId: string) => {
     if (!companyId) return

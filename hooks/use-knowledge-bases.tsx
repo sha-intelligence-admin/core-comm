@@ -30,13 +30,26 @@ export interface KBFile {
 }
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url)
-  if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.message || 'Request failed')
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), 15000) // 15s timeout
+
+  try {
+    const res = await fetch(url, { signal: controller.signal })
+    clearTimeout(id)
+
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.message || 'Request failed')
+    }
+    const data = await res.json()
+    return data.data
+  } catch (error: any) {
+    clearTimeout(id)
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out')
+    }
+    throw error
   }
-  const data = await res.json()
-  return data.data
 }
 
 export function useKnowledgeBases() {

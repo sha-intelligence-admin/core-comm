@@ -6,7 +6,8 @@ import { z } from 'zod'
 const voiceAgentSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
-  voice_model: z.string().default('en-US-neural'),
+  type: z.enum(['voice', 'messaging', 'email', 'workspace']).default('voice'),
+  voice_model: z.string().optional(),
   personality: z.string().optional(),
   language: z.string().default('en-US'),
   status: z.enum(['active', 'inactive', 'training', 'error']).default('active'),

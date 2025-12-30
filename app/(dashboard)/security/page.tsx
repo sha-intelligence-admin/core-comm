@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -8,17 +9,17 @@ import {
     Shield,
     Download,
     Eye,
-    Filter,
     FileText,
     Lock,
     Key,
     CheckCircle,
-    AlertTriangle,
     Calendar,
     User,
     Activity,
     Globe,
     Settings,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react"
 import {
     Select,
@@ -27,27 +28,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-
-const authenticationControls = [
-    {
-        setting: "Two-Factor Authentication (2FA)",
-        description: "Require secondary verification for all users",
-        control: "toggle",
-        enabled: true,
-    },
-    {
-        setting: "Allowed Authentication Methods",
-        description: "Email OTP, Authenticator App, SSO",
-        control: "dropdown",
-        enabled: true,
-    },
-    {
-        setting: "Active User Sessions",
-        description: "View and revoke session tokens",
-        control: "button",
-        enabled: true,
-    },
-]
+import { useSecuritySettings } from "@/hooks/use-security-settings"
+import { useAuditLogs } from "@/hooks/use-audit-logs"
+import { useToast } from "@/hooks/use-toast"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { format } from "date-fns"
+import { MFAEnrollment } from "@/components/mfa-enrollment"
+import { SessionsModal } from "@/components/sessions-modal"
+import * as XLSX from "xlsx"
 
 const dataEncryption = [
     {
@@ -97,69 +85,150 @@ const complianceStandards = [
     },
 ]
 
-const auditLogs = [
-    {
-        id: "1",
-        timestamp: "2025-11-04 10:22",
-        user: "Aisha O. (Admin)",
-        action: "Updated agent permissions",
-        channel: "Messaging",
-        ipAddress: "41.190.22.16",
-    },
-    {
-        id: "2",
-        timestamp: "2025-11-04 09:45",
-        user: "Samuel K. (Support Lead)",
-        action: "Exported analytics report",
-        channel: "Analytics",
-        ipAddress: "102.89.45.12",
-    },
-    {
-        id: "3",
-        timestamp: "2025-11-04 09:12",
-        user: "Idris T. (Developer)",
-        action: "Generated new API key",
-        channel: "Integrations",
-        ipAddress: "197.210.70.34",
-    },
-    {
-        id: "4",
-        timestamp: "2025-11-04 08:30",
-        user: "Fatima Y. (Agent)",
-        action: "Accessed customer conversation",
-        channel: "WhatsApp",
-        ipAddress: "105.112.88.21",
-    },
-    {
-        id: "5",
-        timestamp: "2025-11-04 07:58",
-        user: "Aisha O. (Admin)",
-        action: "Modified routing rules",
-        channel: "Voice",
-        ipAddress: "41.190.22.16",
-    },
-    {
-        id: "6",
-        timestamp: "2025-11-03 18:43",
-        user: "David M. (Support Lead)",
-        action: "Reviewed email classifications",
-        channel: "Email",
-        ipAddress: "156.234.12.89",
-    },
-]
-
-const securityFeatures = [
-    "Enterprise-grade encryption for all data at rest and in transit",
-    "Multi-factor authentication with SSO integration support",
-    "Session management with automatic timeout and revocation",
-    "IP whitelisting and geo-blocking capabilities",
-    "Regular security audits and penetration testing",
-    "SOC 2 Type II certified infrastructure",
-    "Automated threat detection and monitoring",
-    "Data residency options for regional compliance",
-]
-
 export default function SecurityPage() {
+    const [page, setPage] = useState(1)
+    const [limit] = useState(10)
+    const [sessionsModalOpen, setSessionsModalOpen] = useState(false)
+    const { settings, isLoading: settingsLoading, updateSettings } = useSecuritySettings()
+    const { logs, pagination, isLoading: logsLoading } = useAuditLogs(page, limit)
+    const { toast } = useToast()
+
+    const formatIPAddress = (ip: string | null) => {
+        if (!ip) return "Not recorded"
+        if (ip === "::1" || ip === "127.0.0.1" || ip === "localhost") {
+            return "Local"
+        }
+        return ip
+    }
+
+    const handleToggle2FA = async (checked: boolean) => {
+        try {
+            await updateSettings({ two_factor_enabled: checked })
+            toast({
+                title: "Success",
+                description: `Two-Factor Authentication ${checked ? 'enabled' : 'disabled'}`,
+            })
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to update 2FA settings",
+                variant: "destructive",
+            })
+        }
+    }
+
+    const handleAuthMethodChange = async (value: string) => {
+        // Map selection to array with consistent naming
+        let methods: string[] = []
+        if (value === 'all') methods = ['password', 'email_otp', 'sso', 'totp']
+        else if (value === 'otp-app') methods = ['email_otp', 'totp']
+        else if (value === 'sso-only') methods = ['sso']
+        else if (value === 'otp-only') methods = ['email_otp']
+
+        try {
+            await updateSettings({ allowed_auth_methods: methods })
+            toast({
+                title: "Success",
+                description: "Authentication methods updated",
+            })
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to update authentication methods",
+                variant: "destructive",
+            })
+        }
+    }
+
+    const exportToCSV = () => {
+        if (logs.length === 0) {
+            toast({
+                title: "No data to export",
+                description: "There are no audit logs to export",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const headers = ["Timestamp", "User", "Action", "Resource", "IP Address"]
+        const rows = logs.map(log => [
+            log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "N/A",
+            log.actor_name || "Unknown",
+            log.action || "N/A",
+            log.resource || "System",
+            formatIPAddress(log.ip_address)
+        ])
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+        ].join("\n")
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+        const link = document.createElement("a")
+        const url = URL.createObjectURL(blob)
+        link.setAttribute("href", url)
+        link.setAttribute("download", `audit-logs-${format(new Date(), "yyyy-MM-dd")}.csv`)
+        link.style.visibility = "hidden"
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        toast({
+            title: "Export successful",
+            description: `Exported ${logs.length} audit log entries to CSV`,
+        })
+    }
+
+    const exportToXLSX = () => {
+        if (logs.length === 0) {
+            toast({
+                title: "No data to export",
+                description: "There are no audit logs to export",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const data = logs.map(log => ({
+            Timestamp: log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "N/A",
+            User: log.actor_name || "Unknown",
+            Action: log.action || "N/A",
+            Resource: log.resource || "System",
+            "IP Address": formatIPAddress(log.ip_address),
+        }))
+
+        const worksheet = XLSX.utils.json_to_sheet(data)
+        const workbook = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Audit Logs")
+
+        // Auto-size columns
+        const maxWidth = 50
+        const colWidths = Object.keys(data[0] || {}).map(key => {
+            const maxLen = Math.max(
+                key.length,
+                ...data.map(row => String(row[key as keyof typeof row] || "").length)
+            )
+            return { wch: Math.min(maxLen + 2, maxWidth) }
+        })
+        worksheet["!cols"] = colWidths
+
+        XLSX.writeFile(workbook, `audit-logs-${format(new Date(), "yyyy-MM-dd")}.xlsx`)
+
+        toast({
+            title: "Export successful",
+            description: `Exported ${logs.length} audit log entries to Excel`,
+        })
+    }
+
+    if (settingsLoading) {
+        return (
+            <div className="flex h-64 items-center justify-center">
+                <LoadingSpinner size="lg" />
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6 overflow-x-hidden">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -169,16 +238,16 @@ export default function SecurityPage() {
                         Keep your communications protected with enterprise-grade security
                     </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                    <Button className="h-11 rounded-sm px-6 text-white">
+                <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+                    <Button className="h-11 rounded-sm px-6 text-white w-full sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
                         Compliance Docs
                     </Button>
-                    <Button variant="outline" className="h-11 rounded-sm border-input bg-transparent px-6 hover:border-primary hover:bg-primary hover:text-white">
+                    <Button variant="outline" className="h-11 rounded-sm border-input bg-transparent px-6 hover:border-primary hover:bg-primary hover:text-white w-full sm:w-auto">
                         <FileText className="mr-2 h-4 w-4" />
                         Security Report
                     </Button>
-                    <Button variant="outline" className="h-11 rounded-sm border-input bg-transparent px-6 hover:border-primary hover:bg-primary hover:text-white">
+                    <Button variant="outline" className="h-11 rounded-sm border-input bg-transparent px-6 hover:border-primary hover:bg-primary hover:text-white w-full sm:w-auto">
                         <Settings className="mr-2 h-4 w-4" />
                         Configure
                     </Button>
@@ -206,22 +275,23 @@ export default function SecurityPage() {
                                         Require secondary verification for all users
                                     </p>
                                     <div className="flex items-center gap-3">
-                                        <Switch defaultChecked />
-                                        <span className="google-body-small text-foreground">Enabled for all users</span>
+                                        <Switch 
+                                            checked={settings?.two_factor_enabled} 
+                                            onCheckedChange={handleToggle2FA}
+                                        />
+                                        <span className="google-body-small text-foreground">
+                                            {settings?.two_factor_enabled ? 'Enforced' : 'Optional'} for all users
+                                        </span>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
-                                    >
-                                        Enforce for All
-                                    </Button>
-                                    <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600">
-                                        <CheckCircle className="mr-1 h-3 w-3" />
-                                        Active
-                                    </Badge>
+                                    <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+                                    <MFAEnrollment />
+                                    {/* {settings?.two_factor_enabled && (
+                                        <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600">
+                                            <CheckCircle className="mr-1 h-3 w-3" />
+                                            Policy Active
+                                        </Badge>
+                                    )} */}
                                 </div>
                             </div>
                         </div>
@@ -234,7 +304,7 @@ export default function SecurityPage() {
                                     <p className="google-body-small text-muted-foreground mb-3">
                                         Select verification methods available to users
                                     </p>
-                                    <Select defaultValue="all">
+                                    <Select onValueChange={handleAuthMethodChange} defaultValue="all">
                                         <SelectTrigger className="w-full lg:w-[280px] rounded-sm border-input">
                                             <SelectValue placeholder="Select methods" />
                                         </SelectTrigger>
@@ -247,7 +317,7 @@ export default function SecurityPage() {
                                     </Select>
                                 </div>
                                 <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
-                                    3 methods enabled
+                                    {settings?.allowed_auth_methods?.length || 0} methods enabled
                                 </Badge>
                             </div>
                         </div>
@@ -263,12 +333,13 @@ export default function SecurityPage() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
-                                        12 active sessions
+                                        Active
                                     </Badge>
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
+                                        onClick={() => setSessionsModalOpen(true)}
                                     >
                                         <Eye className="mr-2 h-3 w-3" />
                                         View Sessions
@@ -306,10 +377,10 @@ export default function SecurityPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600">
+                                {/* <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600">
                                     <CheckCircle className="mr-1 h-3 w-3" />
                                     Secure
-                                </Badge>
+                                </Badge> */}
                             </div>
                         ))}
                     </div>
@@ -354,10 +425,10 @@ export default function SecurityPage() {
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="google-body-small text-muted-foreground">{item.region}</span>
-                                    <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600">
+                                    {/* <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600">
                                         <CheckCircle className="mr-1 h-3 w-3" />
                                         Compliant
-                                    </Badge>
+                                    </Badge> */}
                                 </div>
                             </div>
                         ))}
@@ -373,7 +444,7 @@ export default function SecurityPage() {
                             </div>
                             <Button
                                 variant="outline"
-                                className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
+                                className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary w-full sm:w-auto"
                             >
                                 <Download className="mr-2 h-4 w-4" />
                                 Download All Docs
@@ -385,7 +456,7 @@ export default function SecurityPage() {
 
             <Card className="rounded-sm border-input transition-all duration-300 hover:border-primary/50">
                 <CardHeader className="rounded-t-sm">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <div className="google-headline-small text-foreground flex items-center gap-2">
                                 <Activity className="h-4 w-4 text-primary" />
@@ -395,9 +466,9 @@ export default function SecurityPage() {
                                 Track all security-related actions and user activity
                             </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 w-full lg:w-auto">
                             <Select defaultValue="all-users">
-                                <SelectTrigger className="w-[160px] rounded-sm border-input">
+                                    <SelectTrigger className="w-full sm:w-[160px] rounded-sm border-input">
                                     <SelectValue placeholder="Filter by user" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -408,7 +479,7 @@ export default function SecurityPage() {
                                 </SelectContent>
                             </Select>
                             <Select defaultValue="7-days">
-                                <SelectTrigger className="w-[140px] rounded-sm border-input">
+                                <SelectTrigger className="w-full sm:w-[140px] rounded-sm border-input">
                                     <SelectValue placeholder="Date range" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -419,7 +490,7 @@ export default function SecurityPage() {
                                 </SelectContent>
                             </Select>
                             <Select defaultValue="all-actions">
-                                <SelectTrigger className="w-[160px] rounded-sm border-input">
+                                <SelectTrigger className="w-full sm:w-[160px] rounded-sm border-input">
                                     <SelectValue placeholder="Action type" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -434,59 +505,97 @@ export default function SecurityPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-input">
-                                    <th className="google-title-small text-foreground text-left p-3">Timestamp</th>
-                                    <th className="google-title-small text-foreground text-left p-3">User</th>
-                                    <th className="google-title-small text-foreground text-left p-3">Action</th>
-                                    <th className="google-title-small text-foreground text-left p-3">Channel</th>
-                                    <th className="google-title-small text-foreground text-left p-3">IP Address</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {auditLogs.map((log) => (
-                                    <tr
-                                        key={log.id}
-                                        className="border-b border-input transition-colors hover:bg-muted/40"
-                                    >
-                                        <td className="google-body-small text-muted-foreground p-3">
-                                            <div className="flex items-center gap-2">
-                                                <Calendar className="h-3 w-3" />
-                                                {log.timestamp}
+                    <div className="rounded-sm bg-muted/40">
+                        {logsLoading ? (
+                            <div className="p-4 text-center">
+                                <LoadingSpinner size="sm" />
+                            </div>
+                        ) : logs.length === 0 ? (
+                            <div className="p-4  text-center text-muted-foreground">
+                                No audit logs found
+                            </div>
+                        ) : (
+                            <div className="">
+                                {logs.map((log) => (
+                                    <div key={log.id} className="border border-input p-4 my-1 rounded-lg transition-colors hover:bg-muted/40">
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="google-body-small text-muted-foreground flex items-center gap-2">
+                                                    <Calendar className="h-3 w-3" />
+                                                    {log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm") : "N/A"}
+                                                </div>
+                                                <div className="google-body-small text-foreground flex items-center gap-2 min-w-0">
+                                                    <User className="h-3 w-3 shrink-0" />
+                                                    <span className="truncate">{log.actor_name || "Unknown"}</span>
+                                                </div>
                                             </div>
-                                        </td>
-                                        <td className="google-body-small text-foreground p-3">
-                                            <div className="flex items-center gap-2">
-                                                <User className="h-3 w-3" />
-                                                {log.user}
+
+                                            <div className="min-w-0">
+                                                <div className="google-body-small text-muted-foreground">Action</div>
+                                                <div className="google-body-small text-foreground break-words">
+                                                    {log.action || "N/A"}
+                                                </div>
                                             </div>
-                                        </td>
-                                        <td className="google-body-small text-foreground p-3">{log.action}</td>
-                                        <td className="p-3">
-                                            <Badge variant="outline" className="rounded-full border-input bg-muted/40 text-muted-foreground">
-                                                {log.channel}
-                                            </Badge>
-                                        </td>
-                                        <td className="google-body-small text-muted-foreground p-3">
-                                            <code className="text-xs">{log.ipAddress}</code>
-                                        </td>
-                                    </tr>
+
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <div className="google-body-small text-muted-foreground">Resource</div>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="mt-1 max-w-full rounded-full border-input bg-muted/40 text-muted-foreground"
+                                                    >
+                                                        <span className="truncate">{log.resource || "System"}</span>
+                                                    </Badge>
+                                                </div>
+
+                                                <div className="min-w-0">
+                                                    <div className="google-body-small text-muted-foreground">IP Address</div>
+                                                    <code className="mt-1 block text-xs break-all text-muted-foreground">
+                                                        {formatIPAddress(log.ip_address)}
+                                                    </code>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 ))}
-                            </tbody>
-                        </table>
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-sm border border-input bg-muted/40 p-4">
-                        <div className="google-body-small text-muted-foreground">
-                            Showing 6 of 1,247 audit log entries
+                        <div className="flex items-center gap-4">
+                            <div className="google-body-small text-muted-foreground">
+                                Showing {logs.length} audit log entries
+                                {pagination && ` (Page ${pagination.page} of ${pagination.totalPages})`}
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-sm"
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1 || logsLoading}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-sm"
+                                    onClick={() => setPage(p => p + 1)}
+                                    disabled={!pagination || page >= pagination.totalPages || logsLoading}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
+                                onClick={exportToCSV}
+                                disabled={logs.length === 0}
                             >
                                 <FileText className="mr-2 h-3 w-3" />
                                 Export CSV
@@ -495,6 +604,8 @@ export default function SecurityPage() {
                                 variant="outline"
                                 size="sm"
                                 className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary"
+                                onClick={exportToXLSX}
+                                disabled={logs.length === 0}
                             >
                                 <FileText className="mr-2 h-3 w-3" />
                                 Export XLSX
@@ -511,6 +622,8 @@ export default function SecurityPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <SessionsModal isOpen={sessionsModalOpen} onOpenChange={setSessionsModalOpen} />
         </div>
     )
 }

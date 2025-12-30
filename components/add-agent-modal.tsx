@@ -49,45 +49,42 @@ export function AddAgentModal({ children }: AddAgentModalProps) {
     setIsSaving(true)
     setErrorMessage("")
 
-    // Only create voice agents for now (voice channel)
-    if (formData.channel === "voice") {
-      try {
-        await createAssistant({
-          name: formData.name,
-          description: formData.goal,
-          systemPrompt: formData.goal || "You are a helpful assistant.",
-          firstMessage: `Hello! I'm ${formData.name}. How can I help you today?`,
-          language: formData.language,
-          model: {
-            provider: 'openai',
-            model: 'gpt-4o',
-            temperature: 0.7,
-          },
-          voice: {
-            provider: 'azure',
-            voiceId: formData.voiceModel,
-          },
-          // knowledgeBaseId: formData.knowledgeBase || undefined,
-        })
+    try {
+      const isVoice = formData.channel === "voice"
+      
+      await createAssistant({
+        name: formData.name,
+        description: formData.goal,
+        systemPrompt: formData.goal || "You are a helpful assistant.",
+        firstMessage: `Hello! I'm ${formData.name}. How can I help you today?`,
+        language: formData.language,
+        // @ts-ignore - type field added in backend
+        type: formData.channel || 'voice',
+        model: {
+          provider: 'openai',
+          model: 'gpt-4o',
+          temperature: 0.7,
+        },
+        voice: isVoice ? {
+          provider: 'azure',
+          voiceId: formData.voiceModel,
+        } : undefined,
+        // knowledgeBaseId: formData.knowledgeBase || undefined,
+      })
 
-        setIsSaving(false)
-        setOpen(false)
-        setFormData({ 
-          name: "", 
-          channel: "", 
-          goal: "", 
-          knowledgeBase: "", 
-          handoff: "",
-          voiceModel: "en-US-JennyNeural",
-          language: "en",
-        })
-      } catch (err: any) {
-        setErrorMessage(err.message || "Failed to create assistant")
-        setIsSaving(false)
-      }
-    } else {
-      // For non-voice channels, just show a message for now
-      setErrorMessage("Only voice agents are supported at this time")
+      setIsSaving(false)
+      setOpen(false)
+      setFormData({ 
+        name: "", 
+        channel: "", 
+        goal: "", 
+        knowledgeBase: "", 
+        handoff: "",
+        voiceModel: "en-US-JennyNeural",
+        language: "en",
+      })
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to create assistant")
       setIsSaving(false)
     }
   }
@@ -95,7 +92,7 @@ export function AddAgentModal({ children }: AddAgentModalProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="flex w-[min(100vw-2rem,480px)] flex-col gap-6 rounded-lg border border-input bg-background p-6 shadow-2xl">
+      <DialogContent className="flex w-[min(100vw-2rem,480px)] max-h-[85vh] overflow-y-auto flex-col gap-6 rounded-lg border border-input bg-background p-6 shadow-2xl">
         <DialogHeader className="space-y-2 text-left">
           <DialogTitle className="google-headline-small">Create AI agent</DialogTitle>
           <DialogDescription className="google-body-medium text-muted-foreground">
@@ -151,6 +148,24 @@ export function AddAgentModal({ children }: AddAgentModalProps) {
               </SelectContent>
             </Select>
           </div>
+
+          {formData.channel === 'voice' && (
+            <div className="space-y-2">
+              <Label htmlFor="agent-voice" className="google-label-medium text-muted-foreground">
+                Voice Model
+              </Label>
+              <Select value={formData.voiceModel} onValueChange={(value) => setFormData((prev) => ({ ...prev, voiceModel: value }))}>
+                <SelectTrigger id="agent-voice" className="h-11 rounded-sm border-input">
+                  <SelectValue placeholder="Select voice" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en-US-JennyNeural">Jenny (Neural)</SelectItem>
+                  <SelectItem value="en-US-GuyNeural">Guy (Neural)</SelectItem>
+                  <SelectItem value="en-US-AriaNeural">Aria (Neural)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="agent-goal" className="google-label-medium text-muted-foreground">

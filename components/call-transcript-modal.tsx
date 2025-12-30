@@ -87,11 +87,10 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
             <div className="relative w-full sm:max-w-lg">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search transcript (coming soon)"
+                placeholder="Search transcript..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-11 w-full rounded-sm border-input pl-10"
-                disabled
               />
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -133,7 +132,7 @@ export function CallTranscriptModal({ call, open, onOpenChange }: CallTranscript
             <div className="space-y-4">
               <div className="google-title-small text-foreground">Transcript</div>
               <div className="rounded-lg border bg-card h-[400px] overflow-y-auto">
-                <LiveTranscript callId={call.id} fallbackTranscript={call.transcript} />
+                <LiveTranscript callId={call.id} fallbackTranscript={call.transcript} searchTerm={searchTerm} />
               </div>
             </div>
           </div>
