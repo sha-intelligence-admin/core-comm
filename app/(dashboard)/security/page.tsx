@@ -35,7 +35,7 @@ import { LoadingSpinner } from "@/components/loading-spinner"
 import { format } from "date-fns"
 import { MFAEnrollment } from "@/components/mfa-enrollment"
 import { SessionsModal } from "@/components/sessions-modal"
-import * as XLSX from "xlsx"
+import ExcelJS from "exceljs"
 
 const dataEncryption = [
     {
@@ -180,7 +180,7 @@ export default function SecurityPage() {
         })
     }
 
-    const exportToXLSX = () => {
+    const exportToXLSX = async () => {
         if (logs.length === 0) {
             toast({
                 title: "No data to export",
@@ -190,30 +190,55 @@ export default function SecurityPage() {
             return
         }
 
-        const data = logs.map(log => ({
-            Timestamp: log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "N/A",
-            User: log.actor_name || "Unknown",
-            Action: log.action || "N/A",
-            Resource: log.resource || "System",
-            "IP Address": formatIPAddress(log.ip_address),
+        const rows = logs.map((log) => ({
+            timestamp: log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "N/A",
+            user: log.actor_name || "Unknown",
+            action: log.action || "N/A",
+            resource: log.resource || "System",
+            ipAddress: formatIPAddress(log.ip_address),
         }))
 
-        const worksheet = XLSX.utils.json_to_sheet(data)
-        const workbook = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Audit Logs")
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet("Audit Logs")
 
-        // Auto-size columns
+        worksheet.columns = [
+            { header: "Timestamp", key: "timestamp" },
+            { header: "User", key: "user" },
+            { header: "Action", key: "action" },
+            { header: "Resource", key: "resource" },
+            { header: "IP Address", key: "ipAddress" },
+        ]
+
+        worksheet.addRows(rows)
+
+        // Auto-size columns (approx char width)
         const maxWidth = 50
-        const colWidths = Object.keys(data[0] || {}).map(key => {
-            const maxLen = Math.max(
-                key.length,
-                ...data.map(row => String(row[key as keyof typeof row] || "").length)
-            )
-            return { wch: Math.min(maxLen + 2, maxWidth) }
-        })
-        worksheet["!cols"] = colWidths
+        for (const column of worksheet.columns) {
+            const header = String(column.header ?? "")
+            const key = String(column.key ?? "") as keyof (typeof rows)[number]
 
-        XLSX.writeFile(workbook, `audit-logs-${format(new Date(), "yyyy-MM-dd")}.xlsx`)
+            const maxLen = Math.max(
+                header.length,
+                ...rows.map((r) => String((r as any)[key] ?? "").length)
+            )
+            column.width = Math.min(maxLen + 2, maxWidth)
+        }
+
+        const fileName = `audit-logs-${format(new Date(), "yyyy-MM-dd")}.xlsx`
+        const buffer = await workbook.xlsx.writeBuffer()
+        const blob = new Blob([buffer as any], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        })
+
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = fileName
+        link.style.visibility = "hidden"
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
 
         toast({
             title: "Export successful",

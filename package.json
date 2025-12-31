@@ -25,6 +25,7 @@
     "@radix-ui/react-dropdown-menu": "latest",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-progress": "^1.0.3",
+    "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-separator": "^1.0.3",
     "@radix-ui/react-slot": "latest",
@@ -42,6 +43,7 @@
     "clsx": "^2.1.1",
     "date-fns": "latest",
     "dotenv": "^17.2.1",
+    "exceljs": "^4.4.0",
     "ioredis": "^5.3.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.454.0",
@@ -54,7 +56,6 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "twilio": "^5.10.7",
-    "xlsx": "^0.18.5",
     "zod": "^4.0.17",
     "zustand": "^5.0.8"
   },

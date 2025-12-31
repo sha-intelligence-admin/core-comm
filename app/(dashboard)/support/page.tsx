@@ -24,13 +24,13 @@ import {
 
 const supportTypes = [
     {
-        type: "AI Support Chat",
+        type: "AI Support Agent",
         icon: MessageCircle,
         availability: "24/7 instant responses",
         description: "Get immediate answers from our AI assistant trained on CoreComm documentation",
-        action: "Start Chat",
+        action: "Talk to Mia",
         status: "available",
-        color: "bg-green-500/20 text-green-600",
+        color: "bg-primary/20 text-primary",
     },
     {
         type: "Human Support Agent",
@@ -168,8 +168,8 @@ export default function SupportPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <Button className="h-11 rounded-sm px-6 text-white">
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        Start AI Chat
+                        <Phone className="mr-2 h-4 w-4" />
+                        Talk to Mia
                     </Button>
                     <Button variant="outline" className="h-11 rounded-sm border-input bg-transparent px-6 hover:border-primary hover:bg-primary hover:text-white">
                         <BookOpen className="mr-2 h-4 w-4" />
@@ -219,10 +219,10 @@ export default function SupportPage() {
                                             >
                                                 {support.action}
                                             </Button>
-                                            <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600">
+                                            {/* <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600">
                                                 
                                                 Available
-                                            </Badge>
+                                            </Badge> */}
                                         </div>
                                     </div>
                                 </div>
@@ -365,9 +365,9 @@ export default function SupportPage() {
                                     <service.icon className="h-5 w-5 text-primary" />
                                     <div className="flex items-center gap-1">
                                         <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                                        <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600 text-xs">
+                                        {/* <Badge variant="outline" className="rounded-full border-0 bg-green-500/20 text-green-600 text-xs">
                                             Operational
-                                        </Badge>
+                                        </Badge> */}
                                     </div>
                                 </div>
                                 <div className="google-title-small text-foreground mb-3">{service.service}</div>
