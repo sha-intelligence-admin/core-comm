@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
 
@@ -32,27 +32,27 @@ export async function GET(request: NextRequest) {
     const companyId = userData.company_id
 
     // Fetch total calls
-    const { count: totalCalls, error: totalCallsError } = await supabase
+    const { count: totalCalls } = await supabase
       .from("calls")
       .select("*", { count: "exact", head: true })
       .eq("company_id", companyId)
 
     // Fetch resolved calls
-    const { count: resolvedCalls, error: resolvedCallsError } = await supabase
+    const { count: resolvedCalls } = await supabase
       .from("calls")
       .select("*", { count: "exact", head: true })
       .eq("company_id", companyId)
       .eq("resolution_status", "resolved")
 
     // Fetch active calls (in-progress)
-    const { count: activeCalls, error: activeCallsError } = await supabase
+    const { count: activeCalls } = await supabase
       .from("calls")
       .select("*", { count: "exact", head: true })
       .eq("company_id", companyId)
       .eq("resolution_status", "pending")
 
     // Fetch calls for duration calculation
-    const { data: callsData, error: callsDataError } = await supabase
+    const { data: callsData } = await supabase
       .from("calls")
       .select("duration")
       .eq("company_id", companyId)
@@ -65,11 +65,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch active voice agents count
-    const { count: activeAgents, error: agentsError } = await supabase
+    const { count: activeAgents } = await supabase
       .from("voice_agents")
       .select("*", { count: "exact", head: true })
       .eq("company_id", companyId)
       .eq("status", "active")
+
+    // Fetch MCP actions count (logged via audit_logs)
+    const { count: mcpActions } = await supabase
+      .from('audit_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('action', 'mcp_action')
 
     // Calculate success rate
     const successRate = totalCalls && totalCalls > 0 
@@ -89,7 +96,7 @@ export async function GET(request: NextRequest) {
         resolvedCalls: resolvedCalls || 0,
         avgDuration: formatDuration(avgDuration),
         avgDurationSeconds: avgDuration,
-        mcpActions: 0, // TODO: Implement MCP actions tracking
+        mcpActions: mcpActions || 0,
         activeCalls: activeCalls || 0,
         activeAgents: activeAgents || 0,
         successRate: parseFloat(successRate),

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { verifyVapiWebhookSignature } from '@/lib/vapi/webhook';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api';
 import type { WebhookPayload } from '@/lib/vapi/types';
@@ -17,20 +18,33 @@ import { IntegrationFactory } from '@/lib/integrations/factory';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Read raw body once (needed for signature verification)
+    // In Jest/unit tests, request may be mocked without `text()`.
+    let rawBody: string;
+    if (typeof (request as any).text === 'function') {
+      rawBody = await (request as any).text();
+    } else {
+      const bodyObj = typeof (request as any).json === 'function' ? await (request as any).json() : {};
+      rawBody = JSON.stringify(bodyObj);
+    }
+
     // Verify webhook signature (recommended in production)
     const signature = request.headers.get('x-vapi-signature');
     const webhookSecret = process.env.VAPI_WEBHOOK_SECRET;
 
-    if (webhookSecret && signature) {
-      // TODO: Implement signature verification
-      // const isValid = await verifyWebhookSignature(request, signature, webhookSecret);
-      // if (!isValid) {
-      //   return createErrorResponse('Invalid webhook signature', 401);
-      // }
+    if (webhookSecret) {
+      if (!signature) {
+        return createErrorResponse('Missing webhook signature', 401);
+      }
+
+      const isValid = verifyVapiWebhookSignature(rawBody, signature, webhookSecret);
+      if (!isValid) {
+        return createErrorResponse('Invalid webhook signature', 401);
+      }
     }
 
     // Parse webhook payload
-    const payload: WebhookPayload = await request.json();
+    const payload: WebhookPayload = JSON.parse(rawBody);
     const { message } = payload;
 
     console.log('[Vapi Webhook] Received event:', message.type);
@@ -530,10 +544,53 @@ async function handleFunctionCall(message: any) {
             functionCall.parameters
           );
           results.push({ integration: integration.type, result });
+
+          // Best-effort audit log for action execution (used for dashboard metrics)
+          try {
+            const supabaseForAudit = createServiceRoleClient();
+            await supabaseForAudit.from('audit_logs').insert({
+              company_id: assistant.company_id,
+              user_id: null,
+              actor_name: 'Vapi',
+              action: integration.type === 'mcp' ? 'mcp_action' : 'integration_action',
+              resource: 'integrations',
+              details: {
+                integration_id: integration.id,
+                integration_type: integration.type,
+                function: functionCall.name,
+                call_id: call?.id,
+                success: true,
+              },
+            });
+          } catch (auditError) {
+            console.warn('[Vapi Webhook] Failed to write audit log (success):', auditError);
+          }
         }
       } catch (error: any) {
         console.error(`[Vapi Webhook] Integration ${integration.type} failed:`, error);
         results.push({ integration: integration.type, error: error.message });
+
+        // Best-effort audit log for failures too
+        try {
+          const supabaseForAudit = createServiceRoleClient();
+          await supabaseForAudit.from('audit_logs').insert({
+            company_id: assistant.company_id,
+            user_id: null,
+            actor_name: 'Vapi',
+            action: integration.type === 'mcp' ? 'mcp_action' : 'integration_action',
+            resource: 'integrations',
+            details: {
+              integration_id: integration.id,
+              integration_type: integration.type,
+              function: functionCall.name,
+              call_id: call?.id,
+              success: false,
+              error: error.message,
+            },
+          });
+        } catch (auditError) {
+          console.warn('[Vapi Webhook] Failed to write audit log (failure):', auditError);
+        }
       }
     }
 

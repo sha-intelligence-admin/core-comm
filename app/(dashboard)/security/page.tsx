@@ -470,6 +470,9 @@ export default function SecurityPage() {
                             <Button
                                 variant="outline"
                                 className="rounded-sm border-input bg-transparent hover:border-primary hover:bg-primary/10 hover:text-primary w-full sm:w-auto"
+                                onClick={() => {
+                                    window.location.href = "/api/security/compliance-docs"
+                                }}
                             >
                                 <Download className="mr-2 h-4 w-4" />
                                 Download All Docs

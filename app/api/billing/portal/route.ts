@@ -29,11 +29,15 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
-    // Flutterwave does not provide a hosted customer billing portal equivalent to Stripe Billing Portal.
-    // For now, return a helpful message so UI can direct users to the app billing page or use payment links.
+    // Flutterwave does not provide a hosted billing portal equivalent to Stripe Billing Portal.
+    // Return an app-local "portal" URL so the UI can still offer a working manage-billing action.
+    const origin = req.headers.get('origin') || '';
+    const fallbackUrl = `${origin}/dashboard/billing`;
+
     return NextResponse.json({
-      error: 'Not implemented: Flutterwave does not provide a hosted billing portal. Use app billing UI or create payment links.',
-    }, { status: 501 });
+      url: returnUrl || fallbackUrl,
+      mode: 'app',
+    });
   } catch (error: any) {
     console.error('[Billing Portal Error]', error);
     return new NextResponse(error.message, { status: 500 });

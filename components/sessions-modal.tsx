@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type Dispatch, type SetStateAction } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -21,93 +21,96 @@ interface ActiveSession {
 
 interface SessionsModalProps {
   isOpen: boolean
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onOpenChange: (open: boolean) => void
+  onOpenChange: Dispatch<SetStateAction<boolean>>
 }
 
 export function SessionsModal({ isOpen, onOpenChange }: SessionsModalProps) {
   const [sessions, setSessions] = useState<ActiveSession[]>([])
   const [loading, setLoading] = useState(false)
-  const [revoking, setRevoking] = useState<string | null>(null)
+  const [signingOut, setSigningOut] = useState<'current' | 'global' | null>(null)
   const supabase = createClient()
   const { toast } = useToast()
 
-  const fetchSessions = async () => {
-    setLoading(true)
+  const signOutCurrent = async () => {
+    setSigningOut('current')
     try {
-      const { data: { session }, error } = await supabase.auth.getSession()
-      
-      if (error) {
-        throw error
-      }
-      
-      if (!session) {
-        setSessions([])
-        return
-      }
-
-      // For now, show the current session only
-      // In production, you'd want to query a custom API endpoint that lists all sessions
-      const formattedSessions: ActiveSession[] = [{
-        id: session.access_token.slice(0, 10) || 'current',
-        isCurrent: true,
-        createdAt: session.user?.created_at || new Date().toISOString(),
-        lastActivity: session.user?.last_sign_in_at || new Date().toISOString(),
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown Device',
-      }]
-
-      setSessions(formattedSessions)
-    } catch (error) {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      toast({ title: "Signed out", description: "You have been signed out." })
+      onOpenChange(false)
+    } catch (error: unknown) {
       // eslint-disable-next-line no-console
-      console.error("Error fetching sessions:", error)
+      console.error("Error signing out:", error)
       toast({
         title: "Error",
-        description: "Failed to load sessions",
+        description: error instanceof Error ? error.message : "Failed to sign out",
         variant: "destructive",
       })
     } finally {
-      setLoading(false)
+      setSigningOut(null)
     }
   }
 
-  const revokeSession = async (sessionId: string) => {
-    if (sessionId === sessions.find(s => s.isCurrent)?.id) {
-      toast({
-        title: "Cannot revoke",
-        description: "You cannot revoke your current session",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setRevoking(sessionId)
+  const signOutEverywhere = async () => {
+    setSigningOut('global')
     try {
-      // Note: Supabase doesn't have a direct way to revoke other sessions
-      // This would need to be implemented via a custom API endpoint
-      // For now, we'll show a placeholder implementation
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      setSessions(sessions.filter(s => s.id !== sessionId))
-      toast({
-        title: "Success",
-        description: "Session revoked successfully",
-      })
-    } catch (error) {
+      // Supabase JS supports global sign-out to invalidate refresh tokens.
+      // Cast is used to avoid dependency on exact SDK typings.
+      const { error } = await supabase.auth.signOut({ scope: 'global' } as unknown as { scope: 'global' })
+      if (error) throw error
+      toast({ title: "Signed out everywhere", description: "All sessions have been revoked." })
+      onOpenChange(false)
+    } catch (error: unknown) {
+      // eslint-disable-next-line no-console
+      console.error("Error signing out globally:", error)
       toast({
         title: "Error",
-        description: "Failed to revoke session",
+        description: error instanceof Error ? error.message : "Failed to sign out everywhere",
         variant: "destructive",
       })
     } finally {
-      setRevoking(null)
+      setSigningOut(null)
     }
   }
 
   useEffect(() => {
     if (isOpen) {
-      fetchSessions()
+      const run = async () => {
+        setLoading(true)
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession()
+          if (error) throw error
+
+          if (!session) {
+            setSessions([])
+            return
+          }
+
+          const formattedSessions: ActiveSession[] = [{
+            id: session.access_token.slice(0, 10) || 'current',
+            isCurrent: true,
+            createdAt: session.user?.created_at || new Date().toISOString(),
+            lastActivity: session.user?.last_sign_in_at || new Date().toISOString(),
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown Device',
+          }]
+
+          setSessions(formattedSessions)
+        } catch (error: unknown) {
+          // eslint-disable-next-line no-console
+          console.error("Error fetching sessions:", error)
+          toast({
+            title: "Error",
+            description: "Failed to load sessions",
+            variant: "destructive",
+          })
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      run()
     }
-  }, [isOpen])
+  }, [isOpen, supabase, toast])
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -163,10 +166,10 @@ export function SessionsModal({ isOpen, onOpenChange }: SessionsModalProps) {
                     variant="outline"
                     size="sm"
                     className="rounded-sm border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50 flex-shrink-0"
-                    onClick={() => revokeSession(session.id)}
-                    disabled={session.isCurrent || revoking === session.id}
+                    onClick={signOutCurrent}
+                    disabled={signingOut !== null}
                   >
-                    {revoking === session.id ? (
+                    {signingOut === 'current' ? (
                       <LoadingSpinner size="sm" className="mr-2" />
                     ) : (
                       <LogOut className="mr-2 h-3 w-3" />
@@ -182,6 +185,22 @@ export function SessionsModal({ isOpen, onOpenChange }: SessionsModalProps) {
         <div className="text-xs text-muted-foreground mt-4 p-3 rounded-sm bg-muted/40">
           <p className="font-medium mb-1">Security Tip:</p>
           <p>Regularly review your active sessions and sign out from any unrecognized devices to keep your account secure.</p>
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            className="rounded-sm"
+            onClick={signOutEverywhere}
+            disabled={signingOut !== null}
+          >
+            {signingOut === 'global' ? (
+              <LoadingSpinner size="sm" className="mr-2" />
+            ) : (
+              <LogOut className="mr-2 h-4 w-4" />
+            )}
+            Sign Out All Devices
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
