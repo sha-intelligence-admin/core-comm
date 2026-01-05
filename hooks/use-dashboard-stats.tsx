@@ -3,6 +3,9 @@
 import { useCalls } from './use-calls'
 import { useMemo } from 'react'
 
+/**
+ * Represents aggregated dashboard statistics.
+ */
 export interface DashboardStats {
   totalCalls: number
   totalCallsChange: string
@@ -21,12 +24,25 @@ export interface DashboardStats {
   successRate: string
 }
 
+/**
+ * Formats duration in seconds to a readable string (e.g., "5m 30s").
+ * 
+ * @param seconds - Duration in seconds
+ * @returns Formatted duration string
+ */
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins}m ${secs}s`
 }
 
+/**
+ * Calculates the percentage change between two numbers.
+ * 
+ * @param current - The current value
+ * @param previous - The previous value
+ * @returns Formatted percentage string (e.g., "+10.5%")
+ */
 function calculatePercentageChange(current: number, previous: number): string {
   if (previous === 0) return '+0.0%'
   const change = ((current - previous) / previous) * 100
@@ -34,6 +50,12 @@ function calculatePercentageChange(current: number, previous: number): string {
   return `${sign}${change.toFixed(1)}%`
 }
 
+/**
+ * Hook to calculate and retrieve dashboard statistics.
+ * Currently calculates stats client-side based on fetched calls.
+ * 
+ * @returns Object containing dashboard statistics, loading state, and error state
+ */
 export function useDashboardStats() {
   // Fetch all calls (we'll filter client-side for now)
   const { calls, isLoading, error } = useCalls({ limit: 1000 })

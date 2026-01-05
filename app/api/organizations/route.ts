@@ -4,6 +4,12 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
 
+/**
+ * GET /api/organizations
+ * Lists organizations the user is a member of.
+ * 
+ * @returns JSON response with list of organizations and membership details
+ */
 export async function GET() {
   try {
     // Get authenticated user

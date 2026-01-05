@@ -64,6 +64,13 @@ function buildAssistantFirstMessage(companyName: string) {
   return `Hi, thanks for calling ${companyName}! I'm the AI assistant. How can I help you today?`
 }
 
+/**
+ * POST /api/organizations/create
+ * Creates a new organization with initial setup (assistant, phone number, etc.).
+ * 
+ * @param request - NextRequest object containing organization details
+ * @returns JSON response with the created organization or error
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()

@@ -16,7 +16,13 @@ const voiceAgentSchema = z.object({
   config: z.record(z.string(), z.any()).default({}),
 })
 
-// GET /api/voice-agents - List voice agents with pagination and filters
+/**
+ * GET /api/voice-agents
+ * Lists voice agents with pagination and filtering.
+ * 
+ * @param request - NextRequest object containing query parameters
+ * @returns JSON response with list of voice agents and pagination metadata
+ */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -92,7 +98,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/voice-agents - Create new voice agent
+/**
+ * POST /api/voice-agents
+ * Creates a new voice agent.
+ * 
+ * @param request - NextRequest object containing voice agent configuration
+ * @returns JSON response with the created voice agent or error
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()

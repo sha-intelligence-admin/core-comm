@@ -7,6 +7,13 @@ const resendSchema = z.object({
   email: z.string().email(),
 })
 
+/**
+ * POST /api/team-members/resend
+ * Resends an invitation email to a team member.
+ * 
+ * @param request - Request object containing the email address
+ * @returns JSON response with success status or error
+ */
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()

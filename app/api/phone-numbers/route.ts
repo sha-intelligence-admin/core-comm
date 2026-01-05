@@ -21,7 +21,13 @@ const phoneNumberSchema = z.object({
   config: z.record(z.string(), z.unknown()).default({}),
 })
 
-// GET /api/phone-numbers - List phone numbers with pagination and filters
+/**
+ * GET /api/phone-numbers
+ * Lists phone numbers with pagination and filtering.
+ * 
+ * @param request - NextRequest object containing query parameters
+ * @returns JSON response with list of phone numbers and pagination metadata
+ */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()

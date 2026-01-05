@@ -8,13 +8,17 @@ import { IntegrationFactory } from '@/lib/integrations/factory';
 
 /**
  * POST /api/webhooks/vapi
- * Handle Vapi webhook events
- *
+ * Handles Vapi webhook events for call lifecycle management.
+ * 
  * Events:
  * - assistant-request: Vapi requesting assistant config for incoming call
  * - status-update: Call status changes
  * - end-of-call-report: Call completed with full details
  * - function-call: Custom function invocation
+ * - transcript: Real-time transcript updates
+ * 
+ * @param request - NextRequest object containing webhook payload
+ * @returns JSON response with processing status or assistant config
  */
 export async function POST(request: NextRequest) {
   try {

@@ -28,7 +28,14 @@ const updateTeamMemberSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
 })
 
-// PUT /api/team-members/[id] - Update a team member
+/**
+ * PUT /api/team-members/[id]
+ * Updates a team member's details and permissions.
+ * 
+ * @param request - Request object containing update data
+ * @param params - Route parameters containing the team member ID
+ * @returns JSON response with the updated team member or error
+ */
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -90,7 +97,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/team-members/[id] - Delete a team member
+/**
+ * DELETE /api/team-members/[id]
+ * Deletes a team member.
+ * 
+ * @param request - Request object
+ * @param params - Route parameters containing the team member ID
+ * @returns JSON response with success message or error
+ */
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

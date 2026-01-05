@@ -19,7 +19,14 @@ const messagingChannelUpdateSchema = z.object({
   avg_response_time: z.number().optional(),
 })
 
-// PUT /api/messaging-channels/[id] - Update messaging channel
+/**
+ * PUT /api/messaging-channels/[id]
+ * Updates an existing messaging channel.
+ * 
+ * @param request - NextRequest object containing update data
+ * @param params - Route parameters containing the channel ID
+ * @returns JSON response with the updated channel or error
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -79,7 +86,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/messaging-channels/[id] - Delete messaging channel
+/**
+ * DELETE /api/messaging-channels/[id]
+ * Deletes a messaging channel.
+ * 
+ * @param request - NextRequest object
+ * @param params - Route parameters containing the channel ID
+ * @returns JSON response with success message or error
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }

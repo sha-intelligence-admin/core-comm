@@ -9,7 +9,10 @@ import {
 
 /**
  * GET /api/vapi/assistants
- * List all assistants for the user's company
+ * Lists all Vapi assistants for the user's company.
+ * 
+ * @param request - NextRequest object
+ * @returns JSON response with list of assistants
  */
 export async function GET(request: NextRequest) {
   try {
@@ -48,7 +51,11 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/vapi/assistants
- * Create a new voice assistant
+ * Creates a new Vapi assistant.
+ * Requires admin or owner role.
+ * 
+ * @param request - NextRequest object containing assistant configuration
+ * @returns JSON response with the created assistant or error
  */
 export async function POST(request: NextRequest) {
   try {

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateCSRFToken } from '@/lib/csrf-protection'
 
+/**
+ * GET /api/csrf
+ * Generates a new CSRF token and sets it as a cookie.
+ * 
+ * @param request - NextRequest object
+ * @returns JSON response with the CSRF token
+ */
 export async function GET(request: NextRequest) {
   try {
     const { token, cookieHeader } = await generateCSRFToken()

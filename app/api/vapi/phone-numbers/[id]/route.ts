@@ -11,7 +11,11 @@ import {
 
 /**
  * GET /api/vapi/phone-numbers/[id]
- * Get a single phone number with statistics
+ * Retrieves a single Vapi phone number with statistics.
+ * 
+ * @param request - NextRequest object
+ * @param params - Route parameters containing the phone number ID
+ * @returns JSON response with phone number details and stats
  */
 export async function GET(
   request: NextRequest,
@@ -65,7 +69,12 @@ export async function GET(
 
 /**
  * PATCH /api/vapi/phone-numbers/[id]
- * Update a phone number's configuration
+ * Updates a Vapi phone number's configuration.
+ * Requires admin or owner role.
+ * 
+ * @param request - NextRequest object containing update data
+ * @param params - Route parameters containing the phone number ID
+ * @returns JSON response with the updated phone number or error
  */
 export async function PATCH(
   request: NextRequest,

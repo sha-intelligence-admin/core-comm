@@ -7,6 +7,9 @@ import { createServiceRoleClient } from '@/lib/supabase/api'
  *
  * This endpoint executes the pending migration to add user fields.
  * Delete this file after migration is complete for security.
+ * 
+ * @param request - NextRequest object
+ * @returns JSON response with migration results
  */
 export async function POST(request: NextRequest) {
   try {

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+/**
+ * POST /api/billing/portal
+ * Generates a URL for the billing portal (or fallback app URL).
+ * 
+ * @param req - NextRequest object containing companyId and returnUrl
+ * @returns JSON response with the portal URL
+ */
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();

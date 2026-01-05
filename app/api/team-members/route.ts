@@ -29,7 +29,13 @@ const teamMemberSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional().default({}),
 })
 
-// GET /api/team-members - List team members with pagination and filtering
+/**
+ * GET /api/team-members
+ * Lists team members with pagination and filtering.
+ * 
+ * @param request - Request object containing query parameters
+ * @returns JSON response with list of team members and pagination metadata
+ */
 export async function GET(request: Request) {
   try {
     const supabase = await createClient()

@@ -3,6 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient, createErrorResponse, createSuccessResponse } from '@/lib/supabase/api'
 import { CreateCallSchema, CallsQuerySchema } from '@/lib/validations'
 
+/**
+ * GET /api/calls
+ * Retrieves a paginated list of calls for the authenticated user's company.
+ * Supports filtering by status, type, priority, and search term.
+ * 
+ * @param request - NextRequest object containing query parameters
+ * @returns JSON response with call data and pagination metadata
+ */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

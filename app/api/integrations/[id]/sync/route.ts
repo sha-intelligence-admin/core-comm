@@ -4,6 +4,14 @@ import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api';
 import { IntegrationFactory } from '@/lib/integrations/factory';
 import { IntegrationType } from '@/lib/integrations/types';
 
+/**
+ * POST /api/integrations/[id]/sync
+ * Triggers a synchronization for a specific integration.
+ * 
+ * @param request - NextRequest object
+ * @param params - Route parameters containing the integration ID
+ * @returns JSON response with sync results or error
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }

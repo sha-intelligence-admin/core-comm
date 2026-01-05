@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+/**
+ * GET /api/user/preferences
+ * Retrieves the authenticated user's preferences.
+ * 
+ * @param request - NextRequest object
+ * @returns JSON response with user preferences
+ */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -44,6 +51,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * POST /api/user/preferences
+ * Updates the authenticated user's preferences.
+ * 
+ * @param request - NextRequest object containing preferences updates
+ * @returns JSON response with success message or error
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()

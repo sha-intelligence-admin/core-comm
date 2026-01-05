@@ -36,7 +36,13 @@ const emailAccountSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional().default({}),
 })
 
-// GET /api/email-accounts - List email accounts with pagination and filtering
+/**
+ * GET /api/email-accounts
+ * Lists email accounts with pagination and filtering.
+ * 
+ * @param request - Request object containing query parameters
+ * @returns JSON response with list of accounts and pagination metadata
+ */
 export async function GET(request: Request) {
   try {
     const supabase = await createClient()
@@ -110,7 +116,13 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/email-accounts - Create a new email account
+/**
+ * POST /api/email-accounts
+ * Creates a new email account.
+ * 
+ * @param request - Request object containing account configuration
+ * @returns JSON response with the created account or error
+ */
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()

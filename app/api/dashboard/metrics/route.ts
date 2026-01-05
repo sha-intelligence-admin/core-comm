@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
+/**
+ * GET /api/dashboard/metrics
+ * Retrieves aggregated metrics for the dashboard (total calls, resolved, active, etc.).
+ * 
+ * @returns JSON response with dashboard metrics
+ */
 export async function GET() {
   try {
     const supabase = await createClient()

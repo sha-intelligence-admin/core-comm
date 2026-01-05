@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server"
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 
+/**
+ * POST /api/auth/accept-invite
+ * Accepts an organization invitation and creates a new user account.
+ * 
+ * @param request - Request object containing token, password, and fullName
+ * @returns JSON response with success message or error
+ */
 export async function POST(request: Request) {
   try {
     const { token, password, fullName } = await request.json()

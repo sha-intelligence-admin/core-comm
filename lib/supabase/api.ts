@@ -1,7 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { Database } from './types'
 
-// Create a Supabase client with service role for server-side operations
+/**
+ * Creates a Supabase client with the Service Role key.
+ * WARNING: This client bypasses Row Level Security (RLS).
+ * Use only for admin tasks or server-side operations that require elevated privileges.
+ * 
+ * @returns Supabase client with admin privileges
+ * @throws Error if environment variables are missing
+ */
 export function createServiceRoleClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -42,6 +49,13 @@ export interface PaginatedResponse<T = any> extends ApiResponse<T> {
 }
 
 // Error handling utility
+/**
+ * Creates a standardized JSON error response.
+ * 
+ * @param message - Error message to display
+ * @param status - HTTP status code (default: 500)
+ * @returns Response object with JSON body
+ */
 export function createErrorResponse(message: string, status = 500): Response {
   return new Response(
     JSON.stringify({ error: message }),

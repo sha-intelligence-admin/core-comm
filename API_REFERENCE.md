@@ -1034,6 +1034,8 @@ These endpoints manage Vapi resources (assistants, knowledge bases, phone number
   "language": "en",
   "model": { "provider": "openai|anthropic|google|groq", "model": "...", "temperature": 0.7, "maxTokens": 123, "knowledgeBaseId": "..." },
   "voice": { "provider": "elevenlabs|playht|azure|deepgram", "voiceId": "...", "speed": 1.0, "stability": 0.5 },
+  "transcriber": { "provider": "deepgram", "model": "nova-2", "language": "en" },
+  "serverUrl": "https://...",
   "knowledgeBaseId": "<uuid>"
 }
 ```
@@ -1202,6 +1204,24 @@ Processes Flutterwave payment/subscription webhooks and updates local billing ta
   - `400` for invalid signature/payload
   - `500` on processing failure
 
+### POST /api/webhooks/twilio/sms
+
+Handles incoming SMS messages from Twilio.
+
+- **Auth:** Not required (Twilio signature validation recommended but not currently enforced in code).
+- **Content-Type:** `application/x-www-form-urlencoded`
+- **Body:** Standard Twilio SMS parameters (`From`, `Body`, `MessageSid`, etc.).
+- **Response:** TwiML XML.
+
+### POST /api/webhooks/twilio/voice
+
+Handles incoming voice calls from Twilio.
+
+- **Auth:** Not required.
+- **Content-Type:** `application/x-www-form-urlencoded`
+- **Body:** Standard Twilio Voice parameters (`CallSid`, `From`, `To`, etc.).
+- **Response:** TwiML XML.
+
 ---
 
 ## Admin
@@ -1222,5 +1242,4 @@ Runs migrations via `supabase.rpc('exec', { sql })`.
 
 # Notes & Gaps
 
-- Some Twilio webhook URLs are referenced during onboarding (`/api/webhooks/twilio/voice` and `/api/webhooks/twilio/sms`) but are not currently implemented as API routes in this repository.
 - Several endpoints return `select('*')` data; exact column sets come from the database schema. Where relevant, refer to the generated types in `lib/supabase/types.ts`.

@@ -113,6 +113,14 @@ function buildAssistantFirstMessage(companyName: string) {
   return `Hi, thanks for calling ${companyName}! I'm the AI assistant. How can I help you today?`
 }
 
+/**
+ * POST /api/onboarding
+ * Handles the complete onboarding process for a new organization.
+ * Creates organization, assistant, phone number, and initial configuration.
+ * 
+ * @param request - NextRequest object containing onboarding data
+ * @returns JSON response with success status and created resources
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()

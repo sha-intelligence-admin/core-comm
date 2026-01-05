@@ -19,11 +19,21 @@ interface HealthCheck {
   version?: string
 }
 
+/**
+ * Service for collecting and reporting application metrics.
+ * Handles in-memory storage and forwarding to external monitoring services.
+ */
 class MonitoringService {
   private metrics: MetricData[] = []
   private maxMetrics = 1000 // Keep last 1000 metrics in memory
 
-  // Record a metric
+  /**
+   * Records a custom metric.
+   * 
+   * @param name - Name of the metric (e.g., 'api.response_time')
+   * @param value - Numeric value of the metric
+   * @param tags - Optional key-value pairs for filtering/grouping
+   */
   recordMetric(name: string, value: number, tags?: Record<string, string>) {
     const metric: MetricData = {
       name,
@@ -45,7 +55,14 @@ class MonitoringService {
     }
   }
 
-  // Record API response time
+  /**
+   * Helper to record API endpoint performance.
+   * 
+   * @param endpoint - API path
+   * @param method - HTTP method (GET, POST, etc.)
+   * @param statusCode - HTTP response status
+   * @param responseTime - Duration in milliseconds
+   */
   recordApiResponse(endpoint: string, method: string, statusCode: number, responseTime: number) {
     this.recordMetric('api.response_time', responseTime, {
       endpoint,

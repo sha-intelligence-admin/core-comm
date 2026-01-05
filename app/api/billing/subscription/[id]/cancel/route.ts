@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { cancelSubscription } from '@/lib/flutterwave';
 
+/**
+ * POST /api/billing/subscription/[id]/cancel
+ * Cancels an active subscription.
+ * 
+ * @param req - NextRequest object
+ * @param params - Route parameters containing the subscription ID
+ * @returns JSON response with cancellation status
+ */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const supabase = await createClient();

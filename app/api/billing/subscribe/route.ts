@@ -3,6 +3,13 @@ import { createClient } from '@/lib/supabase/server';
 import { createPaymentLink } from '@/lib/flutterwave';
 import { PRICING_TIERS, PlanId } from '@/app/constants/pricing';
 
+/**
+ * POST /api/billing/subscribe
+ * Initiates a subscription process by creating a payment link.
+ * 
+ * @param req - NextRequest object containing companyId and planId
+ * @returns JSON response with the payment link URL
+ */
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();

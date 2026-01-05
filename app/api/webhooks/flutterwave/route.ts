@@ -3,6 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { verifyWebhookSignature } from '@/lib/flutterwave';
 
+/**
+ * POST /api/webhooks/flutterwave
+ * Handles Flutterwave webhook events for payments and subscriptions.
+ * 
+ * @param req - NextRequest object containing webhook payload
+ * @returns NextResponse with processing status
+ */
 export async function POST(req: NextRequest) {
   const raw = await req.text();
   const sig = req.headers.get('verif-hash') || req.headers.get('x-flutterwave-signature') || null;

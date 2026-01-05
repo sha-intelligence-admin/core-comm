@@ -3,6 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ADD_ONS, AddOnId } from '@/app/constants/pricing'
 
+/**
+ * POST /api/billing/purchase-addon
+ * Purchases an add-on using the company's wallet balance.
+ * 
+ * @param req - NextRequest object containing companyId and addonId
+ * @returns JSON response with success message or error
+ */
 export async function POST(req: NextRequest) {
   try {
     const { companyId, addonId } = await req.json()

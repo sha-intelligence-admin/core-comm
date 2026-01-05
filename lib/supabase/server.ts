@@ -2,6 +2,13 @@ import { createServerClient } from "@supabase/ssr"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 
+/**
+ * Creates a Supabase client for Server Components and Route Handlers.
+ * Handles cookie management automatically for session persistence.
+ * 
+ * @returns Authenticated Supabase client
+ * @throws Error if environment variables are missing
+ */
 export async function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

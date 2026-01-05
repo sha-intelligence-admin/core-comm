@@ -4,6 +4,13 @@ import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/security/audit-logs
+ * Lists audit logs for the user's organization.
+ * 
+ * @param request - NextRequest object containing query parameters
+ * @returns JSON response with list of audit logs and pagination metadata
+ */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();

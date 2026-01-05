@@ -22,10 +22,23 @@ function xmlResponse(xml: string, status = 200) {
   });
 }
 
+/**
+ * GET /api/webhooks/twilio/sms
+ * Health check endpoint for Twilio SMS webhook.
+ * 
+ * @returns Response with 200 OK
+ */
 export async function GET() {
   return new Response('OK', { status: 200 });
 }
 
+/**
+ * POST /api/webhooks/twilio/sms
+ * Handles incoming SMS messages from Twilio.
+ * 
+ * @param request - NextRequest object containing SMS data
+ * @returns XML response with TwiML
+ */
 export async function POST(request: NextRequest) {
   const form = await (request as unknown as Request).formData();
   const params = toParams(form);

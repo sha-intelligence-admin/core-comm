@@ -12,6 +12,12 @@ const DOCS: Array<{ title: string; file: string }> = [
   { title: 'Deployment Checklist', file: 'DEPLOYMENT_CHECKLIST.md' },
 ];
 
+/**
+ * GET /api/security/compliance-docs
+ * Generates and downloads a compliance documentation pack.
+ * 
+ * @returns Markdown file download containing aggregated compliance docs
+ */
 export async function GET() {
   const generatedAt = new Date().toISOString();
 

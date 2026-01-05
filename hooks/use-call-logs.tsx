@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 
+/**
+ * Represents a call log entry.
+ */
 export interface Call {
   id: string
   caller_number: string
@@ -18,6 +21,9 @@ export interface Call {
   user_id: string
 }
 
+/**
+ * Filters for querying call logs.
+ */
 export interface CallsFilters {
   page?: number
   limit?: number
@@ -27,6 +33,9 @@ export interface CallsFilters {
   search?: string
 }
 
+/**
+ * Pagination metadata for call logs.
+ */
 export interface CallsPagination {
   page: number
   limit: number
@@ -34,6 +43,11 @@ export interface CallsPagination {
   totalPages: number
 }
 
+/**
+ * Hook to manage call logs with filtering and pagination.
+ * 
+ * @returns Object containing calls data, loading state, error state, pagination, and fetch function
+ */
 export function useCallLogs() {
   const [calls, setCalls] = useState<Call[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,6 +59,11 @@ export function useCallLogs() {
     totalPages: 0,
   })
 
+  /**
+   * Fetches call logs based on provided filters.
+   * 
+   * @param filters - Optional filters to apply to the query
+   */
   const fetchCalls = async (filters: CallsFilters = {}) => {
     try {
       setLoading(true)

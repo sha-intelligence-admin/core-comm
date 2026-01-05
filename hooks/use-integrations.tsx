@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 
+/**
+ * Represents an integration configuration.
+ */
 export interface Integration {
   id: string
   name: string
@@ -17,6 +20,9 @@ export interface Integration {
   user_id: string
 }
 
+/**
+ * Filters for querying integrations.
+ */
 export interface IntegrationsFilters {
   page?: number
   limit?: number
@@ -25,6 +31,9 @@ export interface IntegrationsFilters {
   search?: string
 }
 
+/**
+ * Pagination metadata for integrations.
+ */
 export interface IntegrationsPagination {
   page: number
   limit: number
@@ -32,6 +41,11 @@ export interface IntegrationsPagination {
   totalPages: number
 }
 
+/**
+ * Hook to manage integrations.
+ * 
+ * @returns Object containing integrations data, loading state, error state, pagination, and fetch function
+ */
 export function useIntegrations() {
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,6 +57,11 @@ export function useIntegrations() {
     totalPages: 0,
   })
 
+  /**
+   * Fetches integrations based on provided filters.
+   * 
+   * @param filters - Optional filters to apply to the query
+   */
   const fetchIntegrations = async (filters: IntegrationsFilters = {}) => {
     try {
       setLoading(true)

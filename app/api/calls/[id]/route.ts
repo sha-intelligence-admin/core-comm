@@ -3,6 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api'
 import { UpdateCallSchema } from '@/lib/validations'
 
+/**
+ * GET /api/calls/[id]
+ * Retrieves details of a specific call.
+ * 
+ * @param request - NextRequest object
+ * @param params - Route parameters containing the call ID
+ * @returns JSON response with call details or error
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

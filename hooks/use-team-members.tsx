@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 
+/**
+ * Represents a team member profile.
+ */
 export interface TeamMember {
   id: string
   full_name: string
@@ -45,6 +48,9 @@ export interface TeamMember {
   user_id: string
 }
 
+/**
+ * Filters for querying team members.
+ */
 export interface TeamMembersFilters {
   page?: number
   limit?: number
@@ -54,6 +60,9 @@ export interface TeamMembersFilters {
   search?: string
 }
 
+/**
+ * Pagination metadata for team members.
+ */
 export interface TeamMembersPagination {
   page: number
   limit: number
@@ -61,6 +70,11 @@ export interface TeamMembersPagination {
   totalPages: number
 }
 
+/**
+ * Hook to manage team members.
+ * 
+ * @returns Object containing members data, loading state, error state, pagination, and fetch function
+ */
 export function useTeamMembers() {
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,6 +86,11 @@ export function useTeamMembers() {
     totalPages: 0,
   })
 
+  /**
+   * Fetches team members based on provided filters.
+   * 
+   * @param filters - Optional filters to apply to the query
+   */
   const fetchMembers = async (filters: TeamMembersFilters = {}) => {
     try {
       setLoading(true)

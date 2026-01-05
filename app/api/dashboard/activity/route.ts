@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
+/**
+ * GET /api/dashboard/activity
+ * Retrieves recent call activity for the dashboard.
+ * 
+ * @param request - NextRequest object containing query parameters (limit)
+ * @returns JSON response with a list of recent calls
+ */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()

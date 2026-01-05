@@ -1,140 +1,105 @@
-# CoreComm – AI Voice Agent Platform for Customer Support
+# CoreComm – AI Voice Agent Platform
 
-## Concept Summary
-
-CoreComm is an AI-powered, voice-first customer support solution that enables companies to handle incoming phone calls with a conversational AI agent capable of understanding natural speech, responding in real time, and performing actions through MCP server integrations. CoreComm combines telephony infrastructure, speech recognition, conversational AI, retrieval-augmented generation (RAG), and action execution to deliver accurate, context-aware, and human-like phone support.
-
-## How It Works
-
-### Call Connection
-
-1. Customer dials the company's dedicated support number.
-2. Call is routed through a VoIP/SIP gateway (e.g., Twilio, Vonage, SignalWire) into CoreComm's voice processing pipeline.
-
-### Speech-to-Text (STT)
-
-1. Customer speech is transcribed in real-time using streaming ASR (Automatic Speech Recognition) models (e.g., OpenAI Realtime API, Deepgram, Google Cloud STT).
-2. Punctuation, speaker diarization, and confidence scoring are applied.
-
-### Conversational AI Orchestration
-
-Transcribed text is sent to the CoreComm AI Engine:
-
-- **Query Understanding & Context Enrichment**: Detect intent, identify relevant customer/account data.
-- **Knowledge Retrieval**: Use RAG to pull information from:
-  - Company knowledge base
-  - CRM/ticket history
-  - Product manuals
-  - FAQ documents
-- **Action Execution**: If the request involves a task (e.g., checking order status, booking an appointment), CoreComm sends an MCP request to the relevant server.
-
-### Text-to-Speech (TTS)
-
-1. AI responses are converted into realistic, low-latency speech using neural TTS engines (e.g., ElevenLabs, Azure Neural Voice, OpenAI Realtime).
-2. The voice can be customized for brand tone (friendly, formal, etc.).
-
-### MCP Integration
-
-CoreComm uses MCP (Model Context Protocol) to securely request:
-
-- Real-time account lookups
-- Service status checks
-- Order updates
-- Custom workflows (e.g., open a ticket, update subscription)
-
-MCP servers return structured responses for CoreComm to present to the caller.
-
-### Escalation to Human Agent
-
-1. If the AI cannot resolve the issue or confidence is low, the call can be warm-transferred to a live support agent.
-2. The transcript, retrieved context, and customer info are passed to the agent for continuity.
-
-## Core Technical Architecture
-
-### Telephony Layer
-- SIP/VoIP integration via Twilio/Vonage/SIP trunk.
-
-### Real-Time STT/TTS Layer
-- **STT**: Deepgram Streaming API / Google Speech-to-Text / OpenAI Realtime ASR
-- **TTS**: ElevenLabs / Azure Neural Voice / OpenAI Realtime TTS
-
-### CoreComm AI Engine
-- **Intent Recognition**: LLM-based intent parsing
-- **RAG Pipeline**: Embeddings + vector search for knowledge grounding
-- **LLM Orchestration**: GPT-4, Claude, or equivalent, with retrieval context
-- **MCP Client**: Secure integration with MCP servers for action execution
-
-### Integration Layer
-- CRM connectors
-- Helpdesk software
-- Custom MCP endpoints
-
-### Escalation System
-- Real-time agent handoff
-- Context pass-through
-
-## Key Features
-
-- **Natural Conversational Experience**: Human-like, real-time voice interaction.
-- **Knowledge Grounding**: Always answers from verified sources.
-- **Actionable Conversations**: Execute customer requests through MCP servers.
-- **Multi-Language Support**: Handle calls in multiple languages.
-- **Custom Voice Personas**: Maintain brand identity in audio responses.
-- **Analytics Dashboard**: Monitor calls, resolution rates, and escalation triggers.
-- **Continuous Learning**: Improve accuracy from feedback loops.
-
-## Example Use Cases
-
-- **Telecom Support**: Check data usage, reset password, troubleshoot devices.
-- **E-commerce**: Track orders, initiate returns, recommend products.
-- **Banking**: Check account balance, freeze card, report fraud.
-- **Healthcare**: Schedule appointments, provide medication reminders.
-
-## Example Call Flow
-
-**Customer**: "Hi, I want to check the status of my last order."
-
-**CoreComm AI**: Retrieves order history via MCP integration with CRM → "Sure, I see your last order was placed on August 5th and is currently out for delivery. Would you like me to send you the tracking link?"
-
-**Customer**: "Yes, please."
-
-**CoreComm AI**: Triggers MCP workflow to send SMS → "Done. I've sent the tracking link to your phone number ending in 4321."
-
-## Benefits
-
-- 24/7 availability without extra staffing.
-- Faster resolution time for routine queries.
-- Reduced wait times and call queue lengths.
-- Actionable, integrated support instead of just answering FAQs.
-- Seamless escalation to human agents for complex cases.
+CoreComm is an AI-powered, voice-first customer support solution that enables companies to handle incoming phone calls with a conversational AI agent. It combines telephony, speech recognition, and LLMs to deliver accurate, context-aware support.
 
 ---
 
-## 🚀 Quick Deployment
+## 📚 Documentation Index
 
-### For Production Deployment
-See the comprehensive deployment guides in the [`/deployment`](./deployment/) directory.
+- **[Getting Started](GETTING_STARTED.md)**: Setup guide for new developers.
+- **[Environment Setup](ENVIRONMENT_SETUP.md)**: Required environment variables and configuration.
+- **[Architecture](ARCHITECTURE.md)**: System overview, diagrams, and directory structure.
+- **[API Reference](API_REFERENCE.md)**: API endpoints and authentication.
+- **[Deployment Guides](deployment/README.md)**: Instructions for deploying to production.
+- **[Documentation Plan](DOCUMENTATION_PLAN.md)**: Roadmap for project documentation.
 
-#### AWS EC2 Quick Start
-```bash
-wget https://raw.githubusercontent.com/sha-intelligence-admin/core-comm/main/deployment/deploy-aws.sh
-chmod +x deploy-aws.sh
-./deploy-aws.sh
-```
+---
 
-#### Local/Manual Deployment
-```bash
-# If you already have the repository
-cd core-comm/deployment
-chmod +x deploy-no-git.sh
-./deploy-no-git.sh
-```
+## 🚀 Quick Start
 
 ### Prerequisites
-- Ubuntu 20.04+ with 7GB+ RAM (AWS t3.large recommended)
-- API Keys: Twilio, OpenAI (GPT-4), ElevenLabs, Deepgram, Supabase
-- Domain name for webhooks
+- Node.js 18+
+- Supabase Project
+- Vapi Account
 
-📖 **Full Documentation**: [`deployment/README.md`](./deployment/README.md)
+### Local Setup
+```bash
+# 1. Clone the repo
+git clone <repository-url>
+
+# 2. Install dependencies
+npm install
+
+# 3. Setup environment
+cp .env.example .env.local
+# (Fill in Supabase and Vapi keys)
+
+# 4. Run development server
+npm run dev
+```
+*For detailed instructions, see [GETTING_STARTED.md](GETTING_STARTED.md).*
 
 ---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 14 (App Router), React, Tailwind CSS, Shadcn UI
+- **Backend**: Supabase (PostgreSQL, Auth, Realtime)
+- **Voice AI**: Vapi.ai (Orchestration), Deepgram (STT), ElevenLabs (TTS)
+- **Infrastructure**: Docker, Vercel (Frontend), AWS (Optional)
+
+---
+
+## 💡 Concept Summary
+
+CoreComm enables companies to handle incoming phone calls with a conversational AI agent capable of understanding natural speech, responding in real time, and performing actions through MCP server integrations.
+
+### Key Features
+- **Real-time Voice AI**: Low-latency conversation handling.
+- **RAG Integration**: Answers grounded in company knowledge base.
+- **Action Execution**: Performs tasks via MCP (Model Context Protocol).
+- **Live Dashboard**: Real-time call monitoring and analytics.
+- **Human Handoff**: Seamless escalation to live agents.
+
+---
+
+## 🔍 How It Works
+
+### Call Connection
+1. Customer dials the support number.
+2. Call is routed via Twilio/SIP to CoreComm.
+
+### AI Processing
+1. **STT**: Speech converted to text (Deepgram/OpenAI).
+2. **Intelligence**: LLM understands intent and retrieves context (RAG).
+3. **Action**: Executes tasks if needed (MCP).
+4. **TTS**: Generates voice response (ElevenLabs/Azure).
+
+### Architecture Diagram
+*(See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed diagrams)*
+
+```mermaid
+graph LR
+    Phone --> Twilio
+    Twilio --> Vapi
+    Vapi --> CoreComm_API
+    CoreComm_API --> Supabase
+```
+
+---
+
+## 📂 Project Structure
+
+```
+/app                    - Next.js App Router
+/components             - React Components
+/lib                    - Shared Utilities
+/supabase               - Database Migrations
+/deployment             - Deployment Scripts
+```
+
+---
+
+## 🤝 Contributing
+
+Please read [GETTING_STARTED.md](GETTING_STARTED.md) for development guidelines.

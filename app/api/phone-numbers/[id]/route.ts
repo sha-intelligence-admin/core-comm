@@ -24,7 +24,14 @@ const phoneNumberUpdateSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
 })
 
-// PUT /api/phone-numbers/[id] - Update phone number
+/**
+ * PUT /api/phone-numbers/[id]
+ * Updates an existing phone number.
+ * 
+ * @param request - NextRequest object containing update data
+ * @param params - Route parameters containing the phone number ID
+ * @returns JSON response with the updated phone number or error
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -84,7 +91,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/phone-numbers/[id] - Delete phone number
+/**
+ * DELETE /api/phone-numbers/[id]
+ * Deletes a phone number.
+ * 
+ * @param request - NextRequest object
+ * @param params - Route parameters containing the phone number ID
+ * @returns JSON response with success message or error
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }

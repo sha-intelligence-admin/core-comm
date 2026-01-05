@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, createErrorResponse, createSuccessResponse } from '@/lib/supabase/api';
 import { CreateUserProfileSchema } from '@/lib/validations';
 
+/**
+ * POST /api/auth/signup
+ * Creates a new user profile in the database after successful authentication.
+ * 
+ * @param req - NextRequest object containing user profile data
+ * @returns JSON response with created user profile or error
+ */
 export async function POST(req: NextRequest) {
   try {
     // Validate request body

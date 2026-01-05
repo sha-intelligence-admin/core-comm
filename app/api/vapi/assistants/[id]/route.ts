@@ -11,7 +11,11 @@ import {
 
 /**
  * GET /api/vapi/assistants/[id]
- * Get a single assistant with statistics
+ * Retrieves a single Vapi assistant with statistics.
+ * 
+ * @param request - NextRequest object
+ * @param params - Route parameters containing the assistant ID
+ * @returns JSON response with assistant details and stats
  */
 export async function GET(
   request: NextRequest,
@@ -65,7 +69,12 @@ export async function GET(
 
 /**
  * PATCH /api/vapi/assistants/[id]
- * Update an assistant
+ * Updates a Vapi assistant.
+ * Requires admin or owner role.
+ * 
+ * @param request - NextRequest object containing update data
+ * @param params - Route parameters containing the assistant ID
+ * @returns JSON response with the updated assistant or error
  */
 export async function PATCH(
   request: NextRequest,

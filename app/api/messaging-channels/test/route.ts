@@ -8,6 +8,13 @@ const testChannelSchema = z.object({
   phoneNumber: z.string().optional(),
 })
 
+/**
+ * POST /api/messaging-channels/test
+ * Tests credentials for a messaging channel.
+ * 
+ * @param request - NextRequest object containing channel credentials
+ * @returns JSON response with success status or error
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

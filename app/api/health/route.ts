@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { monitoring } from '@/lib/monitoring'
 
+/**
+ * GET /api/health
+ * Checks the health status of the application and its dependencies.
+ * 
+ * @returns JSON response with health status and checks
+ */
 export async function GET() {
   try {
     const healthStatus = await monitoring.getHealthStatus()

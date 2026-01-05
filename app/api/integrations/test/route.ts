@@ -7,6 +7,13 @@ const testIntegrationSchema = z.object({
   apiKey: z.string().optional(),
 })
 
+/**
+ * POST /api/integrations/test
+ * Tests connectivity to an integration endpoint.
+ * 
+ * @param request - NextRequest object containing integration details
+ * @returns JSON response with success status or error
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

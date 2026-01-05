@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createPaymentLink, createPlan, createSubscription } from '@/lib/flutterwave';
 
+/**
+ * POST /api/billing/create-checkout-session
+ * Creates a Flutterwave payment link for one-time payments or subscriptions.
+ * 
+ * @param req - NextRequest object containing priceId, quantity, mode, amount, companyId, successUrl, cancelUrl
+ * @returns JSON response with the payment link URL
+ */
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();

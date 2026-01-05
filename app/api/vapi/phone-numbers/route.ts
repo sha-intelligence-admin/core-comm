@@ -10,7 +10,10 @@ import { purchaseTwilioPhoneNumberByAreaCode } from '@/lib/twilio/client';
 
 /**
  * GET /api/vapi/phone-numbers
- * List all phone numbers for the user's company
+ * Lists all Vapi phone numbers for the user's company.
+ * 
+ * @param request - NextRequest object
+ * @returns JSON response with list of phone numbers
  */
 export async function GET(request: NextRequest) {
   try {
@@ -49,7 +52,11 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/vapi/phone-numbers
- * Create or provision a new phone number
+ * Creates or provisions a new Vapi phone number.
+ * Requires admin or owner role.
+ * 
+ * @param request - NextRequest object containing phone number configuration
+ * @returns JSON response with the created phone number or error
  */
 export async function POST(request: NextRequest) {
   try {

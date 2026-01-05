@@ -10,7 +10,11 @@ import {
 
 /**
  * GET /api/vapi/knowledge-bases/[id]
- * Get a single knowledge base with its files
+ * Retrieves a single Vapi knowledge base with its files.
+ * 
+ * @param request - NextRequest object
+ * @param params - Route parameters containing the knowledge base ID
+ * @returns JSON response with knowledge base details
  */
 export async function GET(
   request: NextRequest,
@@ -58,7 +62,12 @@ export async function GET(
 
 /**
  * PATCH /api/vapi/knowledge-bases/[id]
- * Update a knowledge base
+ * Updates a Vapi knowledge base.
+ * Requires admin or owner role.
+ * 
+ * @param request - NextRequest object containing update data
+ * @param params - Route parameters containing the knowledge base ID
+ * @returns JSON response with the updated knowledge base or error
  */
 export async function PATCH(
   request: NextRequest,

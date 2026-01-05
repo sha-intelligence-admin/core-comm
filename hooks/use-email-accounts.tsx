@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 
+/**
+ * Represents an email account configuration.
+ */
 export interface EmailAccount {
   id: string
   account_name: string
@@ -48,6 +51,9 @@ export interface EmailAccount {
   user_id: string
 }
 
+/**
+ * Filters for querying email accounts.
+ */
 export interface EmailAccountsFilters {
   page?: number
   limit?: number
@@ -56,6 +62,9 @@ export interface EmailAccountsFilters {
   search?: string
 }
 
+/**
+ * Pagination metadata for email accounts.
+ */
 export interface EmailAccountsPagination {
   page: number
   limit: number
@@ -63,6 +72,11 @@ export interface EmailAccountsPagination {
   totalPages: number
 }
 
+/**
+ * Hook to manage email accounts.
+ * 
+ * @returns Object containing accounts data, loading state, error state, pagination, and fetch function
+ */
 export function useEmailAccounts() {
   const [accounts, setAccounts] = useState<EmailAccount[]>([])
   const [loading, setLoading] = useState(true)
@@ -74,6 +88,11 @@ export function useEmailAccounts() {
     totalPages: 0,
   })
 
+  /**
+   * Fetches email accounts based on provided filters.
+   * 
+   * @param filters - Optional filters to apply to the query
+   */
   const fetchAccounts = async (filters: EmailAccountsFilters = {}) => {
     try {
       setLoading(true)

@@ -14,7 +14,13 @@ const messagingChannelSchema = z.object({
   config: z.record(z.string(), z.unknown()).default({}),
 })
 
-// GET /api/messaging-channels - List messaging channels with pagination and filters
+/**
+ * GET /api/messaging-channels
+ * Lists messaging channels with pagination and filtering.
+ * 
+ * @param request - NextRequest object containing query parameters
+ * @returns JSON response with list of channels and pagination metadata
+ */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -93,7 +99,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/messaging-channels - Create new messaging channel
+/**
+ * POST /api/messaging-channels
+ * Creates a new messaging channel.
+ * 
+ * @param request - NextRequest object containing channel configuration
+ * @returns JSON response with the created channel or error
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()

@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
+/**
+ * POST /api/auth/verify-invite
+ * Verifies an organization invitation token.
+ * 
+ * @param request - Request object containing the invitation token
+ * @returns JSON response with invitation details or error
+ */
 export async function POST(request: Request) {
   try {
     const { token } = await request.json()

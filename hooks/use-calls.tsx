@@ -3,6 +3,9 @@
 import useSWR from 'swr'
 import { useUserProfile } from './use-user-profile'
 
+/**
+ * Represents a call record.
+ */
 export interface Call {
   id: string
   company_id: string
@@ -24,6 +27,9 @@ export interface Call {
   updated_at: string
 }
 
+/**
+ * Filters for querying calls.
+ */
 export interface CallsFilters {
   page?: number
   limit?: number
@@ -33,6 +39,9 @@ export interface CallsFilters {
   search?: string
 }
 
+/**
+ * Response structure for calls API.
+ */
 interface CallsResponse {
   calls: Call[]
   pagination: {
@@ -43,6 +52,13 @@ interface CallsResponse {
   }
 }
 
+/**
+ * Fetches data from the API.
+ * 
+ * @param url - The URL to fetch data from
+ * @returns The data property from the JSON response
+ * @throws Error if the request fails
+ */
 const fetcher = async (url: string) => {
   const res = await fetch(url)
   if (!res.ok) {
@@ -53,6 +69,12 @@ const fetcher = async (url: string) => {
   return data.data
 }
 
+/**
+ * Hook to fetch and manage calls.
+ * 
+ * @param filters - Optional filters to apply to the query
+ * @returns Object containing calls data, loading state, error state, and mutation function
+ */
 export function useCalls(filters: CallsFilters = {}) {
   const { profile, loading: profileLoading } = useUserProfile()
 

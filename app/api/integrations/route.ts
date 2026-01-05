@@ -5,6 +5,13 @@ import { CreateIntegrationSchema, IntegrationsQuerySchema } from '@/lib/validati
 import { IntegrationFactory } from '@/lib/integrations/factory'
 import { IntegrationType } from '@/lib/integrations/types'
 
+/**
+ * GET /api/integrations
+ * Lists integrations with pagination and filtering.
+ * 
+ * @param request - NextRequest object containing query parameters
+ * @returns JSON response with list of integrations and pagination metadata
+ */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -78,6 +85,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * POST /api/integrations
+ * Creates a new integration.
+ * 
+ * @param request - NextRequest object containing integration configuration
+ * @returns JSON response with the created integration or error
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

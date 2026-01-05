@@ -2,6 +2,13 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api';
 
+/**
+ * GET /api/security/settings
+ * Retrieves security settings for the user's organization.
+ * 
+ * @param request - NextRequest object
+ * @returns JSON response with security settings
+ */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -52,6 +59,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * PATCH /api/security/settings
+ * Updates security settings for the user's organization.
+ * Requires admin role.
+ * 
+ * @param request - NextRequest object containing settings updates
+ * @returns JSON response with updated settings or error
+ */
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createClient();

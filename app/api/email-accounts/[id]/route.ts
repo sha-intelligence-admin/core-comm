@@ -36,7 +36,14 @@ const updateEmailAccountSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
 })
 
-// PUT /api/email-accounts/[id] - Update an email account
+/**
+ * PUT /api/email-accounts/[id]
+ * Updates an existing email account configuration.
+ * 
+ * @param request - Request object containing update data
+ * @param params - Route parameters containing the account ID
+ * @returns JSON response with the updated account or error
+ */
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -94,7 +101,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/email-accounts/[id] - Delete an email account
+/**
+ * DELETE /api/email-accounts/[id]
+ * Deletes an email account.
+ * 
+ * @param request - Request object
+ * @param params - Route parameters containing the account ID
+ * @returns JSON response with success message or error
+ */
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

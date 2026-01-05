@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
+/**
+ * Represents a user profile.
+ */
 export interface UserProfile {
   id: string
   email: string
@@ -17,6 +20,11 @@ export interface UserProfile {
   updated_at: string
 }
 
+/**
+ * Hook to manage user profile data.
+ * 
+ * @returns Object containing user data, profile data, loading state, error state, and management functions
+ */
 export function useUserProfile() {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -25,6 +33,11 @@ export function useUserProfile() {
   
   const supabase = createClient()
 
+  /**
+   * Fetches user profile from Supabase.
+   * 
+   * @param userId - The ID of the user to fetch
+   */
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -46,6 +59,12 @@ export function useUserProfile() {
     }
   }
 
+  /**
+   * Updates user profile.
+   * 
+   * @param updates - Partial profile object to update
+   * @returns Object containing error if update fails
+   */
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return { error: 'No user logged in' }
 

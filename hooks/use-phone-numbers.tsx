@@ -5,12 +5,18 @@ import { useState, useEffect } from 'react'
 export type PhoneNumberProvider = 'vapi' | 'twilio' | 'vonage' | 'telnyx' | 'byo'
 export type PhoneNumberSource = 'vapi' | 'legacy'
 
+/**
+ * Represents an assistant assigned to a phone number.
+ */
 export interface PhoneNumberAssistant {
   id: string
   name: string
   vapi_assistant_id: string
 }
 
+/**
+ * Represents a phone number configuration.
+ */
 export interface PhoneNumber {
   id: string
   phone_number: string
@@ -29,6 +35,9 @@ export interface PhoneNumber {
   source: PhoneNumberSource
 }
 
+/**
+ * Payload for provisioning a new phone number.
+ */
 export type ProvisionPhoneNumberPayload = {
   provider: PhoneNumberProvider
   assistantId?: string
@@ -37,6 +46,9 @@ export type ProvisionPhoneNumberPayload = {
   fallbackNumber?: string
 }
 
+/**
+ * Payload for updating an existing phone number.
+ */
 export type UpdatePhoneNumberPayload = {
   assistantId?: string | null
   isActive?: boolean
@@ -44,6 +56,12 @@ export type UpdatePhoneNumberPayload = {
   status?: 'active' | 'inactive'
 }
 
+/**
+ * Normalizes phone number data from API response to internal format.
+ * 
+ * @param record - Raw API record
+ * @returns Normalized PhoneNumber object
+ */
 const normalizePhoneNumber = (record: any): PhoneNumber => {
   const assistant = record?.vapi_assistants
     ? {
@@ -83,11 +101,20 @@ const extractPhoneNumbers = (payload: any) => {
   return []
 }
 
+/**
+ * Hook to manage phone numbers.
+ * Provides functionality to fetch, provision, update, and release phone numbers.
+ * 
+ * @returns Object containing phone numbers data, loading state, error state, and management functions
+ */
 export function usePhoneNumbers() {
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  /**
+   * Fetches all phone numbers from the API.
+   */
   const fetchPhoneNumbers = async () => {
     try {
       setLoading(true)

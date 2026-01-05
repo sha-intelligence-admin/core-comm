@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 
+/**
+ * Represents a messaging channel configuration.
+ */
 export interface MessagingChannel {
   id: string
   channel_name: string
@@ -22,6 +25,9 @@ export interface MessagingChannel {
   user_id: string
 }
 
+/**
+ * Filters for querying messaging channels.
+ */
 export interface MessagingChannelsFilters {
   page?: number
   limit?: number
@@ -30,6 +36,9 @@ export interface MessagingChannelsFilters {
   search?: string
 }
 
+/**
+ * Pagination metadata for messaging channels.
+ */
 export interface MessagingChannelsPagination {
   page: number
   limit: number
@@ -37,6 +46,11 @@ export interface MessagingChannelsPagination {
   totalPages: number
 }
 
+/**
+ * Hook to manage messaging channels.
+ * 
+ * @returns Object containing channels data, loading state, error state, pagination, and fetch function
+ */
 export function useMessagingChannels() {
   const [channels, setChannels] = useState<MessagingChannel[]>([])
   const [loading, setLoading] = useState(true)

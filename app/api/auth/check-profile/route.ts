@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 /**
  * Diagnostic endpoint to check if user profile exists
  * GET /api/auth/check-profile
+ * 
+ * @returns JSON response with authentication status and profile data
  */
 export async function GET() {
   try {

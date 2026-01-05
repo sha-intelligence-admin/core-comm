@@ -18,7 +18,14 @@ const voiceAgentUpdateSchema = z.object({
   success_rate: z.number().optional(),
 })
 
-// PUT /api/voice-agents/[id] - Update voice agent
+/**
+ * PUT /api/voice-agents/[id]
+ * Updates an existing voice agent.
+ * 
+ * @param request - NextRequest object containing update data
+ * @param params - Route parameters containing the voice agent ID
+ * @returns JSON response with the updated voice agent or error
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -78,7 +85,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/voice-agents/[id] - Delete voice agent
+/**
+ * DELETE /api/voice-agents/[id]
+ * Deletes a voice agent.
+ * 
+ * @param request - NextRequest object
+ * @param params - Route parameters containing the voice agent ID
+ * @returns JSON response with success message or error
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }

@@ -4,6 +4,9 @@ import useSWR from 'swr'
 import { useUserProfile } from './use-user-profile'
 import { useState } from 'react'
 
+/**
+ * Represents a Vapi assistant configuration.
+ */
 export interface Assistant {
   id: string
   company_id: string
@@ -19,6 +22,13 @@ export interface Assistant {
   updated_at: string
 }
 
+/**
+ * Fetches data from the API with a timeout.
+ * 
+ * @param url - The URL to fetch data from
+ * @returns The data property from the JSON response
+ * @throws Error if the request fails or times out
+ */
 const fetcher = async (url: string) => {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), 15000) // 15s timeout
@@ -42,6 +52,12 @@ const fetcher = async (url: string) => {
   }
 }
 
+/**
+ * Hook to manage Vapi assistants.
+ * Provides functionality to fetch, create, update, and delete assistants.
+ * 
+ * @returns Object containing assistants data, loading state, error state, and mutation functions
+ */
 export function useAssistants() {
   const { profile, loading: profileLoading } = useUserProfile()
 

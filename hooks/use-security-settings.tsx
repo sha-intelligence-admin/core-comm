@@ -3,6 +3,9 @@
 import useSWR from 'swr'
 import { useUserProfile } from './use-user-profile'
 
+/**
+ * Represents security settings configuration.
+ */
 export interface SecuritySettings {
   id: string
   company_id: string
@@ -14,6 +17,13 @@ export interface SecuritySettings {
   updated_at: string
 }
 
+/**
+ * Fetches data from the API.
+ * 
+ * @param url - The URL to fetch data from
+ * @returns The settings property from the JSON response
+ * @throws Error if the request fails
+ */
 const fetcher = async (url: string) => {
   const res = await fetch(url)
   if (!res.ok) {
@@ -24,6 +34,11 @@ const fetcher = async (url: string) => {
   return data.data.settings
 }
 
+/**
+ * Hook to manage security settings.
+ * 
+ * @returns Object containing settings data, loading state, error state, and update function
+ */
 export function useSecuritySettings() {
   const { profile, loading: profileLoading } = useUserProfile()
 
@@ -37,6 +52,11 @@ export function useSecuritySettings() {
     }
   )
 
+  /**
+   * Updates security settings.
+   * 
+   * @param updates - Partial settings object to update
+   */
   const updateSettings = async (updates: Partial<SecuritySettings>) => {
     const res = await fetch('/api/security/settings', {
       method: 'PATCH',

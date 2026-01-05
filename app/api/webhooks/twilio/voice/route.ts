@@ -22,10 +22,23 @@ function xmlResponse(xml: string, status = 200) {
   });
 }
 
+/**
+ * GET /api/webhooks/twilio/voice
+ * Health check endpoint for Twilio Voice webhook.
+ * 
+ * @returns Response with 200 OK
+ */
 export async function GET() {
   return new Response('OK', { status: 200 });
 }
 
+/**
+ * POST /api/webhooks/twilio/voice
+ * Handles incoming voice calls from Twilio.
+ * 
+ * @param request - NextRequest object containing call data
+ * @returns XML response with TwiML
+ */
 export async function POST(request: NextRequest) {
   // Twilio sends application/x-www-form-urlencoded, which NextRequest exposes via formData().
   const form = await (request as unknown as Request).formData();

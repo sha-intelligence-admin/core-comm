@@ -9,7 +9,10 @@ import {
 
 /**
  * GET /api/vapi/knowledge-bases
- * List all knowledge bases for the user's company
+ * Lists all Vapi knowledge bases for the user's company.
+ * 
+ * @param request - NextRequest object
+ * @returns JSON response with list of knowledge bases
  */
 export async function GET(request: NextRequest) {
   try {
@@ -48,7 +51,11 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/vapi/knowledge-bases
- * Create a new knowledge base
+ * Creates a new Vapi knowledge base.
+ * Requires admin or owner role.
+ * 
+ * @param request - NextRequest object containing knowledge base configuration
+ * @returns JSON response with the created knowledge base or error
  */
 export async function POST(request: NextRequest) {
   try {

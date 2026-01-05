@@ -3,6 +3,9 @@
 import useSWR from 'swr'
 import { useUserProfile } from './use-user-profile'
 
+/**
+ * Represents a Vapi knowledge base.
+ */
 export interface KnowledgeBase {
   id: string
   company_id: string
@@ -15,6 +18,9 @@ export interface KnowledgeBase {
   fileCount?: number
 }
 
+/**
+ * Represents a file within a knowledge base.
+ */
 export interface KBFile {
   id: string
   knowledge_base_id: string
@@ -29,6 +35,13 @@ export interface KBFile {
   updated_at: string
 }
 
+/**
+ * Fetches data from the API with a timeout.
+ * 
+ * @param url - The URL to fetch data from
+ * @returns The data property from the JSON response
+ * @throws Error if the request fails or times out
+ */
 const fetcher = async (url: string) => {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), 15000) // 15s timeout
@@ -52,6 +65,12 @@ const fetcher = async (url: string) => {
   }
 }
 
+/**
+ * Hook to manage Vapi knowledge bases.
+ * Provides functionality to fetch, create, and manage knowledge bases and their files.
+ * 
+ * @returns Object containing knowledge bases data, loading state, error state, and mutation functions
+ */
 export function useKnowledgeBases() {
   const { profile, loading: profileLoading } = useUserProfile()
 
@@ -66,6 +85,12 @@ export function useKnowledgeBases() {
     }
   )
 
+  /**
+   * Creates a new knowledge base, optionally with files.
+   * 
+   * @param kbData - Knowledge base configuration and files
+   * @returns The created knowledge base object
+   */
   const createKnowledgeBase = async (kbData: any) => {
     let body;
     let headers: Record<string, string> = {};

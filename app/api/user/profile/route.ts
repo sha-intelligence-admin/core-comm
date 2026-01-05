@@ -5,6 +5,13 @@ import { createErrorResponse, createSuccessResponse } from '@/lib/supabase/api';
 // Mark this route as dynamic to prevent static generation
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/user/profile
+ * Retrieves the authenticated user's profile.
+ * 
+ * @param req - NextRequest object
+ * @returns JSON response with user profile data
+ */
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -45,6 +52,13 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * PUT /api/user/profile
+ * Updates the authenticated user's profile.
+ * 
+ * @param req - NextRequest object containing profile updates
+ * @returns JSON response with updated user profile
+ */
 export async function PUT(req: NextRequest) {
   try {
     const supabase = await createClient();

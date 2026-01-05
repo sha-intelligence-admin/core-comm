@@ -14,11 +14,9 @@ This directory contains all deployment scripts, configurations, and documentatio
 ### 📚 Documentation
 - **`DEPLOYMENT_GUIDE.md`** - Complete production deployment guide
 - **`AWS_DEPLOYMENT_GUIDE.md`** - AWS-specific deployment instructions
+- **`CHECKLISTS.md`** - Consolidated deployment, security, and readiness checklists
 - **`QUICK_START_GUIDE.md`** - Fast deployment for experienced users
 - **`RAG_UPGRADE_GUIDE.md`** - RAG system upgrade documentation
-- **`PRODUCTION_SECURITY_CHECKLIST.md`** - Security checklist for production
-- **`DEPLOYMENT_CHECKLIST.md`** - Pre-deployment verification steps
-- **`PRODUCTION_READINESS_CHECKLIST.md`** - Production readiness validation
 - **`AUDIT.md`** - System audit documentation
 - **`IMPROVEMENTS.md`** - Deployment improvements and optimizations
 

@@ -2,6 +2,13 @@ import { NextResponse } from "next/server"
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
 
+/**
+ * POST /api/organizations/select
+ * Selects an active organization for the user session.
+ * 
+ * @param request - Request object containing companyId
+ * @returns JSON response with success status or error
+ */
 export async function POST(request: Request) {
   try {
     const { companyId } = await request.json()
