@@ -4,15 +4,16 @@ import useSWR from 'swr'
 import { useUserProfile } from './use-user-profile'
 
 /**
- * Represents a Vapi knowledge base.
+ * Represents a Knowledge Base.
  */
 export interface KnowledgeBase {
   id: string
   company_id: string
-  vapi_kb_id: string
   name: string
-  description: string | null
+  type: 'BYOK' | 'MANAGED'
   provider: string
+  status: string
+  config: any
   created_at: string
   updated_at: string
   fileCount?: number
@@ -74,7 +75,7 @@ const fetcher = async (url: string) => {
 export function useKnowledgeBases() {
   const { profile, loading: profileLoading } = useUserProfile()
 
-  const url = profile && !profileLoading ? '/api/vapi/knowledge-bases' : null
+  const url = profile && !profileLoading ? '/api/knowledge-bases' : null
 
   const { data, error, isLoading, mutate } = useSWR(
     url,
@@ -158,7 +159,7 @@ export function useKnowledgeBases() {
   }
 
   return {
-    knowledgeBases: data?.knowledgeBases || [],
+    knowledgeBases: Array.isArray(data) ? data : (data?.knowledgeBases || []),
     isLoading: profileLoading || isLoading,
     error,
     createKnowledgeBase,

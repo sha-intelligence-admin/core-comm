@@ -10,6 +10,8 @@ import {
 import { createAssistant } from "@/lib/vapi/assistants"
 import { createPhoneNumber as createVapiPhoneNumber } from "@/lib/vapi/phone-numbers"
 import { createKnowledgeBase } from "@/lib/vapi/knowledge-bases"
+import { KnowledgeBaseService } from "@/lib/knowledge-base/service"
+import type { CreateKbParams } from "@/lib/knowledge-base/types"
 import { VAPI_DEFAULTS } from "@/lib/vapi/client"
 import type { ModelProvider, VoiceProvider } from "@/lib/vapi/types"
 import { nanoid } from "nanoid"
@@ -107,6 +109,9 @@ export async function POST(request: NextRequest) {
       integrationName,
       mcpEndpoint,
       knowledgeBase,
+      kbType,
+      kbProvider,
+      kbConfig,
       assistantName,
       assistantDescription,
       assistantModel,
@@ -366,8 +371,39 @@ export async function POST(request: NextRequest) {
 
     // Create Knowledge Base if content provided
     let knowledgeBaseId: string | undefined;
-    if (knowledgeBase && knowledgeBase.trim().length > 0) {
-      console.log('📚 Creating default Knowledge Base...');
+    const assistantTools: any[] = [];
+
+    // 1. New Flow: BYOK / Managed via KnowledgeBaseService
+    if (kbType) {
+      console.log(`📚 Creating ${kbType} Knowledge Base...`);
+      try {
+        const createParams: CreateKbParams = {
+            name: `${companyName} Knowledge Base`,
+            type: kbType, // 'BYOK' or 'MANAGED'
+            provider: kbProvider || (kbType === 'BYOK' ? 'qdrant' : 'native'),
+            config: kbConfig || {},
+            languages: assistantLanguage ? [assistantLanguage] : ['en'],
+        };
+
+        const newKb = await KnowledgeBaseService.createKnowledgeBase(user.id, createParams, company.id);
+
+        // For plain text description in Managed mode, add it as a source immediately
+        if (kbType === 'MANAGED' && knowledgeBase && knowledgeBase.trim().length > 0) {
+           await KnowledgeBaseService.addSource(newKb.id, 'text', knowledgeBase, { title: 'Onboarding Description' });
+        }
+        
+        // Generate Tool Definition for Vapi
+        const toolDef = KnowledgeBaseService.getVapiToolDefinition(newKb);
+        assistantTools.push(toolDef);
+        
+        console.log('✅ Created KB via KnowledgeBaseService:', newKb.id);
+      } catch(e) {
+        console.error('❌ Failed to create KB via Service:', e);
+      }
+    }
+    // 2. Old Flow (Fallback): Only text description provided
+    else if (knowledgeBase && knowledgeBase.trim().length > 0) {
+      console.log('📚 Creating default Knowledge Base (Legacy)...');
       try {
         const kbFile = new File([knowledgeBase], "onboarding-info.txt", { type: "text/plain" });
         const kb = await createKnowledgeBase(company.id, {
@@ -465,6 +501,7 @@ export async function POST(request: NextRequest) {
             voiceId: voiceId,
           },
           knowledgeBaseId: knowledgeBaseId,
+          tools: assistantTools,
         })
 
         console.log('✅ Assistant created in VAPI with ID:', assistantRecord?.vapi_assistant_id)

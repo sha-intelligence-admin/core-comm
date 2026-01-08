@@ -70,6 +70,7 @@ export interface CreateAssistantParams {
   voice: VoiceConfig;
   language?: SupportedLanguage;
   knowledgeBaseId?: string;
+  tools?: any[];
 }
 
 export interface UpdateAssistantParams {
@@ -81,6 +82,7 @@ export interface UpdateAssistantParams {
   voice?: Partial<VoiceConfig>;
   language?: SupportedLanguage;
   knowledgeBaseId?: string;
+  tools?: any[];
 }
 
 export interface VapiAssistant {

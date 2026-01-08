@@ -88,6 +88,7 @@ export async function createAssistant(
           id: params.knowledgeBaseId,
         },
       }),
+      tools: params.tools || [],
     } as any,
     voice: {
       provider: params.voice.provider as any,

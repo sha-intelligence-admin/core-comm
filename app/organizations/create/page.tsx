@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Phone, CheckCircle, Building, Target, Loader2, Server, Mic, MessageSquare, Mail } from "lucide-react"
+import { Phone, CheckCircle, Building, Target, Loader2, Server, Mic, MessageSquare, Mail, Database, Cloud } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useToast } from "@/hooks/use-toast"
@@ -58,6 +59,11 @@ export default function OnboardingPage() {
     mcpEndpoint: "",
     apiKey: "",
     knowledgeBase: "",
+
+    // New KB Fields
+    kbType: "MANAGED",
+    kbProvider: "native",
+    kbConfig: {},
 
     // Step 4: Assistant Configuration
     assistantName: "",
@@ -144,7 +150,12 @@ export default function OnboardingPage() {
   const handleInputChange = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
-
+  const updateKbConfig = (key: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      kbConfig: { ...prev.kbConfig, [key]: value }
+    }))
+  }
   const handleNext = async () => {
     setError(null)
     if (currentStep < totalSteps) {
@@ -249,6 +260,13 @@ export default function OnboardingPage() {
         
         if (formData.businessHours === "custom" && !formData.customHours) return false
         
+        return true
+      case 4:
+        if (formData.kbType === 'BYOK') {
+             // Require fields if BYOK is selected
+             const config = formData.kbConfig as Record<string, any>;
+             return !!config?.url && !!config?.apiKey && !!config?.collectionName;
+        }
         return true
       default:
         return true
@@ -627,70 +645,105 @@ export default function OnboardingPage() {
             )}
 
             {currentStep === 4 && (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="rounded-lg bg-primary/5 p-4 border border-input mb-4">
                   <p className="text-sm text-muted-foreground">
-                    You can connect your knowledge base now or skip this step and configure it later from the dashboard.
+                    Connect your knowledge base to give your AI assistant access to company data.
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="integrationName" className="text-foreground font-medium">
-                    Integration Name <span className="text-muted-foreground font-normal">(Optional)</span>
-                  </Label>
-                  <Input
-                    id="integrationName"
-                    placeholder="Knowledge Base API"
-                    value={formData.integrationName}
-                    onChange={(e) => handleInputChange("integrationName", e.target.value)}
-                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mcpEndpoint" className="text-foreground font-medium">
-                    Endpoint URL <span className="text-muted-foreground font-normal">(Optional)</span>
-                  </Label>
-                  <Input
-                    id="mcpEndpoint"
-                    type="url"
-                    placeholder="https://api.yourcompany.com/knowledge"
-                    value={formData.mcpEndpoint}
-                    onChange={(e) => handleInputChange("mcpEndpoint", e.target.value)}
-                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey" className="text-foreground font-medium">
-                    API Key <span className="text-muted-foreground font-normal">(Optional)</span>
-                  </Label>
-                  <Input
-                    id="apiKey"
-                    type="password"
-                    placeholder="sk-..."
-                    value={formData.apiKey}
-                    onChange={(e) => handleInputChange("apiKey", e.target.value)}
-                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="knowledgeBase" className="text-foreground font-medium">
-                    Knowledge Base Description <span className="text-muted-foreground font-normal">(Optional)</span>
-                  </Label>
-                  <Textarea
-                    id="knowledgeBase"
-                    placeholder="Describe your knowledge base content and structure..."
-                    value={formData.knowledgeBase}
-                    onChange={(e) => handleInputChange("knowledgeBase", e.target.value)}
-                    className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full rounded-lg border-brand/30 hover:bg-primary/10 hover:text-primary bg-transparent"
+
+                <Tabs 
+                    value={formData.kbType} 
+                    onValueChange={(val) => {
+                        handleInputChange("kbType", val);
+                        if(val === 'BYOK') handleInputChange("kbProvider", "qdrant");
+                        else handleInputChange("kbProvider", "native");
+                    }} 
+                    className="w-full"
                 >
-                  Test Connection
-                </Button>
+                  <TabsList className="grid w-full grid-cols-2 h-auto p-1 mb-6">
+                    <TabsTrigger value="MANAGED" className="flex items-center gap-2 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                        <Cloud className="h-4 w-4" /> Managed (Hosted)
+                    </TabsTrigger>
+                    <TabsTrigger value="BYOK" className="flex items-center gap-2 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                        <Database className="h-4 w-4" /> Bring Your Own (BYOK)
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="MANAGED" className="space-y-4">
+                     <Alert className="bg-blue-50 border-blue-200">
+                        <AlertDescription className="text-blue-800">
+                           We host and manage the vector database for you. Just provide your content.
+                        </AlertDescription>
+                     </Alert>
+                     <div className="space-y-2">
+                        <Label>Content Description / Initial Knowledge</Label>
+                        <Textarea 
+                            placeholder="Describe your knowledge base or paste content here..."
+                            value={formData.knowledgeBase}
+                            onChange={(e) => handleInputChange("knowledgeBase", e.target.value)}
+                            className="min-h-[150px]"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            For onboarding, getting started with a text description is easiest. You can upload files later in the dashboard.
+                        </p>
+                     </div>
+                  </TabsContent>
+
+                  <TabsContent value="BYOK" className="space-y-4">
+                     <Alert className="bg-amber-50 border-amber-200">
+                        <AlertDescription className="text-amber-800">
+                           Connect to your existing Vector Database. Zero data migration required.
+                        </AlertDescription>
+                     </Alert>
+                     <div className="space-y-2">
+                        <Label>Provider</Label>
+                        <Select 
+                            value={formData.kbProvider} 
+                            onValueChange={(val) => handleInputChange("kbProvider", val)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Provider" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="qdrant">Qdrant</SelectItem>
+                                <SelectItem value="pinecone">Pinecone</SelectItem>
+                                <SelectItem value="weaviate">Weaviate</SelectItem>
+                            </SelectContent>
+                        </Select>
+                     </div>
+                     
+                     {formData.kbProvider && (
+                        <div className="space-y-4 rounded-md border p-4 bg-muted/20">
+                            <div className="space-y-2">
+                                <Label>Endpoint URL</Label>
+                                <Input 
+                                    placeholder="https://..." 
+                                    onChange={(e) => updateKbConfig('url', e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>API Key</Label>
+                                <Input 
+                                    type="password"
+                                    placeholder="sk-..." 
+                                    onChange={(e) => updateKbConfig('apiKey', e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Collection Name</Label>
+                                <Input 
+                                    placeholder="my-collection" 
+                                    onChange={(e) => updateKbConfig('collectionName', e.target.value)}
+                                />
+                            </div>
+                        </div>
+                     )}
+                  </TabsContent>
+                </Tabs>
               </div>
             )}
+
 
             {currentStep === 5 && (
               <div className="space-y-4">
