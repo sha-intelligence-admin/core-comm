@@ -10,7 +10,7 @@ const nextConfig = {
     unoptimized: process.env.NODE_ENV === 'development',
   },
   experimental: {
-    serverComponentsExternalPackages: [],
+    serverComponentsExternalPackages: ['pdf-parse'],
     instrumentationHook: true,
   },
   async headers() {
