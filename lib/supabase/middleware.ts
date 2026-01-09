@@ -80,7 +80,8 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
-    url.searchParams.set('redirectTo', request.nextUrl.pathname)
+    const redirectUrl = request.nextUrl.pathname + request.nextUrl.search
+    url.searchParams.set('redirectTo', redirectUrl)
     const redirectResponse = NextResponse.redirect(url)
     return setSecurityHeaders(redirectResponse)
   }

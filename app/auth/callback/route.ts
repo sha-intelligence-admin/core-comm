@@ -38,8 +38,10 @@ export async function GET(request: Request) {
       userId: data?.user?.id 
     })
 
+    const errorMessage = error?.message?.toLowerCase() ?? "";
+
     // Fallback for missing code verifier (PKCE issue)
-    if (error?.message?.includes("code verifier should be non-empty")) {
+    if (errorMessage.includes("code verifier should be non-empty") || errorMessage.includes("both auth code and code verifier")) {
       console.warn("⚠️ PKCE Verifier missing on server. Redirecting to client-side exchange.")
       // Redirect to the target page with the code, letting the client handle the exchange
       // We construct a URL that the client page can intercept

@@ -25,10 +25,27 @@ export default function KnowledgeBaseDetailPage() {
     // Ingestion Form State
     const [urlInput, setUrlInput] = useState("")
     const [textInput, setTextInput] = useState("")
+    const [isDeleting, setIsDeleting] = useState(false)
 
     useEffect(() => {
         if (id) fetchKbDetails()
     }, [id])
+
+    const handleDeleteKb = async () => {
+        if (!confirm("Are you sure you want to delete this Knowledge Base? This action cannot be undone.")) return;
+
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`/api/knowledge-bases/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error("Failed to delete");
+            
+            toast({ title: "Deleted", description: "Knowledge Base deleted successfully." });
+            router.push('/knowledge-bases');
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete Knowledge Base." });
+            setIsDeleting(false);
+        }
+    }
 
     const fetchKbDetails = async () => {
         setLoading(true)
@@ -238,6 +255,40 @@ export default function KnowledgeBaseDetailPage() {
                              </Card>
                         </div>
                     </div>
+                </TabsContent>
+
+                <TabsContent value="settings" className="mt-6 space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>General Settings</CardTitle>
+                            <CardDescription>Update your knowledge base configuration.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid gap-2">
+                                <label className="text-sm font-medium">Knowledge Base Name</label>
+                                <Input disabled value={kb.name} />
+                                <p className="text-xs text-muted-foreground">Renaming is specifically disabled for MVP.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-destructive/50">
+                        <CardHeader>
+                            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                            <CardDescription>Irreversible actions.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-medium">Delete Knowledge Base</p>
+                                    <p className="text-sm text-muted-foreground">Permanently remove this KB and all its sources.</p>
+                                </div>
+                                <Button variant="destructive" onClick={handleDeleteKb} disabled={isDeleting}>
+                                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin"/> : "Delete KB"}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
         </div>
