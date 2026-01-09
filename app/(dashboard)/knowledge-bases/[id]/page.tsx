@@ -151,11 +151,20 @@ export default function KnowledgeBaseDetailPage() {
 
                 <TabsContent value="overview" className="mt-6">
                     <Card>
-                        <CardHeader><CardTitle>Configuration</CardTitle></CardHeader>
+                        <CardHeader>
+                            <CardTitle>Configuration</CardTitle>
+                            <CardDescription>Technical settings and provider-specific configuration.</CardDescription>
+                        </CardHeader>
                         <CardContent>
-                            <pre className="bg-muted p-4 rounded-md overflow-auto text-sm">
-                                {JSON.stringify(kb.config, null, 2)}
-                            </pre>
+                            {kb.config && Object.keys(kb.config).length > 0 ? (
+                                <pre className="bg-muted p-4 rounded-md overflow-auto text-sm">
+                                    {JSON.stringify(kb.config, null, 2)}
+                                </pre>
+                            ) : (
+                                <div className="text-sm text-muted-foreground italic">
+                                    No advanced configuration set.
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>

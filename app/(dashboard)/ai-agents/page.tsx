@@ -34,7 +34,7 @@ const comingSoonConfig = {
 
 
 const voiceUseCases = [
-  "Customer support hotline",
+  "Communications hotline",
   "Appointment reminders",
   "Automated phone surveys",
 ]

@@ -91,7 +91,7 @@ export const caseStudies = [
     description:
       'Nearpay provides seamless payment tools and financial services that help entrepreneurs, startups, and growing businesses accept payments and manage finances effortlessly — everywhere, anytime.',
     results:
-      'Instant customer support • Faster transaction issue resolution • Higher user trust and platform adoption',
+      'Instant support • Faster transaction issue resolution • Higher user trust and platform adoption',
     testimonial:
       'CoreComm helped us support thousands of business owners at scale — every question gets answered instantly, no waiting. It’s like having a full support team that never sleeps.',
     name: 'Victor Daniyan',

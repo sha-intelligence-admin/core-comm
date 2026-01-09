@@ -8,8 +8,8 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "CoreComm - AI Customer Support Platform",
-  description: "Voice-based AI customer support platform with advanced analytics and integrations",
+  title: "CoreComm - Multi-Agent Intelligence Platform",
+  description: "CoreComm is a multi-agent intelligence platform designed to operate across the full communications stack, in a way that feels human.",
 }
 
 export default function RootLayout({

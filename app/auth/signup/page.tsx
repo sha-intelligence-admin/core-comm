@@ -289,7 +289,7 @@ export default function SignUpPage() {
               <div>
                 <h2 className="text-2xl font-bold">Account Created!</h2>
                 <p className="text-muted-foreground mt-2">
-                  Welcome to CoreComm! Let&apos;s set up your AI customer support platform.
+                  Welcome to CoreComm! Let&apos;s set up your multi-agent intelligence platform.
                 </p>
               </div>
               <div className="space-y-2">

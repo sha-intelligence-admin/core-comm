@@ -43,7 +43,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="google-headline-medium">Dashboard</h1>
-        <p className="text-muted-foreground google-body-medium">Welcome to your CoreComm,  your AI agent for customer support</p>
+        <p className="text-muted-foreground google-body-medium">Welcome to CoreComm, your multi-agent intelligence platform</p>
       </div>
 
       {/* Metrics Grid */}
@@ -84,7 +84,7 @@ export default function DashboardPage() {
           <Card className="rounded-sm transition-all duration-300 hover:border-primary/50 border-input group">
             <CardHeader className=" transition-colors duration-300 rounded-t-sm">
               <div className="transition-colors duration-200 google-headline-small">Recent Activity</div>
-              <div className="google-body-medium text-muted-foreground">Real-time feed of customer support interactions</div>
+              <div className="google-body-medium text-muted-foreground">Real-time feed of communications interactions</div>
             </CardHeader>
             <CardContent>
               <ActivityFeed />

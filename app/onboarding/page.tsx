@@ -84,7 +84,7 @@ export default function OnboardingPage() {
     {
       id: 3,
       title: "Phone Configuration",
-      description: "Set up your customer support line",
+      description: "Set up your communication line",
       icon: Phone,
     },
     {
@@ -197,7 +197,7 @@ export default function OnboardingPage() {
         <div className="text-center">
           <h1 className="google-headline-medium">Welcome to CoreComm</h1>
           <p className="text-muted-foreground google-body-medium">
-            Let&apos;s set up your AI customer support platform in just a few steps
+            CoreComm is a multi-agent intelligence platform designed to operate across the full communications stack, in a way that feels human.
           </p>
         </div>
 
@@ -325,7 +325,7 @@ export default function OnboardingPage() {
                   </Label>
                   <Textarea
                     id="currentSolution"
-                    placeholder="Tell us about your current customer support setup..."
+                    placeholder="Tell us about your current communications setup..."
                     value={formData.currentSolution}
                     onChange={(e) => handleInputChange("currentSolution", e.target.value)}
                     className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
@@ -361,7 +361,7 @@ export default function OnboardingPage() {
                   </Label>
                   <Textarea
                     id="currentSolution"
-                    placeholder="Tell us about your current customer support setup..."
+                    placeholder="Tell us about your current communications setup..."
                     value={formData.currentSolution}
                     onChange={(e) => handleInputChange("currentSolution", e.target.value)}
                     className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
@@ -576,7 +576,7 @@ export default function OnboardingPage() {
                   </Label>
                   <Input
                     id="assistantName"
-                    placeholder="e.g., Customer Support Concierge"
+                    placeholder="e.g., Support & Sales Assistant"
                     value={formData.assistantName}
                     onChange={(e) => handleInputChange("assistantName", e.target.value)}
                     className="rounded-lg border-input focus:border-primary focus:ring-primary/50"
@@ -728,7 +728,7 @@ export default function OnboardingPage() {
                   </Label>
                   <Textarea
                     id="assistantPersonality"
-                    placeholder="You are a helpful, professional, and friendly customer support assistant. Keep responses concise and always confirm you understood the customer's request..."
+                    placeholder="You are a helpful, professional, and friendly assistant. Keep responses concise and always confirm you understood the request..."
                     value={formData.assistantPersonality}
                     onChange={(e) => handleInputChange("assistantPersonality", e.target.value)}
                     className="rounded-lg border-input focus:border-primary focus:ring-primary/50"

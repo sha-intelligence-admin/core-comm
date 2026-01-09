@@ -37,7 +37,7 @@ export default function CallLogsPage() {
       <div>
         <h1 className="google-headline-medium">Call Logs</h1>
         <p className="google-body-medium text-muted-foreground">
-          View and analyze all customer support interactions
+          View and analyze all communications interactions
         </p>
       </div>
 

@@ -40,7 +40,7 @@ const roleTypes = [
         role: "Support Lead",
         icon: UserCog,
         permissions: "Manage Voice & Messaging Agents, edit routing rules, review analytics, escalate cases",
-        useCase: "Customer support team managers or supervisors",
+        useCase: "Communications team managers or supervisors",
         color: "bg-blue-500/20 text-blue-600",
     },
     {
